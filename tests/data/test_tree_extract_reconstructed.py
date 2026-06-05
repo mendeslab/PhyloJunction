@@ -9,7 +9,7 @@ import phylojunction.data.sampled_ancestor as pjsa
 import phylojunction.data.attribute_transition as pjat
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 class TestExtractReconstructedTree(unittest.TestCase):
@@ -2023,10 +2023,10 @@ class TestExtractReconstructedTree(unittest.TestCase):
                                              to_state=0,
                                              to_state2=1)
         clado_at_dict = {
-            "nd5": [clado_at1],
-            "nd7": [clado_at2],
-            "nd6": [clado_at3],
-            "nd8": [clado_at4]
+            "nd5": clado_at1,
+            "nd7": clado_at2,
+            "nd6": clado_at3,
+            "nd8": clado_at4
         }
 
 

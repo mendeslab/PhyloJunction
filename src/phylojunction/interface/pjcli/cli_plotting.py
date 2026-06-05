@@ -16,7 +16,7 @@ import phylojunction.data.tree as pjdt
 import phylojunction.utility.exception_classes as ec
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 def start_fig_and_axes(

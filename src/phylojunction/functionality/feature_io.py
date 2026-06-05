@@ -10,7 +10,7 @@ import phylojunction.utility.helper_functions as pjh
 import phylojunction.functionality.evol_event as pjev
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 class GeoGraph():
@@ -1149,7 +1149,7 @@ class GeoFeatureQuery():
             exit(("ERROR: Function \'cb_feature_threshold\' needs a "
                     "categorical-between feature name or feature id."
                     ". Exiting."))
-            
+
         n_regions = ft_all_epochs_list[0].n_regions  # just grabbing 1st
 
         # 1D: "from" region
@@ -1270,7 +1270,8 @@ class GeoFeatureQuery():
             geo_cond_name: str,
             w_bw_bit_patterns: ty.Union[ty.List[ty.List[str]],
                                ty.List[str]],
-            is_directed: bool = False) -> None:
+            is_directed: bool = False,
+            user_young2old: bool = True) -> None:
         """Populate geographic connectivity bit dictionaries
 
         e.g., for 2 regions, 3 epochs {"altitude": ["010", "010"]}
@@ -1291,6 +1292,9 @@ class GeoFeatureQuery():
                 list.
             is_directed (bool): Flag specifying if connectivity graph
                 is directed or not. Defaults to False.
+            user_young2old (bool): Flag specifying if epochs (their
+                ages specifically) are passed from young to old.
+                Defaults to True.
         """
 
         self.geo_cond_name = geo_cond_name
@@ -1302,7 +1306,9 @@ class GeoFeatureQuery():
 
         self._populate_geo_cond_change_times_dict(geo_cond_name)
 
-        self._populate_conn_graph_list(geo_cond_name, is_directed)
+        self._populate_conn_graph_list(geo_cond_name,
+                                       is_directed,
+                                       user_young2old)
 
     # internal
     def _populate_geo_cond_change_times_dict(self,

@@ -2,7 +2,7 @@ import typing as ty
 from abc import ABC, abstractmethod
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 class RegionStatus():

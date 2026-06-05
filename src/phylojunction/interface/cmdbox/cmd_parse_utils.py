@@ -7,7 +7,7 @@ import phylojunction.pgm.pgm as pgm
 import phylojunction.utility.exception_classes as ec
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 # note that in string literals, backslash "\" has a special
@@ -95,7 +95,6 @@ def parse_spec(
             ty.List[pgm.NodeDAG]]:
 
     spec_dict: ty.Dict[str, str] = tokenize_fn_spec(fn_spec_str, cmd_line)
-    
     spec_dict_return: \
         ty.Dict[str, ty.List[ty.Union[str, pgm.NodeDAG]]] = dict()
 
@@ -246,6 +245,15 @@ def tokenize_fn_spec(fn_spec_str: str, cmd_line: str) -> ty.Dict[str, str]:
             # keep adding as long as it's not a comma
             else:
                 if ch == "[" and not reading_string:
+                    if reading_vector:
+                        raise ec.ScriptSyntaxError(
+                            cmd_line,
+                            ("Something went wrong during variable"
+                             " assignment. It appears that a 2D-vector"
+                             " specification was attempted, but phylojunction"
+                             " does not support it. Try flattening the matrix"
+                             ". Exiting."))
+
                     reading_vector = True
 
                 if ch == '"':

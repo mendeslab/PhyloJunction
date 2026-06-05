@@ -405,12 +405,14 @@ The example above is then invoked later in ``pj_sandbox.py``:
         # 3: BiSSE model with incomplete sample, 2 tree samples, 2 tree replicates per sample
         # 4: Builds discrete SSE tree manually, then prints on screen
         # 5: Builds discrete SSE tree from newick string, then prints on screen
+        # 6: Read .pj script examples/see_stoch_maps.pj
 
         example_to_run = 1
         # example_to_run = 2
         # example_to_run = 3
         # example_to_run = 4
         # example_to_run = 5
+        # example_to_run = 6
             
         if example_to_run == 1:
             dag_obj = run_example_yule_string()

@@ -78,3 +78,18 @@ The function for assigning a log-normal (``lognormal``) distribution to a random
     :caption: **Example command.** Specifying two samples of a twice replicated log-normally (mean log(:math:`\mu)=-3.25`, standard deviation :math:`\sigma=0.25`) distributed random variable :math:`x`.
 
     x ~ lognormal(n=1000, mean=-3.25, sd=0.25)
+
+Categorical
+-----------
+
+The function for assigning a categorical (``categorical``) distribution to a random variable has four parameters:
+
+    | ``n`` (integer, optional): Number of samples to draw (samples are i.i.d.). Defaults to 1.
+    | ``nr`` (integer, optional): Number of replicates to draw per sample. Defaults to 1.
+    | ``cats`` (integer, required): Number of discrete categories in each draw (must be greater than 1).
+    | ``probs`` (real number, required): Probability of each category (must add up to 1.0).
+
+.. code-block::
+    :caption: **Example command.** Specifying two samples of a twice replicated random variable representing to two equiprobable categories,
+
+    x ~ categorical(n=2, nr=2, cats=[0,1], probs=[0.5, 0.5])

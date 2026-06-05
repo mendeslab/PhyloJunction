@@ -33,4 +33,4 @@ stash := sse_stash(flat_rate_mat=[det_w_birth_rate0, det_death_rate0, det_trans_
 
 # stochastic-node variable ('trs') assignment
 ori <- 3.0
-trs ~ discrete_sse(n=2, nr=2, stash=stash, start_state=[2,2], stop="age", stop_value=ori, origin="true", cond_spn="true", cond_surv="true")
+trs ~ discrete_sse(n=2, nr=2, stash=stash, start_state=[2,1,0,1], stop="age", stop_value=ori, origin="true", cond_spn="true", cond_surv="true")

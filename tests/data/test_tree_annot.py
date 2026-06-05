@@ -1,6 +1,9 @@
 import unittest
 from dendropy import Tree, Node, Taxon
 
+__author__ = "Fabio K. Mendes"
+__email__ = "fmendes@lsu.edu"
+
 # pj imports
 import phylojunction.data.tree as pjtr
 

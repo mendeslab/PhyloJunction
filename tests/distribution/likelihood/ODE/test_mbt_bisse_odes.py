@@ -6,7 +6,7 @@ import phylojunction.distribution.likelihood.ODE.dn_bisse_ode as pjbode
 import phylojunction.distribution.likelihood.ODE.dn_mbt_ode as pjmbtode
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 class TestMBTBiSSEODEs(unittest.TestCase):

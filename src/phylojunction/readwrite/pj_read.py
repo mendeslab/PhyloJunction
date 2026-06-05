@@ -15,7 +15,7 @@ import phylojunction.utility.helper_functions as pjh
 from phylojunction.data.tree import AnnotatedTree
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 def read_text_file(fp_string: str) -> ty.List[str]:

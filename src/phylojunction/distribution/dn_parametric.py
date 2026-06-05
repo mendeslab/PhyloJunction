@@ -2,6 +2,7 @@ import sys
 import typing as ty
 import math
 import numpy as np
+import random
 from scipy.stats import expon, lognorm, norm, gamma, uniform  # type: ignore
 
 # pj imports
@@ -12,7 +13,7 @@ import phylojunction.utility.helper_functions as pjh
 import phylojunction.inference.revbayes.rb_dn_parametric as rbpar
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 class DnLogNormal(pgm.DistrForSampling):
@@ -685,6 +686,126 @@ class DnUnif(pgm.DistrForSampling):
             self.min_param_list,
             self.max_param_list,
             self.parent_node_tracker)
+
+
+class DnCategorical(pgm.DistrForSampling):
+
+    DN_NAME = "Categorical"
+
+    n_samples: int
+    n_repl: int
+    cats_param_list: ty.List[int]
+    probs_param_list: ty.List[float]
+    vectorized_params: ty.List[ty.List[ty.Union[int, float, str]]]
+    param_dict: ty.Dict[str, ty.Union[bool, ty.List[ty.Union[int, float, str]]]]
+    parent_node_tracker: ty.Optional[ty.Dict[str, str]]
+
+    @staticmethod
+    def draw_categorical(n_samples: int,
+                         cats_param: ty.List[int],
+                         probs_param: ty.List[float]) \
+            -> ty.List[int]:
+        """Return sample from categorical distribution.
+
+        Args:
+            n_samples (int): Number of draws (sample size).
+            cats_param (int): List of categories (e.g., states) that one
+                wants to sample. Must be the same size as 'probs_param'.
+            probs_param (float): List of category drawing probabilities
+                (i.e., weights) to use when drawing categories. Must be
+                the same size as 'cats_param'.
+
+        Returns:
+            (list): List of integers provided/representing categories
+                being sampled.
+        """
+
+        return random.choices(cats_param, weights=probs_param, k=n_samples)
+
+    def __init__(
+            self,
+            n_samples: int,
+            n_repl: int,
+            cats_param: ty.List[int],
+            probs_param: ty.List[float],
+            parent_node_tracker: ty.Optional[ty.Dict[str, str]] = None) \
+                -> None:
+
+        self.param_dict = dict()
+        self.n_samples = n_samples
+        self.n_repl = n_repl
+        self.cats_param_arg = cats_param
+        self.probs_param_arg = probs_param
+
+        # one element per parameter
+        # check_sample_size_return = \
+        #     self.init_check_vectorize_sample_size(
+        #         [self.cats_param_arg,
+        #          self.probs_param_arg])
+        #
+        # if isinstance(check_sample_size_return, list):
+        #     self.vectorized_params = check_sample_size_return
+
+        # params
+        self.cats_param_list = self.cats_param_arg  # 2D list
+        self.probs_param_list = self.probs_param_arg  # 2D list
+        # self.cats_param_list = self.vectorized_params[0]  # 2D list
+        # self.probs_param_list = self.vectorized_params[1]  # 2D list
+
+        # for inference, we need to keep track of parent node names
+        self.parent_node_tracker = parent_node_tracker
+
+    def init_check_vectorize_sample_size(
+        self,
+        param_list: ty.List[ty.Any] = []) \
+            -> ty.Optional[ty.List[ty.List[ty.Union[int, float, str]]]]:
+
+        return pjh.check_and_vectorize_if_must(
+            param_list,
+            self.DN_NAME,
+            size_to_grow=self.n_samples)
+
+    def generate(self) -> ty.List[float]:
+        sampled_values: ty.List[int] = []
+
+        try:
+            if len(self.cats_param_list) == 1 and \
+                    len(self.probs_param_list) == 1:
+                n_draws: int = self.n_samples * self.n_repl
+
+                print("self.probs_param_list", self.probs_param_list)
+                # so mypy won't complain
+                # ty.cast(
+                sample = DnCategorical.draw_categorical(n_draws,
+                                                        self.cats_param_list[0],
+                                                        self.probs_param_list[0])
+
+                print("categorical sample", sample)
+                return sample
+
+            else:
+                # for i in range(len(self.cats_param_list)):
+                    # so mypy won't complain
+                repl = DnCategorical.draw_categorical(
+                    self.n_repl,
+                    self.cats_param_list[0],
+                    self.probs_param_list[0])#.tolist()
+
+                return repl
+                # sampled_values += repl
+
+                # return sampled_values
+
+        except Exception as e:
+            print("An error occurred: ", type(e).__name__, " - ", e)
+
+            raise ec.GenerateFailError(
+                self.DN_NAME,
+                ("A \'cats_param\' and \'probs_param\' must be specified. "
+                 "Exiting..."))
+
+    def get_rev_inference_spec_info(self) -> ty.List[str]:
+        return ""
 
 
 if __name__ == "__main__":

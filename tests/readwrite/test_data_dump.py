@@ -8,7 +8,7 @@ import phylojunction.readwrite.pj_write as pjwrite
 import phylojunction.distribution.dn_discrete_sse as dnsse
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 class TestDataDump(unittest.TestCase):

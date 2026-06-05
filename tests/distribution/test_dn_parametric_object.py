@@ -29,7 +29,7 @@ class TestParametricDns(unittest.TestCase):
         repl_size = 2
         mins = [0.0, 1.0, 2.0, 3.0, 4.0]
         maxs = [1.0, 2.0, 3.0, 4.0, 5.0]
-        tups = tuple((i, maxs[idx])for idx, i in enumerate(mins))
+        tups = tuple((i, maxs[idx]) for idx, i in enumerate(mins))
         # unif_rv = dnpar.DnUnif([5, repl_size, mins, maxs]).generate()
         unif_rv = dnpar.DnUnif(5, repl_size, mins, maxs, self.dummy_parent_node_tracker).generate()
 

@@ -12,7 +12,7 @@ import phylojunction.functionality.biogeo as pjbio
 import phylojunction.utility.exception_classes as ec
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 class StochMap(pjev.EvolRelevantEvent):
@@ -27,14 +27,14 @@ class StochMap(pjev.EvolRelevantEvent):
             position of '1's in the 'from_state_bit_patt'.
         to_state (int): Integer representation of target state (i.e.,
             target biogeographic range).
-        to_state_bit_pattern (str): Bit pattern representation of
+        to_state_bit_patt (str): Bit pattern representation of
             target state (i.e., target biogeographic range).
         to_state_idx_set (set): Set of indices corresponding to the
             position of '1's in 'to_state_bit_patt', for child 1.
         to_state2 (int): Integer representation of second target state
             if stochastic map is cladogenetic (i.e., second target
             biogeographic range).
-        to_state2_bit_pattern (str): Bit pattern representation of
+        to_state2_bit_patt (str): Bit pattern representation of
             second target state if stochastic map is cladogenetic
             (i.e., second target biogeographic range).
         to_state2_idx_set (set): Set of indices corresponding to the
@@ -673,7 +673,8 @@ class RangeSplitOrBirth(StochMap):
         
         else:
             return self.str_representation \
-                + "\n  Child 2 node: same as parent"
+                + "\n  Child 2 node: " + self.child2_node_name + \
+                " (state same as parent)"
 
 
 class StochMapsOnTree():

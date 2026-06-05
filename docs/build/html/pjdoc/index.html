@@ -77,6 +77,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#gamma">Gamma</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#normal">Normal</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#log-normal">Log-normal</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#categorical">Categorical</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#tree-distributions">Tree distributions</a><ul>
@@ -118,43 +119,44 @@
 <h1>Documentation<a class="headerlink" href="#documentation" title="Link to this heading"></a></h1>
 <nav class="contents local" id="contents">
 <ul class="simple">
-<li><p><a class="reference internal" href="#overview" id="id20">Overview</a></p>
+<li><p><a class="reference internal" href="#overview" id="id21">Overview</a></p>
 <ul>
-<li><p><a class="reference internal" href="#origins-and-design" id="id21">Origins and design</a></p></li>
-<li><p><a class="reference internal" href="#graphical-models" id="id22">Graphical models</a></p>
+<li><p><a class="reference internal" href="#origins-and-design" id="id22">Origins and design</a></p></li>
+<li><p><a class="reference internal" href="#graphical-models" id="id23">Graphical models</a></p>
 <ul>
-<li><p><a class="reference internal" href="#how-to-read-a-dag" id="id23">How to read a DAG?</a></p></li>
+<li><p><a class="reference internal" href="#how-to-read-a-dag" id="id24">How to read a DAG?</a></p></li>
 </ul>
 </li>
-<li><p><a class="reference internal" href="#specifying-a-model-an-example" id="id24">Specifying a model (an example)</a></p>
+<li><p><a class="reference internal" href="#specifying-a-model-an-example" id="id25">Specifying a model (an example)</a></p>
 <ul>
-<li><p><a class="reference internal" href="#multiple-samples-and-replicates" id="id25">Multiple samples and replicates</a></p></li>
+<li><p><a class="reference internal" href="#multiple-samples-and-replicates" id="id26">Multiple samples and replicates</a></p></li>
 </ul>
 </li>
 </ul>
 </li>
-<li><p><a class="reference internal" href="#graphical-user-interface-gui" id="id26">Graphical user interface (GUI)</a></p>
+<li><p><a class="reference internal" href="#graphical-user-interface-gui" id="id27">Graphical user interface (GUI)</a></p>
 <ul>
-<li><p><a class="reference internal" href="#implementation-comparison" id="id27">Implementation comparison</a></p></li>
-<li><p><a class="reference internal" href="#coverage-validation" id="id28">Coverage validation</a></p></li>
+<li><p><a class="reference internal" href="#implementation-comparison" id="id28">Implementation comparison</a></p></li>
+<li><p><a class="reference internal" href="#coverage-validation" id="id29">Coverage validation</a></p></li>
 </ul>
 </li>
-<li><p><a class="reference internal" href="#command-line-interface-cli" id="id29">Command-line interface (CLI)</a></p></li>
-<li><p><a class="reference internal" href="#sandbox-bypassing-the-interfaces" id="id30">Sandbox: Bypassing the interfaces</a></p></li>
-<li><p><a class="reference internal" href="#lexicon" id="id31">Lexicon</a></p>
+<li><p><a class="reference internal" href="#command-line-interface-cli" id="id30">Command-line interface (CLI)</a></p></li>
+<li><p><a class="reference internal" href="#sandbox-bypassing-the-interfaces" id="id31">Sandbox: Bypassing the interfaces</a></p></li>
+<li><p><a class="reference internal" href="#lexicon" id="id32">Lexicon</a></p>
 <ul>
-<li><p><a class="reference internal" href="#parametric-distributions" id="id32">Parametric distributions</a></p>
+<li><p><a class="reference internal" href="#parametric-distributions" id="id33">Parametric distributions</a></p>
 <ul>
-<li><p><a class="reference internal" href="#uniform" id="id33">Uniform</a></p></li>
-<li><p><a class="reference internal" href="#exponential" id="id34">Exponential</a></p></li>
-<li><p><a class="reference internal" href="#gamma" id="id35">Gamma</a></p></li>
-<li><p><a class="reference internal" href="#normal" id="id36">Normal</a></p></li>
-<li><p><a class="reference internal" href="#log-normal" id="id37">Log-normal</a></p></li>
+<li><p><a class="reference internal" href="#uniform" id="id34">Uniform</a></p></li>
+<li><p><a class="reference internal" href="#exponential" id="id35">Exponential</a></p></li>
+<li><p><a class="reference internal" href="#gamma" id="id36">Gamma</a></p></li>
+<li><p><a class="reference internal" href="#normal" id="id37">Normal</a></p></li>
+<li><p><a class="reference internal" href="#log-normal" id="id38">Log-normal</a></p></li>
+<li><p><a class="reference internal" href="#categorical" id="id39">Categorical</a></p></li>
 </ul>
 </li>
-<li><p><a class="reference internal" href="#tree-distributions" id="id38">Tree distributions</a></p>
+<li><p><a class="reference internal" href="#tree-distributions" id="id40">Tree distributions</a></p>
 <ul>
-<li><p><a class="reference internal" href="#discrete-sse" id="id39">Discrete SSE</a></p></li>
+<li><p><a class="reference internal" href="#discrete-sse" id="id41">Discrete SSE</a></p></li>
 </ul>
 </li>
 </ul>
@@ -491,12 +493,14 @@ Each example is wrapped within its own function, like so:</p>
 <span class="c1"># 3: BiSSE model with incomplete sample, 2 tree samples, 2 tree replicates per sample</span>
 <span class="c1"># 4: Builds discrete SSE tree manually, then prints on screen</span>
 <span class="c1"># 5: Builds discrete SSE tree from newick string, then prints on screen</span>
+<span class="c1"># 6: Read .pj script examples/see_stoch_maps.pj</span>
 
 <span class="n">example_to_run</span> <span class="o">=</span> <span class="mi">1</span>
 <span class="c1"># example_to_run = 2</span>
 <span class="c1"># example_to_run = 3</span>
 <span class="c1"># example_to_run = 4</span>
 <span class="c1"># example_to_run = 5</span>
+<span class="c1"># example_to_run = 6</span>
 
 <span class="k">if</span> <span class="n">example_to_run</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
     <span class="n">dag_obj</span> <span class="o">=</span> <span class="n">run_example_yule_string</span><span class="p">()</span>
@@ -606,6 +610,24 @@ On this page you will find examples of how to invoke the available distributions
 </div>
 </div>
 </section>
+<section id="categorical">
+<h4>Categorical<a class="headerlink" href="#categorical" title="Link to this heading"></a></h4>
+<p>The function for assigning a categorical (<code class="docutils literal notranslate"><span class="pre">categorical</span></code>) distribution to a random variable has four parameters:</p>
+<blockquote>
+<div><div class="line-block">
+<div class="line"><code class="docutils literal notranslate"><span class="pre">n</span></code> (integer, optional): Number of samples to draw (samples are i.i.d.). Defaults to 1.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">nr</span></code> (integer, optional): Number of replicates to draw per sample. Defaults to 1.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">cats</span></code> (integer, required): Number of discrete categories in each draw (must be greater than 1).</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">probs</span></code> (real number, required): Probability of each category (must add up to 1.0).</div>
+</div>
+</div></blockquote>
+<div class="literal-block-wrapper docutils container" id="id16">
+<div class="code-block-caption"><span class="caption-text"><strong>Example command.</strong> Specifying two samples of a twice replicated random variable representing to two equiprobable categories,</span><a class="headerlink" href="#id16" title="Link to this code"></a></div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">~</span> <span class="n">categorical</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">nr</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">cats</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span> <span class="n">probs</span><span class="o">=</span><span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+</section>
 </section>
 <section id="tree-distributions">
 <h3>Tree distributions<a class="headerlink" href="#tree-distributions" title="Link to this heading"></a></h3>
@@ -618,8 +640,8 @@ At the moment, PhyloJunction comes with one tree distribution that produce a var
 <p>The implementation and usage of <code class="docutils literal notranslate"><span class="pre">discrete_sse</span></code> in PhyloJunction is very flexible and takes inspiration from Tim Vaughan’s great <a class="reference external" href="https://tgvaughan.github.io/remaster/" rel="noopener noreferrer" target="_blank">ReMASTER</a> simulator program: a model with any number of rates of whatever types may be specified.
 Of course, this flexibility comes at the price of user responsibility!</p>
 <p>SSE rates are added to a DAG by passing deterministic function <code class="docutils literal notranslate"><span class="pre">sse_rate</span></code> a stochastic or constant node containing a rate’s value (the value can also be passed directly):</p>
-<div class="literal-block-wrapper docutils container" id="id16">
-<div class="code-block-caption"><span class="caption-text"><strong>Script excerpt 1.</strong> Command in <em>phylojunction</em> to add a birth rate (deterministic node) to the DAG.</span><a class="headerlink" href="#id16" title="Link to this code"></a></div>
+<div class="literal-block-wrapper docutils container" id="id17">
+<div class="code-block-caption"><span class="caption-text"><strong>Script excerpt 1.</strong> Command in <em>phylojunction</em> to add a birth rate (deterministic node) to the DAG.</span><a class="headerlink" href="#id17" title="Link to this code"></a></div>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">birth_rate</span> <span class="o">~</span> <span class="n">exponential</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">nr</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">rate</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
 
 <span class="n">det_birth_rate</span> <span class="o">:=</span> <span class="n">sse_rate</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;lambda&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">birth_rate</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="s2">&quot;speciation&quot;</span><span class="p">)</span>
@@ -654,8 +676,8 @@ Of course, this flexibility comes at the price of user responsibility!</p>
 <p><span class="underline">Sampling probabilities</span></p>
 <p>The discrete SSE model in PhyloJunction supports not only state-dependent rates, but also state-dependent sampling probabilities.
 Specifying SSE probabilities can be done like so:</p>
-<div class="literal-block-wrapper docutils container" id="id17">
-<div class="code-block-caption"><span class="caption-text"><strong>Script excerpt 2.</strong> Command in the <em>phylojunction</em> language to add a sampling probability parameter (deterministic node) to the DAG.</span><a class="headerlink" href="#id17" title="Link to this code"></a></div>
+<div class="literal-block-wrapper docutils container" id="id18">
+<div class="code-block-caption"><span class="caption-text"><strong>Script excerpt 2.</strong> Command in the <em>phylojunction</em> language to add a sampling probability parameter (deterministic node) to the DAG.</span><a class="headerlink" href="#id18" title="Link to this code"></a></div>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">det_sampling_prob</span> <span class="o">:=</span> <span class="n">sse_prob</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;rho&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">state</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 <span class="c1"># by setting the value to 1.0, we assume complete sampling!</span>
 </pre></div>
@@ -687,8 +709,8 @@ This is accomplished with deterministic function <code class="docutils literal n
 <p>The discrete SSE model in PhyloJunction is a “skyline” model, that is, it allows both state-dependent rates and parameters to vary over time (i.e., to be time-heterogeneous).
 In the presence of time-heterogeneity, these parameters are assumed to vary according to a user-defined piecewise constant function (this is coded into the model via the <code class="docutils literal notranslate"><span class="pre">value</span></code> and <code class="docutils literal notranslate"><span class="pre">epoch</span></code> parameters of <code class="docutils literal notranslate"><span class="pre">sse_rate</span></code> and <code class="docutils literal notranslate"><span class="pre">sse_prob</span></code>).
 The limits of each “piece” of that function are given by the argument to <code class="docutils literal notranslate"><span class="pre">epoch_age_ends</span></code> (see above).</p>
-<div class="literal-block-wrapper docutils container" id="id18">
-<div class="code-block-caption"><span class="caption-text"><strong>Script excerpt 3.</strong> Command in the <em>phylojunction</em> language to organize rate and probability parameters into a stash (a deterministic node in the DAG).</span><a class="headerlink" href="#id18" title="Link to this code"></a></div>
+<div class="literal-block-wrapper docutils container" id="id19">
+<div class="code-block-caption"><span class="caption-text"><strong>Script excerpt 3.</strong> Command in the <em>phylojunction</em> language to organize rate and probability parameters into a stash (a deterministic node in the DAG).</span><a class="headerlink" href="#id19" title="Link to this code"></a></div>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">det_birth_rate1</span> <span class="o">:=</span> <span class="n">sse_rate</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;lambda1&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="s2">&quot;speciation&quot;</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 <span class="n">det_birth_rate2</span> <span class="o">:=</span> <span class="n">sse_rate</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;lambda2&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="s2">&quot;speciation&quot;</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
 
@@ -721,8 +743,8 @@ The parameters of this function are:</p>
 </div>
 </div></blockquote>
 <p>Below, an example of assigning a discrete SSE to a stochastic DAG node representing phylogenetic tree samples:</p>
-<div class="literal-block-wrapper docutils container" id="id19">
-<div class="code-block-caption"><span class="caption-text"><strong>Script excerpt 4.</strong> Commands in <em>phylojunction</em> to build a discrete SSE distribution and assign it to a stochastic DAG node.</span><a class="headerlink" href="#id19" title="Link to this code"></a></div>
+<div class="literal-block-wrapper docutils container" id="id20">
+<div class="code-block-caption"><span class="caption-text"><strong>Script excerpt 4.</strong> Commands in <em>phylojunction</em> to build a discrete SSE distribution and assign it to a stochastic DAG node.</span><a class="headerlink" href="#id20" title="Link to this code"></a></div>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">det_birth_rate1</span> <span class="o">:=</span> <span class="n">sse_rate</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;lambda1&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="s2">&quot;speciation&quot;</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 <span class="n">det_birth_rate2</span> <span class="o">:=</span> <span class="n">sse_rate</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;lambda2&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="s2">&quot;speciation&quot;</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
 

@@ -11,7 +11,7 @@ import phylojunction.utility.exception_classes as ec
 import phylojunction.utility.helper_functions as pjh
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 # MacroevolEvent = enum.Enum("Macroevol. event",

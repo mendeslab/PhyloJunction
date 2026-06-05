@@ -2,6 +2,12 @@ import unittest
 import matplotlib
 from dendropy import Tree, Node, Taxon
 
+from pathlib import Path
+DATA_TEST_INPUT_DIR = Path(__file__).parent.parent / "data" / "test_input"
+TR_FILE_PATH_STR = str(DATA_TEST_INPUT_DIR / "tr.tre")
+SMAPS_FILE_PATH_STR = str(DATA_TEST_INPUT_DIR / "smaps.tsv")
+TIPDATA_FILE_PATH_STR = str(DATA_TEST_INPUT_DIR / "tip_data.tsv")
+
 # pj imports
 import phylojunction.data.tree as pjtr
 import phylojunction.data.sampled_ancestor as pjsa
@@ -9,7 +15,7 @@ import phylojunction.data.attribute_transition as pjat
 import phylojunction.interface.cmdbox.cmd_parse as cmdp
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 class TestReconstructedTreePrint(unittest.TestCase):
@@ -1532,11 +1538,14 @@ class TestReconstructedTreePrint(unittest.TestCase):
         """
 
         read_smap_str = \
-            ('trs <- read_tree(n=1, file_path="tests/data/test_input/tr.tre", '
+            ('trs <- read_tree(n=1, file_path=\"' +
+             TR_FILE_PATH_STR + '\",'
              'node_name_attr="index")\n'
              'mapped_trs := map_attr(tree=trs, fun="smap", '
-             'maps_file_path="tests/data/test_input/smaps.tsv", '
-             'tip_attr_file_path="tests/data/test_input/tip_data.tsv", '
+             'maps_file_path=\"' +
+             SMAPS_FILE_PATH_STR + '\",'
+             'tip_attr_file_path=\"' +
+             TIPDATA_FILE_PATH_STR + '\",'
              'attr_name="state", n_regions=2, geo="true")')
 
         dag_obj = cmdp.script2dag(read_smap_str, in_pj_file=False)

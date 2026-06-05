@@ -17,7 +17,7 @@ from phylojunction.data.attribute_transition \
     import AttributeTransition  # type: ignore
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 class DnSSE(pgm.DistrForSampling):
@@ -319,10 +319,19 @@ class DnSSE(pgm.DistrForSampling):
                 [int(self.start_states[0]) for i in range(self.n_sim)]
 
         # do not know how to multiply, error!
-        elif n_start_states > 1 and n_start_states != self.n_sim:
-            raise ec.DimensionalityError(
-                self.DN_NAME,
-                par_name="'state_state'")
+        elif n_start_states > 1:
+            if ((n_start_states / self.n_sim) != self.n_repl) and \
+                    (n_start_states != self.n_sim):
+                raise ec.DimensionalityError(
+                    self.DN_NAME,
+                    par_name="'state_state'")
+            
+            # if number of starting states is identical
+            # to number of samples (simulations), we assume all
+            # replicates within a sample will share the starting
+            # state of that sample -- here, we multiply them
+            elif n_start_states == self.n_sim:
+                self.start_states *= self.n_repl
 
         ########################
         # Checking stop values #
@@ -2175,25 +2184,27 @@ class DnSSE(pgm.DistrForSampling):
         ith_sim = 0
         n_failed_attempts = 0
         while len(output) < (self.n_sim * self.n_repl):
-            repl_size = 0
+            ith_repl = 0
 
-            while repl_size < self.n_repl:
+            while ith_repl < self.n_repl:
                 # abort due to runtime limit
                 ellapsed_time = \
                     pjh.get_ellapsed_time_in_seconds(start_time, time.time())
                 if ellapsed_time >= self.runtime_limit:
                     raise ec.RunTimeLimit(self.runtime_limit)
 
+                start_states_idx = (ith_sim * self.n_repl) + ith_repl
+
                 # simulate!
                 tr = self.simulate(
-                    self.start_states[ith_sim],
+                    self.start_states[start_states_idx],
                     self.stop_val[ith_sim],
                     sample_idx=ith_sim)
 
                 # check if tr has right specs
                 if self._is_tr_ok(tr, self.stop_val[ith_sim]):
                     output.append(tr)
-                    repl_size += 1
+                    ith_repl += 1
 
                 # tree not good, stay in while loop
                 else:

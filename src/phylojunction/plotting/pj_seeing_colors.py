@@ -12,12 +12,12 @@ def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=100):
 
 
 # matplotlib color palette name, n colors
-cmap = matplotlib.pyplot.cm.get_cmap('seismic', 5)
+cmap = plt.get_cmap('seismic', 5)
 for i in range(cmap.N):
     rgb = cmap(i)[:3]  # will return rgba, we take only first 3 so we get rgb
     print(matplotlib.colors.rgb2hex(rgb))
 
-qual_cmap = matplotlib.cm.get_cmap('tab20')
+qual_cmap = plt.get_cmap('tab20')
 qual_color_list = \
     [matplotlib.colors.rgb2hex(qual_cmap(i)[:3]) for i in range(qual_cmap.N)]
 
@@ -27,7 +27,7 @@ n_colors = 20
 mv = 120 * 2.08 / n_colors  # I found this 2.08 empirically... by trying!
 
 # this palette does up to 250 colors, not more
-cmap = matplotlib.pyplot.cm.get_cmap('terrain', n_colors)
+cmap = plt.get_cmap('terrain', n_colors)
 
 # for up to 120
 # new_cmap = truncate_colormap(cmap, minval=0.0, maxval=2.08, n=n_colors)
@@ -59,7 +59,13 @@ new_cmap = truncate_colormap(cmap, minval=0.0, maxval=mv, n=n_colors)
 
 if __name__ == "__main__":
     fig, ax = matplotlib.pyplot.subplots(figsize=(8, 5))
-    for x in range(n_colors):
-        # ax.axvline(x, color=color_list[x], linewidth=3)
-        ax.axvline(x, color=qual_color_list[x], linewidth=3)
+    # for x in range(n_colors):
+    #     # ax.axvline(x, color=color_list[x], linewidth=3)
+    #     ax.axvline(x, color=qual_color_list[x], linewidth=3)
+    # plt.show()
+
+    # colors = plt.cm.Vega20c((4. / 3 * np.arange(20 * 3 / 4)).astype(int))
+    plt.scatter(np.arange(20), np.ones(20), c=qual_color_list, s=180)
+    print(qual_color_list)
+
     plt.show()

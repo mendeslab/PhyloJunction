@@ -133,6 +133,11 @@
 <span class="sig-name descname"><span class="pre">global_time</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#phylojunction.data.attribute_transition.AttributeTransition.global_time" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="phylojunction.data.attribute_transition.AttributeTransition.prep_str_representation">
+<span class="sig-name descname"><span class="pre">prep_str_representation</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#phylojunction.data.attribute_transition.AttributeTransition.prep_str_representation" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.attribute_transition.AttributeTransition.str_representation">
 <span class="sig-name descname"><span class="pre">str_representation</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#phylojunction.data.attribute_transition.AttributeTransition.str_representation" title="Link to this definition"></a></dt>
@@ -270,13 +275,13 @@ origin and the root. Will be 0.0 if no origin node.</p></li>
 <li><p><strong>node_heights_dict</strong> (<em>dict</em>) – Dictionary that holds the heights of
 all nodes in the tree. Keys are node labels, values are
 floats.</p></li>
-<li><p><strong>rec_node_heights_dict</strong> (<em>dict</em>) – Dictionary that holds the heights
+<li><p><strong>rec_tr_node_heights_dict</strong> (<em>dict</em>) – Dictionary that holds the heights
 of all nodes in the reconstructed tree. Keys are node
 labels, values are floats.</p></li>
 <li><p><strong>node_ages_dict</strong> (<em>dict</em>) – Dictionary that holds the ages of all
 nodes in the tree. Keys are node labels, values are
 floats.</p></li>
-<li><p><strong>rec_node_ages_dict</strong> (<em>dict</em>) – Dictionary that holds the ages of
+<li><p><strong>rec_tr_node_ages_dict</strong> (<em>dict</em>) – Dictionary that holds the ages of
 all nodes in the reconstructed tree. Keys are node labels,
 values are floats.</p></li>
 <li><p><strong>slice_t_ends</strong> (<em>float</em>) – List of floats with the end times for
@@ -318,13 +323,27 @@ are nodes that are both sampled and observed by
 definition.</p></li>
 <li><p><strong>sa_lineage_dict</strong> (<em>dict</em>) – </p></li>
 <li><p><strong>at_dict</strong> (<em>dict</em><em>, </em><em>optional</em>) – Dictionary holding a list of
-AttributeTransition objects for each branch (subtending an
+AttributeTransition instances for each branch (subtending an
 internal node) along which state transitions happened.
 When a cladogenetic event change states, it is recorded as
 the first (oldest) state transition of its children.</p></li>
 <li><p><strong>rec_tr_at_dict</strong> (<em>dict</em><em>, </em><em>optional</em>) – Same as ‘at_dict’, but applies
-to reconstructed tree.</p></li>
-<li><p><strong>clado_at_dict</strong> (<em>dict</em>) – </p></li>
+to reconstructed tree. Defaults to ‘None’.</p></li>
+<li><p><strong>have_updated_rec_tr_at_dict</strong> (<em>bool</em>) – Flag keeping track of the
+status of ‘rec_tr_at_dict’. If ‘extract_reconstructed_tree’
+updated it, then this flag will be set to True. Defaults to
+‘False’.</p></li>
+<li><p><strong>clado_at_dict</strong> (<em>dict</em>) – Dictionary holding an AttributeTransition
+instance for internal nodes that underwent speciation where
+at least one child’s state differs from the parent’s. Keys
+are strings, values are AttributeTransitions.  Defaults to
+‘None’.</p></li>
+<li><p><strong>rec_tr_clado_at_dict</strong> (<em>dict</em>) – Same as ‘clado_at_dict’, but
+applies to reconstructed tree.</p></li>
+<li><p><strong>have_updated_rec_tr_at_dict</strong> – Flag keeping track of the
+status of ‘rec_tr_clado_at_dict’.
+If ‘extract_reconstructed_tree’ updated it, then this flag
+will be set to True. Defaults to ‘False’.</p></li>
 <li><p><strong>epsilon</strong> (<em>float</em>) – Float threshold to determine if a
 tiny decimal number is to be considered 0.0 or not. In
 other words, if the difference between a tiny value ‘x’
@@ -461,13 +480,18 @@ and their values as values.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.get_taxon_states_str">
-<span class="sig-name descname"><span class="pre">get_taxon_states_str</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nexus</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.get_taxon_states_str" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">get_taxon_states_str</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nexus</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bit_format</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.get_taxon_states_str" title="Link to this definition"></a></dt>
 <dd><p>Get states for all nodes in tree as single string.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>nexus</strong> (<em>bool</em>) – Flag specifying whether states are being
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nexus</strong> (<em>bool</em>) – Flag specifying whether states are being
 collected for Nexus printing (‘True’ if so). Defaults
-to ‘False’.</p>
+to ‘False’.</p></li>
+<li><p><strong>bit_format</strong> (<em>bool</em>) – Flag specifying if states are to be
+represented as bit patterns (e.g., ‘A’ -&gt; ‘10’, ‘B’ -&gt;
+‘01’, ‘AB’ -&gt; ‘11’). Defaults to ‘False’.</p></li>
+</ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>String containing the states of all nodes in tree.</p>
@@ -477,6 +501,16 @@ to ‘False’.</p>
 </dd>
 </dl>
 </dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.have_updated_rec_tr_at_dict">
+<span class="sig-name descname"><span class="pre">have_updated_rec_tr_at_dict</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.have_updated_rec_tr_at_dict" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.have_updated_rec_tr_clado_at_dict">
+<span class="sig-name descname"><span class="pre">have_updated_rec_tr_clado_at_dict</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.have_updated_rec_tr_clado_at_dict" title="Link to this definition"></a></dt>
+<dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.is_extant_or_sa_on_both_sides_complete_tr_root">
@@ -611,16 +645,6 @@ or during tree initialization.</p></li>
 </dl>
 </dd></dl>
 
-<dl class="py attribute">
-<dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.rec_node_ages_dict">
-<span class="sig-name descname"><span class="pre">rec_node_ages_dict</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.rec_node_ages_dict" title="Link to this definition"></a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.rec_node_heights_dict">
-<span class="sig-name descname"><span class="pre">rec_node_heights_dict</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.rec_node_heights_dict" title="Link to this definition"></a></dt>
-<dd></dd></dl>
-
 <dl class="py method">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.rec_str">
 <span class="sig-name descname"><span class="pre">rec_str</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.rec_str" title="Link to this definition"></a></dt>
@@ -634,6 +658,16 @@ or during tree initialization.</p></li>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.rec_tr_clado_at_dict">
 <span class="sig-name descname"><span class="pre">rec_tr_clado_at_dict</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#phylojunction.data.attribute_transition.AttributeTransition" title="phylojunction.data.attribute_transition.AttributeTransition"><span class="pre">AttributeTransition</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.rec_tr_clado_at_dict" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.rec_tr_node_ages_dict">
+<span class="sig-name descname"><span class="pre">rec_tr_node_ages_dict</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.rec_tr_node_ages_dict" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.rec_tr_node_heights_dict">
+<span class="sig-name descname"><span class="pre">rec_tr_node_heights_dict</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.rec_tr_node_heights_dict" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
@@ -724,7 +758,7 @@ or during tree initialization.</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.update_rec_tr_at_dict">
 <span class="sig-name descname"><span class="pre">update_rec_tr_at_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rec_tree_root_nd</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Node</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.update_rec_tr_at_dict" title="Link to this definition"></a></dt>
-<dd><p>Update ‘rec_tr_at_dict’ and ‘rec_clado-at_dict’ members.</p>
+<dd><p>Update ‘rec_tr_at_dict’ and ‘rec_clado_at_dict’ members.</p>
 <p>The ‘at_dict’ member of the AnnotatedTree, when defined, will by
 default host the state transitions of every node of the complete
 tree. This method initializes ‘rec_tr_at_dict’ so that it

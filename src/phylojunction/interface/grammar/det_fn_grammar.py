@@ -9,7 +9,7 @@ import phylojunction.pgm.pgm as pgm
 import phylojunction.data.tree as pjtr
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 class PJDetFnGrammar():

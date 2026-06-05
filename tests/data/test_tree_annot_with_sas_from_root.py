@@ -6,7 +6,7 @@ import phylojunction.data.tree as pjtr
 import phylojunction.data.sampled_ancestor as pjsa
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 class TestAnnotateTreeWithSAsFromRoot(unittest.TestCase):

@@ -11,7 +11,7 @@ import phylojunction.functionality.biogeo as pjbio
 import phylojunction.calculation.discrete_sse as sseobj  # type: ignore
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 def make_mapped_ann_tree(det_fn_name: str,

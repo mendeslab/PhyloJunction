@@ -11,7 +11,7 @@ import phylojunction.readwrite.pj_write as pjwrite
 import phylojunction.readwrite.pj_read as pjread
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 def join_dataframes(

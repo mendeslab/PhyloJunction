@@ -19,7 +19,7 @@ from phylojunction.interface.pysidegui.pjguiwidgets.pj_buttons \
     import PJPushButton  # type: ignore
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 my_dir_path = Path(__file__)

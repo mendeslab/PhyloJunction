@@ -8,7 +8,7 @@ import phylojunction.utility.exception_classes as ec
 # from user_interface.dn_discrete_sse import make_discrete_SSE_dn # https://stackoverflow.com/questions/16981921/relative-imports-in-python-3
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 class PJDnGrammar():
@@ -29,6 +29,8 @@ class PJDnGrammar():
             tuple(["n", "nr", "shape", "scale", "rate_parameterization"]),
             "unif":
             tuple(["n", "nr", "min", "max"]),
+            "categorical":
+            tuple(["n", "nr", "cats", "probs"]),
             "discrete_sse": tuple(["n", "nr", "stop", "stop_value", "origin",
                                    "stash", "start_state", "eps",
                                    "runtime_limit", "max_n_attempts",
@@ -381,8 +383,8 @@ class PJDnGrammar():
                 parent_node_tracker)
 
         elif dn_id == "unif":
-            unif_min: ty.List[float] = []
-            unif_max: ty.List[float] = []
+            unif_min: ty.List[float] = list()
+            unif_max: ty.List[float] = list()
 
             # { mean: node_dag1_name, sd: node_dag2_name, ... }
             if dn_param_dict:
@@ -449,7 +451,129 @@ class PJDnGrammar():
                 unif_min,
                 unif_max,
                 parent_node_tracker)
-    
+
+        elif dn_id == "categorical":
+            n_cats: int = 0
+            cats: ty.List[int] = list()
+
+            n_probs: int = 0
+            probs: ty.List[float] = list()
+
+            if dn_param_dict:
+                # val is list
+                for arg, val in dn_param_dict.items():
+                    if isinstance(val[0], pgm.StochasticNodeDAG):
+                        # needed for building inference specifications
+                        parent_node_tracker[arg] = val[0].node_name
+
+                    # extracting values and removing empty values
+                    extracted_val_list = \
+                        [v for v in pgm.extract_vals_as_str_from_node_dag(val) \
+                         if v]
+
+                    if not cls.grammar_check("categorical", arg):
+                        raise ec.ParseNotAParameterError(arg)
+
+                    elif arg == "n":
+                        if len(extracted_val_list) > 1:
+                            raise ec.ParseRequireSingleValueError(
+                                dnpar.DnCategorical.DN_NAME, arg)
+
+                        try:
+                            n_samples = int(extracted_val_list[0])
+
+                        except ValueError:
+                            raise ec.ParseRequireIntegerError(
+                                dnpar.DnCategorical.DN_NAME, arg)
+
+                    elif arg == "nr":
+                        if len(extracted_val_list) > 1:
+                            raise ec.ParseRequireSingleValueError(
+                                dnpar.DnCategorical.DN_NAME, arg)
+
+                        try:
+                            n_repl = int(extracted_val_list[0])
+
+                        except ValueError:
+                            raise ec.ParseRequireIntegerError(
+                                dnpar.DnCategorical.DN_NAME, arg)
+
+                    elif arg == "cats":
+                        n_cats = len(extracted_val_list)
+
+                        # check 1:
+                        # it only makes sense to use this distribution
+                        # if there are 2+ categories
+                        if n_cats in (0, 1):
+                            raise ec.IncorrectDimensionError("\'cats\'",
+                                                             n_cats,
+                                                             "> 1")
+
+                        # check 2: categories must get integer IDs
+                        try:
+                            cats = [int(v) for v in extracted_val_list]
+
+                        except ValueError:
+                            raise ec.ParseRequireIntegerError(
+                                dnpar.DnCategorical.DN_NAME, arg)
+
+                    elif arg == "probs":
+                        n_probs = len(extracted_val_list)
+
+                        # check 1:
+                        # it only makes sense to use this distribution
+                        # if there are 2+ categories (meaning 2+ probs)
+                        if n_probs in (0, 1):
+                            raise ec.IncorrectDimensionError("\'probs\'",
+                                                             n_probs,
+                                                             "> 1")
+
+                        # check 2: there must be 1 prob per cat
+                        elif n_probs != n_cats:
+                            raise ec.IncorrectDimensionError("\'probs\'",
+                                                             n_probs,
+                                                             "# of categories (" +
+                                                             str(n_cats) +
+                                                             ")")
+
+                        # check 3: values must be floats
+                        try:
+                            probs = [float(v) for v in extracted_val_list]
+
+                        except ValueError:
+                            raise ec.ParseRequireNumericError(
+                                dnpar.DnCategorical.DN_NAME, arg)
+
+                        # check 4: floats must add up to 1.0
+                        prob_sum = sum(probs)
+                        if prob_sum > 1.0 or (1.0 - prob_sum) > 1e-3:
+                            arg_str = "[" + ", ".join(str(v) for v in val) + "]"
+                            raise ec.ParseInvalidArgumentError(
+                                "probs",
+                                arg_str,
+                                ("Sum of probabilities must be within "
+                                "1e-3 of unity.")
+                            )
+
+            # making sure essential parameters of distribution have been specified
+            for par_obj, par_name in \
+                    ((cats, "cats"), (probs, "probs")):
+                if not par_obj:
+                    raise ec.ParseMissingParameterError(par_name)
+
+            # this distribution requires a vector parameter, which could in
+            # principle be vectorized itself (i.e., be a 2D parameter)
+            cats = [cats]
+            probs = [probs]
+
+            return dnpar.DnCategorical(
+                n_samples,
+                n_repl,
+                cats,
+                probs,
+                parent_node_tracker)
+
+
     @classmethod
     def init_return_discrete_SSE_dn(
         cls,
@@ -500,7 +624,8 @@ class PJDnGrammar():
                      "normal",
                      "exponential",
                      "gamma",
-                     "unif"):
+                     "unif",
+                     "categorical"):
             return cls.init_return_parametric_dn(dn_id, dn_param_dict)
 
         #################################

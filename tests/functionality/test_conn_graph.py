@@ -4,7 +4,7 @@ import unittest
 import phylojunction.functionality.feature_io as pjgeo
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 class TestConnGraph(unittest.TestCase):

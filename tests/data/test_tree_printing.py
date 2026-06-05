@@ -5,6 +5,9 @@ from dendropy import Tree, Node, Taxon
 import phylojunction.data.tree as pjtr
 import phylojunction.data.sampled_ancestor as pjsa
 
+__author__ = "Fabio K. Mendes"
+__email__ = "fmendes@lsu.edu"
+
 class TestTreePrinting(unittest.TestCase):
 
     def test_nexus_printing(self):

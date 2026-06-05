@@ -12,8 +12,7 @@ import phylojunction.calculation.discrete_sse as sseobj
 import phylojunction.distribution.dn_discrete_sse as distsse
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
-
+__email__ = "fmendes@lsu.edu"
 
 def run_example_yule_string() -> pgm.DirectedAcyclicGraph:
     """Run example 1.
@@ -24,10 +23,11 @@ def run_example_yule_string() -> pgm.DirectedAcyclicGraph:
 
     yule_model_str = \
         ('n_sim <- 2\nn_rep <- 2\nbirth_rate <- 1.0\n'
+         'start_states <- [0, 0, 0, 0]\n'''
          'det_birth_rate := sse_rate(name="lambda", value=birth_rate,'
          ' event="speciation")\n'
          'stash := sse_stash(flat_rate_mat=[det_birth_rate])\n'
-         'trs ~ discrete_sse(n=n_sim, nr=n_rep, stash=stash, start_state=[0],'
+         'trs ~ discrete_sse(n=n_sim, nr=n_rep, stash=stash, start_state=start_states,'
          ' stop="size", stop_value=10.0, origin="false")\n')
     
     dag_obj = cmdp.script2dag(yule_model_str, in_pj_file=False)
@@ -409,8 +409,6 @@ def run_example_map_attr(ax: matplotlib.pyplot.Axes) -> None:
                 sa_along_branches=False,
                 attr_of_interest="state")
 
-
-
 # TODO
 # def run_example_inference_string():
     # as if we had clicked "See" in the inference tab
@@ -460,13 +458,13 @@ if __name__ == "__main__":
     # 2: Same as (1), but reading a pre-made .pj script in examples/geosse.pj
     # 3: BiSSE model with incomplete sample, 2 tree samples, 2 tree replicates per sample
     # 4: Builds discrete SSE tree manually, then prints on screen
-    # 5: Builds discrete SSE tree from newick string, then prints on screen
+    # 5: Builds discrete SSE tree from Newick string, then prints on screen
     # 6: Read .pj script examples/see_stoch_maps.pj
 
     # example_to_run = 1
     # example_to_run = 2
     # example_to_run = 3
-    example_to_run = 4
+    # example_to_run = 4
     # example_to_run = 5
     # example_to_run = 6
         

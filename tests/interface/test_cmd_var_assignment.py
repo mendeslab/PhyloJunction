@@ -1,5 +1,10 @@
 import unittest
 import re
+from pathlib import Path
+
+EXAMPLES_DIR = Path(__file__).parent.parent.parent / "examples" / "trees_maps_files"
+FILE_PATH1_STR = str(EXAMPLES_DIR / "tree_to_read.tre")
+FILE_PATH2_STR = str(EXAMPLES_DIR / "trees_to_read.tre")
 
 # pj imports
 import phylojunction.pgm.pgm as pgm
@@ -8,10 +13,11 @@ import phylojunction.interface.cmdbox.cmd_parse_utils as cmdu
 import phylojunction.utility.exception_classes as ec
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 class TestVarAssignment(unittest.TestCase):
+
     def test_var_assignment(self):
         """
         Test variable assignment.
@@ -108,7 +114,7 @@ class TestVarAssignment(unittest.TestCase):
     def test_var_assignment_read_tree_string(self):
         """Test read_tree() from string.
         
-        Test read_tree()calls using Newick strings directly produce
+        Test read_tree() calls using Newick strings directly produce
         the right DAG.
         """
 
@@ -154,8 +160,9 @@ class TestVarAssignment(unittest.TestCase):
 
         dag_obj = pgm.DirectedAcyclicGraph()
 
-        cmd_line1 = ('tr <- read_tree(file_path="examples/trees_maps_files'
-                     '/tree_to_read.tre", node_name_attr="index")')
+        cmd_line1 = ('tr <- read_tree(file_path=\"' +
+                     FILE_PATH1_STR + '\",'
+                     'node_name_attr="index")')
 
         stoch_node_name, _, stoch_node_spec = \
             re.split(cmdu.assign_regex, cmd_line1)
@@ -172,8 +179,9 @@ class TestVarAssignment(unittest.TestCase):
                          ('((nd1:1.0[&index=1],nd2:1.0[&index=2])nd4:1.0'
                           '[&index=4],nd3:2.0[&index=3])nd5[&index=5];'))
         
-        cmd_line2 = ('tr <- read_tree(file_path="examples/trees_maps_files'
-                     '/trees_to_read.tre", node_name_attr="index")')
+        cmd_line2 = ('tr <- read_tree(file_path=\"' +
+                     FILE_PATH2_STR + '\",'
+                     'node_name_attr="index")')
 
         stoch_node_name, _, stoch_node_spec = re.split(cmdu.assign_regex, cmd_line2)
         cmd.parse_variable_assignment(dag_obj, stoch_node_name, stoch_node_spec, cmd_line2)
@@ -237,8 +245,8 @@ class TestVarAssignment(unittest.TestCase):
 
         dag_obj = pgm.DirectedAcyclicGraph()
 
-        cmd_line1 = ('tr <- read_tree(nr=13, file_path="examples/'
-                     'trees_maps_files/tree_to_read.tre", '
+        cmd_line1 = ('tr <- read_tree(nr=13, file_path=\"' +
+                     FILE_PATH1_STR + '\", '
                      'node_name_attr="index")')
 
         stoch_node_name, _, stoch_node_spec = re.split(cmdu.assign_regex, cmd_line1)
@@ -257,8 +265,8 @@ class TestVarAssignment(unittest.TestCase):
         self.assertEqual(str(exc.exception),
                          expected_exception_message1)
         
-        cmd_line2 = ('tr <- read_tree(file_path="examples/'
-                     'trees_maps_files/tree_to_read.tre", '
+        cmd_line2 = ('tr <- read_tree(file_path=\"' +
+                     FILE_PATH2_STR + '\", '
                      'node_name_attr="name")')
 
         stoch_node_name, _, stoch_node_spec = re.split(cmdu.assign_regex, cmd_line2)

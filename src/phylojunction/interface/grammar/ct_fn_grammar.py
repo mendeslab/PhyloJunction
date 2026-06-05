@@ -6,7 +6,7 @@ import phylojunction.pgm.pgm as pgm
 import phylojunction.interface.grammar.ct_fn_treereader_makers as make_tree
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 class PJCtFnGrammar():

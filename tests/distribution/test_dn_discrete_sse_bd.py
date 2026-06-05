@@ -9,7 +9,7 @@ import phylojunction.calculation.discrete_sse as sseobj
 import phylojunction.distribution.dn_discrete_sse as distsse
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 class TestBDTrees(unittest.TestCase):
@@ -85,6 +85,7 @@ class TestBDTrees(unittest.TestCase):
                 condition_on_survival=True,
                 epsilon=1e-12,
                 runtime_limit=3600,
+                max_n_failed_attempts=400,
                 debug=False)
 
             trs = sse_sim.generate()

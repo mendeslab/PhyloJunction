@@ -44,7 +44,7 @@ def check_and_vectorize_if_must(
 
     Args:
         param_list (tuple): Parameter values (could be scalar
-        integers, floats, strings, or any of those in a list).
+            integers, floats, strings, or any of those in a list).
         dn_name (str): Name of the distribution whose parameter values
             we are checking.
         size_to_grow (int): Number of values we need, which is the
@@ -107,7 +107,6 @@ def check_and_vectorize_if_must(
     # in case there is more than one parameter
     if isinstance(vectorizable_param_list, list):
         for v in vectorizable_param_list:
-
             # a single value was provided as scalar, either by itself, or
             # inside a list by itself
             if isinstance(v, (int, float, str)):

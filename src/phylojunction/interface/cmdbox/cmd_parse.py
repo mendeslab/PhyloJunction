@@ -16,7 +16,7 @@ import phylojunction.interface.grammar.det_fn_grammar as detgrammar
 import phylojunction.utility.exception_classes as ec
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 def script2dag(script_file_path_or_model_spec: str,

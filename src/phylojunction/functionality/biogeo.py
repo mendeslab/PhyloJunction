@@ -11,7 +11,7 @@ import phylojunction.utility.helper_functions as pjh
 import phylojunction.functionality.feature_io as pjf
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 class State2BitLookup:

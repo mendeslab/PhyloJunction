@@ -16,8 +16,9 @@ det_death_rate1 := sse_rate(name="mu1", value=death_rate1, states=[1], event="ex
 det_trans_rate_10 := sse_rate(name="q10", value=trans_rate_10, states=[1,0], event="transition")
 
 # deterministic-node variable ('sse_stash') assignment
-stash := sse_stash(flat_rate_mat=[det_birth_rate0, det_death_rate0, det_trans_rate_01, det_birth_rate1, det_death_rate1, det_trans_rate_10], n_states=2) 
+stash := sse_stash(flat_rate_mat=[det_birth_rate0, det_death_rate0, det_trans_rate_01, det_birth_rate1, det_death_rate1, det_trans_rate_10], n_states=2, seed_age=3.0)
 
 # stochastic-node variable ('trs') assignment
 ori <- 3.0
-trs ~ discrete_sse(n=2, nr=2, stash=stash, start_state=[0], stop="age", stop_value=ori, origin="true", cond_spn="true", cond_surv="true")
+start_states ~ categorical(n=2, nr=2, cats=[0, 1], probs=[0.5, 0.5])
+trs ~ discrete_sse(n=2, nr=2, stash=stash, start_state=start_states, stop="age", stop_value=ori, origin="true", cond_spn="true", cond_surv="true")

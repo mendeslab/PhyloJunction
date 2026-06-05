@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Uniform &mdash; PhyloJunction 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/pj_custom.css?v=b916aa57" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=d45e8c67"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html">
+            
+              <img src="../_static/pj_logo_doc.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../index.html">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installing.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules.html">Library API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PhyloJunction</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Uniform</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/pjdoc/parametric.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <p>PhyloJunction ships with a (growing) number of parametric distributions.
+All distributions support replication (i.e., plating in the DAG) and take as arguments both direct scalar values (e.g., “1.0”) and values stored in DAG nodes.
+On this page you will find examples of how to invoke the available distributions (using the <em>phylojunction</em> language) when building a model.</p>
+<section id="uniform">
+<h1>Uniform<a class="headerlink" href="#uniform" title="Link to this heading"></a></h1>
+<p>The function for assigning a uniform (<code class="docutils literal notranslate"><span class="pre">uniform</span></code>) distribution to a random variable has four parameters:</p>
+<blockquote>
+<div><div class="line-block">
+<div class="line"><code class="docutils literal notranslate"><span class="pre">n</span></code> (integer, optional): Number of samples to draw (samples are i.i.d.). Defaults to 1.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">nr</span></code> (integer, optional): Number of replicates to draw per sample. Defaults to 1.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">min</span></code> (real number, required): Lower bound (inclusive).</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">max</span></code> (real number, required): Upper bound (inclusive).</div>
+</div>
+</div></blockquote>
+<div class="literal-block-wrapper docutils container" id="id1">
+<div class="code-block-caption"><span class="caption-text"><strong>Example command.</strong> Specifying two samples of a twice replicated uniformly distributed random variable <span class="math notranslate nohighlight">\(x\)</span>, from -1.0 and 1.0.</span><a class="headerlink" href="#id1" title="Link to this code"></a></div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">~</span> <span class="n">unif</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">nr</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="nb">min</span><span class="o">=-</span><span class="mf">1.0</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="exponential">
+<h1>Exponential<a class="headerlink" href="#exponential" title="Link to this heading"></a></h1>
+<p>The function for assigning a exponential (<code class="docutils literal notranslate"><span class="pre">exponential</span></code>) distribution to a random variable has four parameters:</p>
+<blockquote>
+<div><div class="line-block">
+<div class="line"><code class="docutils literal notranslate"><span class="pre">n</span></code> (integer, optional): Number of samples to draw (samples are i.i.d.). Defaults to 1.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">nr</span></code> (integer, optional): Number of replicates to draw per sample. Defaults to 1.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">rate</span></code> (positive real, required): Rate (or scale) of distribution.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">rate_parameterization</span></code> (string boolean, optional): Whether the value passed in <code class="docutils literal notranslate"><span class="pre">rate</span></code> is the distribution’s rate. Defaults to “true”.</div>
+</div>
+</div></blockquote>
+<div class="literal-block-wrapper docutils container" id="id2">
+<div class="code-block-caption"><span class="caption-text"><strong>Example command.</strong> Specifying two samples of a twice replicated exponentially (scale <span class="math notranslate nohighlight">\(\frac{1}{\lambda}=1.0\)</span>) distributed random variable <span class="math notranslate nohighlight">\(x\)</span>.</span><a class="headerlink" href="#id2" title="Link to this code"></a></div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">~</span> <span class="n">exponential</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">nr</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">rate</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">rate_parameterization</span><span class="o">=</span><span class="s2">&quot;false&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="gamma">
+<h1>Gamma<a class="headerlink" href="#gamma" title="Link to this heading"></a></h1>
+<p>The function for assigning a gamma (<code class="docutils literal notranslate"><span class="pre">gamma</span></code>) distribution to a random variable has five parameters:</p>
+<blockquote>
+<div><div class="line-block">
+<div class="line"><code class="docutils literal notranslate"><span class="pre">n</span></code> (integer, optional): Number of samples to draw (samples are i.i.d.). Defaults to 1.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">nr</span></code> (integer, optional): Number of replicates to draw per sample. Defaults to 1.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">shape</span></code> (positive real, required): Shape of distribution.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">scale</span></code> (positive real, required): Scale (or rate) of distribution.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">rate_parameterization</span></code> (string boolean, optional): Whether the value passed in <code class="docutils literal notranslate"><span class="pre">scale</span></code> is the distribution’s rate. Defaults to “false”.</div>
+</div>
+</div></blockquote>
+<div class="literal-block-wrapper docutils container" id="id3">
+<div class="code-block-caption"><span class="caption-text"><strong>Example command.</strong> Specifying two samples of a twice replicated gamma-distributed (shape <span class="math notranslate nohighlight">\(k=10.0\)</span>, scale <span class="math notranslate nohighlight">\(\theta=1.0\)</span>) random variable <span class="math notranslate nohighlight">\(x\)</span>.</span><a class="headerlink" href="#id3" title="Link to this code"></a></div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">~</span> <span class="n">gamma</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">nr</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="normal">
+<h1>Normal<a class="headerlink" href="#normal" title="Link to this heading"></a></h1>
+<p>The function for assigning a normal (<code class="docutils literal notranslate"><span class="pre">normal</span></code>) distribution to a random variable has four parameters:</p>
+<blockquote>
+<div><div class="line-block">
+<div class="line"><code class="docutils literal notranslate"><span class="pre">n</span></code> (integer, optional): Number of samples to draw (samples are i.i.d.). Defaults to 1.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">nr</span></code> (integer, optional): Number of replicates to draw per sample. Defaults to 1.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">mean</span></code> (real, required): Mean (location) of distribution.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">sd</span></code> (positive real, required): Standard deviation (scale) of distribution.</div>
+</div>
+</div></blockquote>
+<div class="literal-block-wrapper docutils container" id="id4">
+<div class="code-block-caption"><span class="caption-text"><strong>Example command.</strong> Specifying two samples of a twice replicated normally (mean <span class="math notranslate nohighlight">\(\mu=0.0\)</span>, standard deviation <span class="math notranslate nohighlight">\(\sigma=1.0\)</span>) distributed random variable <span class="math notranslate nohighlight">\(x\)</span>.</span><a class="headerlink" href="#id4" title="Link to this code"></a></div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">~</span> <span class="n">normal</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">nr</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">mean</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="log-normal">
+<h1>Log-normal<a class="headerlink" href="#log-normal" title="Link to this heading"></a></h1>
+<p>The function for assigning a log-normal (<code class="docutils literal notranslate"><span class="pre">lognormal</span></code>) distribution to a random variable has five parameters:</p>
+<blockquote>
+<div><div class="line-block">
+<div class="line"><code class="docutils literal notranslate"><span class="pre">n</span></code> (integer, optional): Number of samples to draw (samples are i.i.d.). Defaults to 1.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">nr</span></code> (integer, optional): Number of replicates to draw per sample. Defaults to 1.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">meanlog</span></code> (real, required): Mean (location) of distribution over the logarithm of the random variable.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">sdlog</span></code> (positive real, required): Standard deviation (scale) of distribution over the logarithm of the random variable.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">log_space</span></code> (string boolean, optional): Whether the value of <code class="docutils literal notranslate"><span class="pre">mean</span></code> is in log-space. Defaults to “true”.</div>
+</div>
+</div></blockquote>
+<div class="literal-block-wrapper docutils container" id="id5">
+<div class="code-block-caption"><span class="caption-text"><strong>Example command.</strong> Specifying two samples of a twice replicated log-normally (mean log(<span class="math notranslate nohighlight">\(\mu)=-3.25\)</span>, standard deviation <span class="math notranslate nohighlight">\(\sigma=0.25\)</span>) distributed random variable <span class="math notranslate nohighlight">\(x\)</span>.</span><a class="headerlink" href="#id5" title="Link to this code"></a></div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">~</span> <span class="n">lognormal</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">mean</span><span class="o">=-</span><span class="mf">3.25</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mf">0.25</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="categorical">
+<h1>Categorical<a class="headerlink" href="#categorical" title="Link to this heading"></a></h1>
+<p>The function for assigning a categorical (<code class="docutils literal notranslate"><span class="pre">categorical</span></code>) distribution to a random variable has four parameters:</p>
+<blockquote>
+<div><div class="line-block">
+<div class="line"><code class="docutils literal notranslate"><span class="pre">n</span></code> (integer, optional): Number of samples to draw (samples are i.i.d.). Defaults to 1.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">nr</span></code> (integer, optional): Number of replicates to draw per sample. Defaults to 1.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">cats</span></code> (integer, required): Number of discrete categories in each draw (must be greater than 1).</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">probs</span></code> (real number, required): Probability of each category (must add up to 1.0).</div>
+</div>
+</div></blockquote>
+<div class="literal-block-wrapper docutils container" id="id6">
+<div class="code-block-caption"><span class="caption-text"><strong>Example command.</strong> Specifying two samples of a twice replicated random variable representing to two equiprobable categories,</span><a class="headerlink" href="#id6" title="Link to this code"></a></div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">~</span> <span class="n">categorical</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">nr</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">cats</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span> <span class="n">probs</span><span class="o">=</span><span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Fabio K. Mendes.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

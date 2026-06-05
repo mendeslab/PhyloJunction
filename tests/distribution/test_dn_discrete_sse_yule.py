@@ -9,7 +9,7 @@ import phylojunction.calculation.discrete_sse as sseobj
 import phylojunction.distribution.dn_discrete_sse as distsse
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 class TestYuleTrees(unittest.TestCase):

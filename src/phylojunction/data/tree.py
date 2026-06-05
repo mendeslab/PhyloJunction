@@ -22,7 +22,7 @@ import phylojunction.data.attribute_transition as pjat
 import phylojunction.functionality.biogeo as pjbio
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 class AnnotatedTree(dp.Tree):
@@ -267,7 +267,8 @@ class AnnotatedTree(dp.Tree):
             ty.Optional[
                 ty.Dict[str, ty.List[pjat.AttributeTransition]]] = None,
             clado_at_dict:
-            ty.Optional[ty.Dict[str, pjat.AttributeTransition]] = None,
+            ty.Optional[
+                ty.Dict[str, pjat.AttributeTransition]] = None,
             tree_died: ty.Optional[bool] = None,
             tree_invalid: ty.Optional[bool] = None,
             read_as_newick_string: bool = False,

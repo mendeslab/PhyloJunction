@@ -3,7 +3,7 @@ import numpy as np
 from scipy.integrate import solve_ivp
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 def mbt_e_eqn(es, qs, mus, b):

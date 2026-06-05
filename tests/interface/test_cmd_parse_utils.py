@@ -4,7 +4,7 @@ import unittest
 import phylojunction.interface.cmdbox.cmd_parse_utils as cmdu
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 class TestCommandParseUtils(unittest.TestCase):
 
@@ -25,7 +25,6 @@ class TestCommandParseUtils(unittest.TestCase):
         cmd_line3 = "a := sse_rate(" + fn_spec3 + ")"     
         
         token_dict1 = cmdu.tokenize_fn_spec(fn_spec1, cmd_line1)
-        print("token_dict1 = ", token_dict1)
         token_dict2 = cmdu.tokenize_fn_spec(fn_spec2, cmd_line2)
         token_dict3 = cmdu.tokenize_fn_spec(fn_spec3, cmd_line3)
 

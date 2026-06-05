@@ -7,7 +7,7 @@ import phylojunction.utility.exception_classes as ec
 from phylojunction.constant_function.ct_function_read_tree import CtFnTreeReader
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 def make_tree_reader(ct_fn_name: str,

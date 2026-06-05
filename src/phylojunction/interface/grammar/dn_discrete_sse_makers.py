@@ -8,7 +8,7 @@ import phylojunction.pgm.pgm as pgm
 import phylojunction.utility.exception_classes as ec
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 def make_discrete_SSE_dn(

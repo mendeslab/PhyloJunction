@@ -6,6 +6,9 @@ import phylojunction.data.tree as pjtr
 import phylojunction.data.sampled_ancestor as pjsa
 import phylojunction.utility.exception_classes as ec
 
+__author__ = "Fabio K. Mendes"
+__email__ = "fmendes@lsu.edu"
+
 class TestTreeExceptions(unittest.TestCase):
     
     def test_alive_annotation_exceptions(self):

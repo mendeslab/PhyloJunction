@@ -2,7 +2,7 @@ import typing as ty
 import enum
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 class ScriptSyntaxError(Exception):
@@ -495,8 +495,8 @@ class ParseRequireIntegerError(Exception):
         self.obj_name = obj_name
         self.message = \
             "When specifying object " + obj_name + "'s parameter \'" \
-            + arg + ("\', something other than an integer was "
-                          "provided. An integer is required.")
+            + arg + ("\', something that could not be read as an integer "
+                          "was provided. An integer is required.")
         super().__init__(self.message)
 
     def __str__(self) -> str:

@@ -12,7 +12,7 @@ import phylojunction.readwrite.pj_read as pjr
 from phylojunction.data.tree import AnnotatedTree
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 class CtFnTreeReader(pgm.ConstantFn):
@@ -46,13 +46,15 @@ class CtFnTreeReader(pgm.ConstantFn):
 
         self.slice_t_ends = None
         self.slice_age_ends = list_time_slice_age_ends
-        # throw away epoch end if last epoch is leads to present
-        if list_time_slice_age_ends[-1] == 0.0:
-            if len(list_time_slice_age_ends) == 1:
-                self.slice_age_ends = None
 
-            else:
-                self.slice_age_ends = list_time_slice_age_ends[:-1]
+        if len(list_time_slice_age_ends) in (0, 1):
+            # if 1 epoch is provided throw away last epoch end
+            self.slice_age_ends = None
+
+        # if there is 2 or more entries in time slice age ends,
+        # throw away last epoch end
+        elif list_time_slice_age_ends[-1] == 0.0:
+            self.slice_age_ends = list_time_slice_age_ends[:-1]
 
         # will hold one or more tree Newick strings
         self.tr_str_list = list()

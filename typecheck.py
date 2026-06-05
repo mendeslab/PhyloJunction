@@ -12,7 +12,7 @@ import subprocess
 import phylojunction
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 module_pkgs_or_mod_name_list = list()
 module_mod_name_list_mypy_args = dict()

@@ -10,7 +10,7 @@ import phylojunction.readwrite.pj_write as pjw
 import phylojunction.interface.pjcli.cli_plotting as cliplt
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 def execute_pj_script(

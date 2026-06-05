@@ -11,7 +11,7 @@ import phylojunction.pgm.pgm as pgm
 import phylojunction.readwrite.pj_write as pjw
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 class TestSmapWrite(unittest.TestCase):

@@ -3,7 +3,7 @@ import math
 from enum import Enum, EnumMeta
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 def exp_root_height_yule_ntaxa(birth_rate: float, n_taxa: int) -> float:

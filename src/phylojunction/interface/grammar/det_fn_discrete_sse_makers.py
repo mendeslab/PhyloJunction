@@ -7,7 +7,7 @@ import phylojunction.pgm.pgm as pgm
 import phylojunction.calculation.discrete_sse as sseobj  # type: ignore
 
 __author__ = "Fabio K. Mendes"
-__email__ = "f.mendes@wustl.edu"
+__email__ = "fmendes@lsu.edu"
 
 
 def make_DiscreteStateDependentRate(
