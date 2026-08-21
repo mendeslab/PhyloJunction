@@ -777,17 +777,33 @@ if __name__ == "__main__":
         + "det_sampling_rate := sse_prob(name=\"rho\", value=sampling_rate, state=[0])\n" \
         + "stash := sse_stash(flat_rate_mat=[det_birth_rate], flat_prob_mat=[det_sampling_rate], n_states=1, n_epochs=1)\n" \
         + "trs ~ discrete_sse(n=n_sim, nr=n_rep, stash=stash, start_state=[0,0], stop=\"age\", stop_value=1.0, origin=\"true\")"
-    
+
+    # fbd with incomplete sampling
     script_str39 = \
+        "birth_rate <- 1.0\n" \
+        + "death_rate <- 0.2\n" \
+        + "fossil_rate <- 0.5\n" \
+        + "det_birth_rate := sse_rate(name=\"lambda\", value=birth_rate, states=[0, 0, 0], event=\"w_speciation\")\n" \
+        + "det_death_rate := sse_rate(name=\"mu\", value=death_rate, states=[0], event=\"extinction\")\n" \
+        + "det_fossil_rate := sse_rate(name=\"psi\", value=fossil_rate, states=[0], event=\"anc_sampling\")\n" \
+        + "sampling_prob <- 0.5\n" \
+        + "det_sampling_prob := sse_prob(name=\"rho\", value=sampling_prob, state=0)\n" \
+        + "stash := sse_stash(flat_rate_mat=[det_birth_rate, det_death_rate, det_fossil_rate]," \
+        + "flat_prob_mat=[det_sampling_prob], n_states=1, n_epochs=1)\n" \
+        + "ori <- 3\n" \
+        + "trs ~ discrete_sse(n=1, stash=stash, start_state=[0], stop=\"age\", stop_value=ori, origin=\"true\"," \
+        + "cond_spn=\"true\", cond_surv=\"true\")"
+
+    script_str40 = \
         'tr <- read_tree(string="((sp1[&index=1]:1.0,sp2[&index=2]:1.0)[&index=4]:1.0,sp3[&index=3]:2.0)[&index=5];", node_name_attr="index")'
     
-    script_str40 = \
+    script_str41 = \
         'tr <- read_tree(string="((sp1:1.0,sp2:1.0):1.0,sp3:2.0);")'
 
-    script_str41 = \
+    script_str42 = \
         'tr <- read_tree(file_path="examples/trees_maps_files/tree_to_read.tre", node_name_attr="index")'
     
-    script_str42 = \
+    script_str43 = \
         'tr <- read_tree(file_path="examples/trees_maps_files/trees_to_read.tre", node_name_attr="index")'
         # tr <- read_tree(file_path="examples/trees_maps_files/trees_to_read.tre", node_name_attr="index")
     
@@ -849,4 +865,49 @@ if __name__ == "__main__":
 
     # file_handle_exception = io.StringIO(script_str36)
 
-    dag = script2dag(script_str8, in_pj_file=False)
+    dag = script2dag(script_str39 , in_pj_file=False, random_seed=456)
+
+    for node_name, node_dag in dag.name_node_dict.items():
+        if isinstance(node_dag, pgm.StochasticNodeDAG):
+            if isinstance(node_dag.value[0], pjtr.AnnotatedTree):
+                ann_tr = node_dag.value[0]
+                print(ann_tr.tree.as_string(schema="newick"))
+
+                rec_tr = ann_tr.extract_reconstructed_tree(plotting_overhead=True)
+                print(rec_tr.as_string(schema="newick"))
+
+
+                # print(node_dag.value[0].tree.as_string(schema="newick"))
+                # print(node_dag.get_node_stats_str(0, len(node_dag.value), 0))
+
+                ######################
+                # Preparing plotting #
+                ######################
+                # fig = Figure(figsize=(11,4.5))
+
+                # note that pjgui uses matplotlib.figure.Figure
+                # (which is part of Matplotlib's OOP class library)
+                #
+                # here, we instead use pyplot's figure, which is the
+                # Matlab-like state-machine API
+                fig = plt.figure()
+
+                ax = fig.add_axes([0.25, 0.2, 0.5, 0.6])
+                ax.patch.set_alpha(0.0)
+                ax.xaxis.set_ticks([])
+                ax.yaxis.set_ticks([])
+                ax.spines['left'].set_visible(False)
+                ax.spines['bottom'].set_visible(False)
+                ax.spines['right'].set_visible(False)
+                ax.spines['top'].set_visible(False)
+
+                pjtr.plot_ann_tree(ann_tr,
+                                   ax,
+                                   use_age=False,
+                                   start_at_origin=True,
+                                   sa_along_branches=True,
+                                   attr_of_interest="state",
+                                   draw_reconstructed=True)
+                # sa_along_branches=False
+
+                plt.show()

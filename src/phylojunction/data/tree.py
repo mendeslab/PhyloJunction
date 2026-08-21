@@ -1415,6 +1415,16 @@ class AnnotatedTree(dp.Tree):
                     if not int_nd_complete_tr.is_leaf():
                         rec_tr_nd_name = recur_to_find_rec_tr_node(int_nd_complete_tr)
 
+                        # entire descendant subtree of this SA lineage node
+                        # also went extinct -- the SA already exists as a
+                        # standalone tip in the reconstructed tree (its
+                        # dummy parent was collapsed by
+                        # suppress_unifurcations), so there is no surviving
+                        # lineage node left to annotate; nothing to do here,
+                        # same as the is_leaf() case above
+                        if rec_tr_nd_name == "":
+                            continue
+
                         rec_tr_nd = \
                             self.tree_reconstructed.find_node_with_label(rec_tr_nd_name)
                         rec_tr_nd.is_sa_lineage = True
@@ -1786,7 +1796,62 @@ class AnnotatedTree(dp.Tree):
                         sa.age = self.rec_tr_root_age - sa.global_time
 
         return self.tree_reconstructed
-   
+
+    def populate_n_stubs_on_branches_of_rec_tr(self) -> None:
+        """Populate n_stub for branches of the reconstructed tree.
+
+        This method is not called upon initialization of class,
+        but rather when information about branches' stubs is required,
+        e.g., when a Gamma-spike clock model is used somewhere in the
+        DAG.
+
+        There is no return and only a side-effect (each node in the
+        reconstructed tree has a member 'n_stub' initialized and
+        populated.
+        """
+
+        if not self.tree_reconstructed:
+            self.extract_reconstructed_tree(plotting_overhead=False)
+
+        for rec_nd in self.tree_reconstructed.preorder_node_iter():
+            rec_nd.n_stub = 0
+
+            complete_nd = self.tree.find_node_with_label(rec_nd.label)
+            rec_parent = rec_nd.parent_node
+
+            if rec_parent is None:
+                continue
+
+            complete_parent = self.tree.find_node_with_label(rec_parent.label)
+
+            current_nd = complete_nd.parent_node
+
+            while current_nd != complete_parent:
+                if not current_nd.is_sa_dummy_parent:
+                    rec_nd.n_stub += 1
+
+                current_nd = current_nd.parent_node
+
+        # dummy nodes (parents of sampled ancestors) are not real branching
+        # events, so any stub count accumulated on their own branch really
+        # belongs to the lineage that survives past the SA event -- we
+        # transfer it to the 'is_sa_lineage' child and zero the dummy node
+        # out; preorder traversal guarantees a parent dummy is processed
+        # (and its count already transferred downward) before any child
+        # dummy is reached, so chained SA events cascade correctly
+        for rec_nd in self.tree_reconstructed.preorder_node_iter():
+            if rec_nd.is_sa_dummy_parent:
+                lineage_child = next(
+                    (ch for ch in rec_nd.child_node_iter()
+                     if ch.is_sa_lineage),
+                    None)
+
+                if lineage_child is not None:
+                    lineage_child.n_stub += rec_nd.n_stub
+
+                rec_nd.n_stub = 0
+
+
     def populate_nd_attr_dict(self,
                               attrs_of_interest_list: ty.List[str],
                               attr_dict_added_separately_from_tree: bool = False) \

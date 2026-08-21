@@ -461,7 +461,7 @@ if __name__ == "__main__":
     # 5: Builds discrete SSE tree from Newick string, then prints on screen
     # 6: Read .pj script examples/see_stoch_maps.pj
 
-    # example_to_run = 1
+    example_to_run = 1
     # example_to_run = 2
     # example_to_run = 3
     # example_to_run = 4
