@@ -98,67 +98,36 @@ class GeoGraph():
         if it is missing in the other direction).
         """
 
-        visited_nodes_set = set()
-        tmp_comm_class_set_list = list()
+        # Treat each directed edge as an undirected connection for component membership.
+        # Mark nodes when queued: each is visited once, and traversal exhausts exactly
+        # the nodes reachable from its seed. Sorted seeds order components by minimum node;
+        # neighbor order cannot change membership. Isolated nodes form singleton components.
+        neighbors = {node: set() for node in self._node_set}
+        for source, target in self._edge_set:
+            neighbors[source].add(target)
+            neighbors[target].add(source)
 
-        for from_node, to_node_set in self._edge_dict.items():
-
-            # first we mark the nodes that have been visited
-            visited_nodes_set.add(from_node)
-            for to_node in to_node_set:
-                visited_nodes_set.add(to_node)
-
-            # a node and all nodes connected to it by at least
-            # one directed edge
-            node_and_edges_coming_out = set([from_node]).union(to_node_set)
-
-            intersected = False
-            for i, ccs in enumerate(tmp_comm_class_set_list):
-                # set of nodes has any overlap with an existing comm class
-                if not ccs.isdisjoint(node_and_edges_coming_out):
-                    # we merge the two into a larger comm class
-                    ccs = ccs.union(node_and_edges_coming_out)
-
-                    # and update list of communicating classes
-                    tmp_comm_class_set_list[i] = ccs
-                    intersected = True
-
-            # if the set of nodes from this iteration has no intersection
-            # with any existing communicating class, it is a new class on
-            # its own
-            if not intersected:
-                tmp_comm_class_set_list.append(node_and_edges_coming_out)
-
-        # 'singlet' comm classes
-        for a_node in self._node_set:
-            if a_node not in visited_nodes_set:
-                tmp_comm_class_set_list.append(set([a_node]))
-
-        # final pass: collapsing comm classes that overlap
-        for cc in tmp_comm_class_set_list:
-            if len(self.comm_class_set_list) == 0:
-                self.comm_class_set_list.append(cc)
-
-            else:
-                for i, seen_cc in enumerate(self.comm_class_set_list):
-                    if cc not in self.comm_class_set_list:
-                        # if mutually exclusive with all other comm classes
-                        if seen_cc.isdisjoint(cc):
-                            self.comm_class_set_list.append(cc)
-
-                        # if not mutually exclusive, we collapse
-                        else:
-                            updated_cc = seen_cc.union(cc)
-                            self.comm_class_set_list[i] = updated_cc
-
-        # at this point, self.comm_class_set_list contains only
-        # mutually exclusive communicating classes -- we can populate
-        # other class members
-        for i, cc in enumerate(self.comm_class_set_list):
-            self._n_comm_classes += 1
-
-            for node_idx in cc:
-                self._node_comm_class_dict[node_idx] = i
+        self.comm_class_set_list = []
+        self._node_comm_class_dict = {}
+        visited = set()
+        for seed in sorted(self._node_set):
+            if seed in visited:
+                continue
+            component = set()
+            pending = [seed]
+            visited.add(seed)
+            while pending:
+                node = pending.pop()
+                component.add(node)
+                for neighbor in neighbors[node]:
+                    if neighbor not in visited:
+                        visited.add(neighbor)
+                        pending.append(neighbor)
+            component_idx = len(self.comm_class_set_list)
+            self.comm_class_set_list.append(component)
+            for node in component:
+                self._node_comm_class_dict[node] = component_idx
+        self._n_comm_classes = len(self.comm_class_set_list)
 
 
     def over_barrier(self,

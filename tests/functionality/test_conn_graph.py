@@ -1,4 +1,5 @@
 import unittest
+from itertools import permutations
 
 # pj imports
 import phylojunction.functionality.feature_io as pjgeo
@@ -19,6 +20,26 @@ class TestConnGraph(unittest.TestCase):
         self.assertEqual(g.edge_set, {(0, 1), (1, 0), (0, 2), (2, 0)})
         g.populate_comm_class_members()
         self.assertTrue(g.are_connected(1, 2))
+
+    # Connected components must partition nodes independently of insertion order and
+    # rebuild cleanly; fixed-order examples miss overlapping merges. Retire if graphs are replaced.
+    def test_component_partition(self):
+        edges = [(0, 1), (2, 3), (4, 5), (5, 3)]
+        for order in permutations(edges):
+            with self.subTest(order=order):
+                g = pjgeo.GeoGraph(7)
+                for source, target in order:
+                    g.add_edge(source, target, is_directed=True)
+                for _ in range(2):
+                    g.populate_comm_class_members()
+                    self.assertEqual(g.comm_class_set_list, [{0, 1}, {2, 3, 4, 5}, {6}])
+                    self.assertEqual(g.n_comm_classes, 3)
+                    self.assertEqual(sum(map(len, g.comm_class_set_list)), 7)
+                    self.assertEqual(set.union(*g.comm_class_set_list), set(range(7)))
+                    for source, target in edges:
+                        self.assertTrue(g.are_connected(source, target))
+                    self.assertTrue(g.are_connected(2, 4))
+                    self.assertFalse(g.are_connected(0, 6))
 
     def test_graph1(self) -> None:
         """Test multiple comm. classes are correctly built."""
