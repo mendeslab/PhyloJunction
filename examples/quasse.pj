@@ -1,0 +1,4 @@
+# Brownian diffusion is variance per unit time. All commands occupy one line.
+birth := quasse_logistic(y0=0.4, y1=0.8, midpoint=0.0, slope=2.0)
+death := quasse_logistic(y0=0.02, y1=0.1, midpoint=1.0, slope=2.0)
+trees ~ quasse(n=2, nr=2, birth_rate=birth, death_rate=death, start_trait=0.0, drift=0.0, diffusion=0.1, stop="age", stop_value=3.0, method="diversitree", k=500)

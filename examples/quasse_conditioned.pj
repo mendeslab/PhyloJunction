@@ -1,0 +1,4 @@
+# Fix age, sample each survivor independently, and retain exactly three observed tips.
+birth := quasse_logistic(y0=0.4, y1=0.8, midpoint=0.0, slope=2.0)
+death := quasse_logistic(y0=0.02, y1=0.1, midpoint=1.0, slope=2.0)
+trees ~ quasse(n=2, birth_rate=birth, death_rate=death, diffusion=0.1, stop="age", stop_value=3.0, sampling_prob=0.8, min_rec_taxa=3, max_rec_taxa=3, method="diversitree", k=500)

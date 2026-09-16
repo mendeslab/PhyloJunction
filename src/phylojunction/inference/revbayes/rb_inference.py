@@ -80,6 +80,11 @@ def dag_obj_to_rev_inference_spec(
     all_nodes_all_sims_spec_list: ty.List[ty.List[str]] = []
     all_nodes_moves_str: str = str()
     sorted_node_dag_list: ty.List[pgm.NodeDAG] = dag_obj.get_sorted_node_dag_list()
+    # Reject unsupported models before building scripts or creating output directories.
+    for node in sorted_node_dag_list:
+        if (isinstance(node, pgm.StochasticNodeDAG) and node.sampling_dn is not None
+                and getattr(node.sampling_dn, "DN_NAME", None) == "DnQuaSSE"):
+            raise NotImplementedError("QuaSSE RevBayes inference export is not supported.")
     node_name: str = str()
     n_sim = 0
 
