@@ -67,10 +67,10 @@ class GeoGraph():
             self._edge_set.add(edge_tup2)
 
             if node2_idx not in self._edge_dict:
-                self._edge_dict[node1_idx] = set([node2_idx])
+                self._edge_dict[node2_idx] = set([node1_idx])
 
             else:
-                self._edge_dict[node1_idx].add(node2_idx)
+                self._edge_dict[node2_idx].add(node1_idx)
 
     @property
     def edge_set(self) -> ty.Set[ty.Tuple[int]]:

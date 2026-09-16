@@ -9,6 +9,17 @@ __email__ = "fmendes@lsu.edu"
 
 class TestConnGraph(unittest.TestCase):
 
+    # Protect symmetric adjacency and existing neighbors under repeated insertion;
+    # directed-only tests miss this. Remove if adjacency storage is replaced.
+    def test_undirected_adjacency(self):
+        g = pjgeo.GeoGraph(3)
+        for a, b in [(0, 1), (0, 2), (0, 1), (2, 0)]:
+            g.add_edge(a, b)
+        self.assertEqual(g.edge_dict, {0: {1, 2}, 1: {0}, 2: {0}})
+        self.assertEqual(g.edge_set, {(0, 1), (1, 0), (0, 2), (2, 0)})
+        g.populate_comm_class_members()
+        self.assertTrue(g.are_connected(1, 2))
+
     def test_graph1(self) -> None:
         """Test multiple comm. classes are correctly built."""
 
