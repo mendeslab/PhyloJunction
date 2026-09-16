@@ -8,6 +8,7 @@ import statistics as stat  # type: ignore
 import pandas as pd  # type: ignore
 from tabulate import tabulate  # type: ignore
 from abc import ABC, abstractmethod
+from phylojunction.calculation.continuous_sse import LogisticRate
 
 # pj imports
 import phylojunction.utility.exception_classes as ec
@@ -301,7 +302,7 @@ class NodeDAG(ABC):
         self.param_of = None
 
         if isinstance(self._value, (list, np.ndarray)) and not \
-           isinstance(self._value[0], pjtr.AnnotatedTree):
+           isinstance(self._value[0], (pjtr.AnnotatedTree, LogisticRate)):
             self._flatten_and_extract_values()
 
     @property

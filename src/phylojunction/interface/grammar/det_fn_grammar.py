@@ -7,6 +7,7 @@ import phylojunction.interface.grammar.det_fn_discrete_sse_makers as detsse
 import phylojunction.interface.grammar.det_fn_map_attribute as detatt
 import phylojunction.pgm.pgm as pgm
 import phylojunction.data.tree as pjtr
+from phylojunction.interface.grammar.det_fn_quasse_makers import make_logistic_rate
 
 __author__ = "Fabio K. Mendes"
 __email__ = "fmendes@lsu.edu"
@@ -20,6 +21,7 @@ class PJDetFnGrammar():
     # All available deterministic functions #
     #########################################
     det_fn_grammar_dict = {
+        "quasse_logistic": {"y0", "y1", "midpoint", "slope"},
         "sse_prob": set(["name", "value", "state", "epoch"]),
         "sse_rate": set(["name", "value", "event", "states", "epoch"]),
         "sse_stash": set(["flat_rate_mat", "flat_prob_mat", "n_states",
@@ -137,6 +139,9 @@ class PJDetFnGrammar():
                 raise ec.ParseNotAParameterError(arg)
             
         # validate input
+        if det_fn_id == "quasse_logistic":
+            return make_logistic_rate(det_fn_param_dict)
+
         if det_fn_id == "sse_rate":
             # health checks inside
             return cls.init_return_state_dep_rate(det_fn_param_dict)
