@@ -193,7 +193,7 @@ class AnnotatedTree(dp.Tree):
     slice_age_ends: ty.Optional[ty.List[float]]
 
     # state related #
-    state_count: int
+    state_count: ty.Optional[int]
     state_count_dict: ty.Dict[int, int]
     extant_terminal_state_count_dict: ty.Dict[int, int]
     extant_terminal_sampled_state_count_dict: ty.Dict[int, int]
@@ -253,7 +253,7 @@ class AnnotatedTree(dp.Tree):
     def __init__(
             self,
             a_tree: dp.Tree,
-            total_state_count: int,
+            total_state_count: ty.Optional[int],
             start_at_origin: bool = False,
             alternative_root_label: str = "",
             condition_on_obs_both_sides_root: bool = False,
@@ -272,10 +272,13 @@ class AnnotatedTree(dp.Tree):
             tree_died: ty.Optional[bool] = None,
             tree_invalid: ty.Optional[bool] = None,
             read_as_newick_string: bool = False,
-            epsilon: float = 1e-12):
+            epsilon: float = 1e-12,
+            continuous_trait: ty.Optional[str] = None):
 
         # using during initialization
         self.epsilon = epsilon
+        self.continuous_trait = continuous_trait
+        self.state_count = total_state_count
 
         # trees
         self.tree = a_tree
@@ -317,6 +320,8 @@ class AnnotatedTree(dp.Tree):
         self.origin_edge_length = 0.0
         self.seed_age = self.tree.max_distance_from_root()
         self.max_age = max_age
+        if self.continuous_trait is not None and max_age is not None:
+            self.seed_age = max_age
         self.node_heights_dict = dict()
         self.rec_tr_node_heights_dict = dict()
         self.node_ages_dict = dict()
@@ -327,21 +332,23 @@ class AnnotatedTree(dp.Tree):
         # state related
         self.state_count = total_state_count
         self.state_count_dict = \
-            dict((int(s), 0) for s in range(0, self.state_count, 1))
+            dict((int(s), 0) for s in range(0, self.state_count or 0, 1))
         self.extant_terminal_state_count_dict = \
-            dict((int(s), 0) for s in range(0, self.state_count, 1))
+            dict((int(s), 0) for s in range(0, self.state_count or 0, 1))
         self.extant_terminal_sampled_state_count_dict = \
-            dict((int(s), 0) for s in range(0, self.state_count, 1))
+            dict((int(s), 0) for s in range(0, self.state_count or 0, 1))
         self.extinct_terminal_state_count_dict = \
-            dict((int(s), 0) for s in range(0, self.state_count, 1))
+            dict((int(s), 0) for s in range(0, self.state_count or 0, 1))
         self.sa_state_count_dict = \
-            dict((int(s), 0) for s in range(0, self.state_count, 1))
-        ## ambiguous states
-        self.state_count_dict[-1] = 0
-        self.extant_terminal_state_count_dict[-1] = 0
-        self.extant_terminal_sampled_state_count_dict[-1] = 0
-        self.extinct_terminal_state_count_dict[-1] = 0
-        self.sa_state_count_dict[-1] = 0
+            dict((int(s), 0) for s in range(0, self.state_count or 0, 1))
+        # Continuous trees have no discrete or ambiguous-state categories.
+        if self.state_count is not None:
+            ## ambiguous states
+            self.state_count_dict[-1] = 0
+            self.extant_terminal_state_count_dict[-1] = 0
+            self.extant_terminal_sampled_state_count_dict[-1] = 0
+            self.extinct_terminal_state_count_dict[-1] = 0
+            self.sa_state_count_dict[-1] = 0
         # TODO: later deal with this
 
         # TODO: add argument for node_attr_dict (when attrs are passed in
@@ -364,6 +371,11 @@ class AnnotatedTree(dp.Tree):
         # self.tree_died
         # self.brosc_node
         self._init_and_update_origin_root_members()
+        if self.continuous_trait is not None and self.with_origin:
+            # Extinction does not move the observation horizon to the last death.
+            self.origin_age = self.seed_age
+            if self.root_node is not None:
+                self.root_age = self.seed_age - self.origin_edge_length
 
         # for plotting and counting nodes
         self.sa_lineage_dict = sa_lineage_dict
@@ -405,7 +417,8 @@ class AnnotatedTree(dp.Tree):
         # (ii)  self.extant_terminal_state_count_dict
         # (iii) self.extant_terminal_sampled_state_count_dict
         # (iv)  self.sa_state_count_dict
-        self._count_node_states()
+        if self.state_count is not None:
+            self._count_node_states()
 
         # initializes (side-effect):
         # (i)  self.node_heights_dict
@@ -443,10 +456,11 @@ class AnnotatedTree(dp.Tree):
         # successfully initializing AnnotatedTree
         for nd in self.tree.preorder_node_iter():
             # first we check that we have all attributes in place
-            if not hasattr(nd, "state"):
+            trait_attr = self.continuous_trait or "state"
+            if not hasattr(nd, trait_attr):
                 raise ec.AnnotatedTreeNodeMissingAttrError(
                     nd.label,
-                    "state",
+                    trait_attr,
                     "Issue happened when initializing AnnotatedTree"
                 )
             
@@ -772,6 +786,19 @@ class AnnotatedTree(dp.Tree):
             (v)   self.extant_sampled_terminal_nodes_labels
             (vi)  self.extinct_terminal_nodes_labels
         """
+
+        if self.continuous_trait is not None:
+            # Continuous simulations explicitly annotate terminal status, including zero-length
+            # branches. Distance and branch-length heuristics would misclassify immediate events.
+            tips = list(self.tree.leaf_node_iter())
+            self.extant_terminal_nodes_labels = tuple(nd.label for nd in tips if nd.alive)
+            self.extant_sampled_terminal_nodes_labels = tuple(
+                nd.label for nd in tips if nd.alive and nd.sampled)
+            self.extinct_terminal_nodes_labels = tuple(nd.label for nd in tips if not nd.alive)
+            self.n_extant_terminal_nodes = len(self.extant_terminal_nodes_labels)
+            self.n_extant_sampled_terminal_nodes = len(self.extant_sampled_terminal_nodes_labels)
+            self.n_extinct_terminal_nodes = len(self.extinct_terminal_nodes_labels)
+            return
 
         # nd.distance_from_root() gives distance to seed!
         extant_terminal_nd_labels_list: ty.List[str] = []
@@ -1433,6 +1460,43 @@ class AnnotatedTree(dp.Tree):
                             )
                             self.rec_tr_sa_lineage_dict = to_insert
 
+    # Prune continuous trees using observation flags, preserving traits and true node ages.
+    # There are no sampled ancestors or discrete transition histories to remap.
+    def _extract_continuous_reconstructed_tree(self, require_obs_both_sides=None):
+        require_both = (self.condition_on_obs_both_sides_root if require_obs_both_sides is None
+                        else require_obs_both_sides)
+        observed = self.n_extant_sampled_terminal_nodes
+        if require_both and (self.root_node is None or not all(
+                any(nd.alive and nd.sampled for nd in child.leaf_iter())
+                for child in self.root_node.child_node_iter())):
+            observed = 0
+        self.rec_tr_node_ages_dict.clear()
+        self.rec_tr_node_heights_dict.clear()
+        if not observed:
+            self.tree_reconstructed = dp.Tree()
+            self.rec_tr_root_node = None
+            self.rec_tr_root_node_label = None
+            self.rec_tr_root_age = 0.0
+            return self.tree_reconstructed
+        rec = copy.deepcopy(self.tree)
+        rec.filter_leaf_nodes(lambda nd: nd.alive and nd.sampled, suppress_unifurcations=True)
+        if observed == 1:
+            # Keep the origin-to-tip edge for a singleton; a lone tip would lose its duration.
+            tip = rec.seed_node
+            tip.edge_length = self.node_heights_dict[tip.label]
+            origin = dp.Node(label="origin", edge_length=0.0)
+            origin.trait = getattr(self.tree.seed_node, self.continuous_trait)
+            origin.add_child(tip)
+            rec.seed_node = origin
+        else:
+            rec.seed_node.edge_length = 0.0
+        self.tree_reconstructed = rec
+        self.rec_tr_root_node = rec.seed_node
+        self.rec_tr_root_node_label = rec.seed_node.label
+        self.rec_tr_root_age = self.node_ages_dict[rec.seed_node.label]
+        self._populate_node_age_height_dicts(do_reconstructed_tree=True)
+        return rec
+
     def extract_reconstructed_tree(
             self,
             plotting_overhead: bool = False,
@@ -1473,6 +1537,9 @@ class AnnotatedTree(dp.Tree):
                 reconstructed tree extracted from AnnotatedTree's
                 instance owning the method call.
         """
+        if self.continuous_trait is not None:
+            return self._extract_continuous_reconstructed_tree(require_obs_both_sides)
+
 
         if not self.tree_reconstructed:
             ##################################
