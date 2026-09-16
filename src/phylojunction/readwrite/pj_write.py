@@ -848,7 +848,7 @@ def prep_data_df(
 
                         if "Origin age" in repls_all_stats_dict:
                             tree_repl_summary_df_dict[rv_name].at[j, "origin_age"] = \
-                                "{:,.5f}".format(stat.mean(repls_all_stats_dict["Origin age"]))
+                                round(stat.mean(repls_all_stats_dict["Origin age"]), 5)
                             sd = stat.stdev(repls_all_stats_dict["Origin age"])
 
                             if sd < 1E-10:
@@ -856,10 +856,10 @@ def prep_data_df(
 
                             else:
                                 tree_repl_summary_df_dict[rv_name].at[j + 1, "origin_age"] = \
-                                    "{:,.5f}".format(sd)
+                                    round(sd, 5)
 
                         tree_repl_summary_df_dict[rv_name].at[j, "root_age"] = \
-                            "{:,.5f}".format(stat.mean(repls_all_stats_dict["Root age"]))
+                            round(stat.mean(repls_all_stats_dict["Root age"]), 5)
                         sd = stat.stdev(repls_all_stats_dict["Root age"])
 
                         if sd < 1E-10:
@@ -867,24 +867,24 @@ def prep_data_df(
 
                         else:
                             tree_repl_summary_df_dict[rv_name].at[j + 1, "root_age"] = \
-                                "{:,.5f}".format(sd)
+                                round(sd, 5)
 
                         tree_repl_summary_df_dict[rv_name].at[j, "n_total"] = \
                             stat.mean(repls_all_stats_dict["Total taxon count"])
                         tree_repl_summary_df_dict[rv_name].at[j + 1, "n_total"] = \
-                            "{:,.5f}".format(stat.stdev(repls_all_stats_dict["Total taxon count"]))
+                            round(stat.stdev(repls_all_stats_dict["Total taxon count"]), 5)
                         tree_repl_summary_df_dict[rv_name].at[j, "n_extant"] = \
                             stat.mean(repls_all_stats_dict["Extant taxon count"])
                         tree_repl_summary_df_dict[rv_name].at[j + 1, "n_extant"] = \
-                            "{:,.5f}".format(stat.stdev(repls_all_stats_dict["Extant taxon count"]))
+                            round(stat.stdev(repls_all_stats_dict["Extant taxon count"]), 5)
                         tree_repl_summary_df_dict[rv_name].at[j, "n_extinct"] = \
                             stat.mean(repls_all_stats_dict["Extinct taxon count"])
                         tree_repl_summary_df_dict[rv_name].at[j + 1, "n_extinct"] = \
-                            "{:,.5f}".format(stat.stdev(repls_all_stats_dict["Extinct taxon count"]))
+                            round(stat.stdev(repls_all_stats_dict["Extinct taxon count"]), 5)
                         tree_repl_summary_df_dict[rv_name].at[j, "n_sa"] = \
                             stat.mean(repls_all_stats_dict["Direct ancestor count"])
                         tree_repl_summary_df_dict[rv_name].at[j + 1, "n_sa"] = \
-                            "{:,.5f}".format(stat.stdev(repls_all_stats_dict["Direct ancestor count"]))
+                            round(stat.stdev(repls_all_stats_dict["Direct ancestor count"]), 5)
 
                         j += 2
 
