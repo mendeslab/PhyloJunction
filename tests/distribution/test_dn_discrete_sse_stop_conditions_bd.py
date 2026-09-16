@@ -57,6 +57,22 @@ class TestSSEStopConditionsBD(unittest.TestCase):
         with self.assertRaises(ec.MaxNFailedAttemptsLimit):
             sim.generate()
 
+    # Unsupported observation models must fail before size simulation; existing tests
+    # use default complete sampling. Remove when size stopping implements incomplete sampling.
+    def test_size_requires_complete_sampling(self):
+        probabilities = self.sse_stash.get_prob_handler().state_dep_prob_manager.matrix_state_dep_params
+        for values in [[0.0], [0.5], [1.0], [1.0, 0.5]]:
+            for stop in ["age", "size"]:
+                with self.subTest(values=values, stop=stop):
+                    probabilities[0][0].value = list(values)
+                    kwargs = dict(n=len(values), origin=True, start_states_list=[0],
+                                  stop=stop, stop_value=[3.0])
+                    if stop == "size" and any(value != 1.0 for value in values):
+                        with self.assertRaisesRegex(ec.ObjInitInvalidArgError, "complete sampling"):
+                            distsse.DnSSE(self.sse_stash, **kwargs)
+                    else:
+                        distsse.DnSSE(self.sse_stash, **kwargs)
+
     def test_tree_size_stop_condition_origin(self):
         """
         Test if birth-death trees have correct number of

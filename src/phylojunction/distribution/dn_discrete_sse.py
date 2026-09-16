@@ -68,6 +68,7 @@ class DnSSE(pgm.DistrForSampling):
             procedure and return tree. If 'age', stops when age of
             either origin or is equal to 'stop_val' (see below).
             If "size", stops when tree has 'stop_val' observed nodes.
+            Size stopping requires complete sampling (all sampling probabilities equal 1).
         stop_val (float): List of values used by 'stop' (see above) to
             end each of the 'n_sim' sampling (simulation) procedures
             and return tree. Either maximum age, or maximum count of
@@ -416,6 +417,13 @@ class DnSSE(pgm.DistrForSampling):
         # the checks below are also carried out at the grammar level,
         # but we do it again in case distribution is used without a script
         if self.stop == "size":
+            # Size stopping currently has no incomplete-sampling observation step.
+            probabilities = self.prob_handler.state_dep_prob_manager.matrix_state_dep_params
+            if any(value != 1.0 for epoch in probabilities for prob in epoch for value in prob.value):
+                raise ec.ObjInitInvalidArgError(
+                    self.DN_NAME, "'stop'",
+                    'Size stopping requires complete sampling (all sampling probabilities must be 1).')
+
             for idx, a_stop_val in enumerate(self.stop_val):
                 # must be a number
                 if not isinstance(a_stop_val, (int, float)):
