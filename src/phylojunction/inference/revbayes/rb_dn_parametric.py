@@ -57,7 +57,9 @@ def get_exponential_rev_inference_spec_info(n_samples: int, exp_scale_or_rate_li
             # if we can find a node that holds the value of the rate, we use it
             try:
                 # key: arg in PJ syntax, value: NodeDAG name passed as arg
-                ith_sim_str += parent_node_tracker["rate"]
+                rate_expr = parent_node_tracker["rate"]
+                # Keep the reciprocal in the model so it follows changes to its parent.
+                ith_sim_str += rate_expr if rate_parameterization else "1.0 / " + rate_expr
 
             except:
                 ith_sim_str += str(scale_or_rate_list[ith_sim])
@@ -100,7 +102,9 @@ def get_gamma_rev_inference_spec_info(n_samples: int, gamma_shape_param_list: ty
             # if we can find a node that holds the value of the scale parameter, we use it
             try:
                 # returns NodeDAG, and we grab its name
-                ith_sim_str += parent_node_tracker["scale"]
+                rate_expr = parent_node_tracker["scale"]
+                # Rev expects a rate, including when PJ's scale is a named model node.
+                ith_sim_str += rate_expr if rate_parameterization else "1.0 / " + rate_expr
 
             except:
                 ith_sim_str += str(scale_or_rate_list[ith_sim])

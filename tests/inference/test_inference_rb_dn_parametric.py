@@ -13,6 +13,26 @@ __author__ = "Fabio K. Mendes"
 __email__ = "fmendes@lsu.edu"
 
 class TestInferenceRevBayesParametricDn(unittest.TestCase):
+    # Literal and named scale inputs must export the same rate, retaining dependencies.
+    # Moment tests never exercise this translation; remove if rate/scale export is replaced.
+    def test_scale_rate_export(self):
+        for distribution in ["exponential", "gamma"]:
+            for as_rate in [False, True]:
+                for named in [False, True]:
+                    with self.subTest(distribution=distribution, as_rate=as_rate, named=named):
+                        prefix = "s <- [2.0, 4.0]\n" if named else ""
+                        argument = "s" if named else "[2.0, 4.0]"
+                        params = "rate=" if distribution == "exponential" else "shape=[3.0, 3.0], scale="
+                        model = prefix + (f'x ~ {distribution}(n=2, {params}{argument}, '
+                                          f'rate_parameterization="{str(as_rate).lower()}")')
+                        dag = cmdp.script2dag(model, in_pj_file=False, random_seed=123)
+                        rates = (["s" if as_rate else "1.0 / s"] * 2 if named else
+                                 (["2.0", "4.0"] if as_rate else ["0.5", "0.25"]))
+                        template = ("dnExponential(lambda={})" if distribution == "exponential"
+                                    else "dnGamma(3.0, rate={})")
+                        self.assertEqual(dag.get_node_dag_by_name("x").sampling_dn.get_rev_inference_spec_info(),
+                                         [template.format(rate) for rate in rates])
+
     def test_pj2rb_uniform(self):
         """
         Test if PJ -> .Rev conversion functionality is correct for
