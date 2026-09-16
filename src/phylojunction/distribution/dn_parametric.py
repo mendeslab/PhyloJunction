@@ -45,9 +45,9 @@ class DnLogNormal(pgm.DistrForSampling):
                 distribution.
             scale (float): Mean (scale) of log-normal distribution in
                 log-space. Defaults to 1.0.
-            log_space (bool, optional): Flag specifying if mean of
-                distribution is provided in log-space. Defaults to
-                'True'.
+            log_space (bool, optional): If true, mean_param is the underlying normal
+                mean; otherwise it is the lognormal median/scale exp(mean).
+                sd_param is always the underlying normal standard deviation.
 
         Returns:
             (list): List of floats sampled from log-normal distribution.
@@ -164,7 +164,8 @@ class DnLogNormal(pgm.DistrForSampling):
             self.n_samples,
             self.ln_mean_list,
             self.ln_sd_list,
-            self.parent_node_tracker)
+            self.parent_node_tracker,
+            log_space=self.ln_log_space)
 
 
 class DnNormal(pgm.DistrForSampling):

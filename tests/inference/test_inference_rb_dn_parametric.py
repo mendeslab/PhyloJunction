@@ -148,13 +148,23 @@ class TestInferenceRevBayesParametricDn(unittest.TestCase):
         self.assertAlmostEqual(rb_sample_sd, stdev(pj_normal_values), delta=1e-2)
 
 
+    # Export must preserve both parameterization and parent dependencies; sample-moment
+    # tests do not inspect Rev code. Remove if this distribution exporter is replaced.
     def test_pj2rb_lognormal(self):
-        """
-        Test if PJ -> .Rev conversion functionality is correct for
-        lognormal distribution, by comparing against expected strings
-        and expected sampled values (from running RevBayes)
-        """
-        pass
+        for log_space, means in [(True, [0.0, 1.0]), (False, [1.0, math.e])]:
+            for named in [False, True]:
+                with self.subTest(log_space=log_space, named=named):
+                    prefix = "m <- " + str(means) + "\ns <- [0.5, 1.0]\n" if named else ""
+                    mean_arg = "m" if named else str(means)
+                    sd_arg = "s" if named else "[0.5, 1.0]"
+                    model = prefix + ('x ~ lognormal(n=2, meanlog=' + mean_arg + ', sdlog=' + sd_arg
+                                      + ', log_space="' + str(log_space).lower() + '")')
+                    dag = cmdp.script2dag(model, in_pj_file=False, random_seed=123)
+                    dn = dag.get_node_dag_by_name("x").sampling_dn
+                    means_out = (["m" if log_space else "ln(m)"] * 2 if named else ["0.0", "1.0"])
+                    sds_out = ["s", "s"] if named else ["0.5", "1.0"]
+                    self.assertEqual(dn.get_rev_inference_spec_info(),
+                                     [f"dnLognormal(mean={m}, sd={s})" for m, s in zip(means_out, sds_out)])
 
 if __name__ == "__main__":
     # Assuming you opened the PhyloJunction/ (repo root) folder

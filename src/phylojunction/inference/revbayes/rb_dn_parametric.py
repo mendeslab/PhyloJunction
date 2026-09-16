@@ -142,7 +142,13 @@ def get_normal_rev_inference_spec_info(n_samples: int, norm_mean_param_list: ty.
     return rev_str_list
 
 
-def get_ln_rev_inference_spec_info(n_samples: int, ln_mean_list: ty.List[float], ln_sd_list: ty.List[float], parent_node_tracker: ty.Optional[ty.Dict[str, str]]) -> ty.List[str]:
+# Translate lognormal parameters while retaining dependencies on named model nodes.
+def get_ln_rev_inference_spec_info(
+        n_samples: int,
+        ln_mean_list: ty.List[float],
+        ln_sd_list: ty.List[float],
+        parent_node_tracker: ty.Optional[ty.Dict[str, str]],
+        log_space: bool = True) -> ty.List[str]:
     
     rev_str_list: ty.List[str] = [] # return
     
@@ -151,8 +157,10 @@ def get_ln_rev_inference_spec_info(n_samples: int, ln_mean_list: ty.List[float],
 
     # so mypy won't complain
     if isinstance(parent_node_tracker, dict):
-        real_mean_list = [ math.exp(float(i)) for i in real_mean_list ]
-        real_sd_list = [ math.exp(float(i)) for i in real_sd_list ]
+        # Rev uses the underlying normal parameters. In natural-space mode PJ's
+        # location is the median exp(mu), so only that parameter needs a logarithm.
+        if not log_space:
+            real_mean_list = [math.log(float(value)) for value in real_mean_list]
         
         # real_mean_list and real_sd_list will have n_sim values inside, even if they are all the same
         for ith_sim in range(n_samples):
@@ -161,7 +169,8 @@ def get_ln_rev_inference_spec_info(n_samples: int, ln_mean_list: ty.List[float],
             # if we can find a node that holds the value of the mean, we use it
             try:
                 # returns NodePGM, and we grab its name
-                ith_sim_str += parent_node_tracker["mean"]
+                mean_expr = parent_node_tracker["meanlog"]
+                ith_sim_str += mean_expr if log_space else "ln(" + mean_expr + ")"
 
             except:
                 ith_sim_str += str(real_mean_list[ith_sim])
@@ -171,7 +180,7 @@ def get_ln_rev_inference_spec_info(n_samples: int, ln_mean_list: ty.List[float],
             # if we can find a node that holds the value of the sd, we use it
             try:
                 # returns NodeDAG, and we grab its name
-                ith_sim_str += parent_node_tracker["sd"]
+                ith_sim_str += parent_node_tracker["sdlog"]
 
             except:
                 ith_sim_str += str(real_sd_list[ith_sim])
