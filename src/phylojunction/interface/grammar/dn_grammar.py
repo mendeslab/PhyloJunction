@@ -5,6 +5,7 @@ import phylojunction.distribution.dn_parametric as dnpar
 import phylojunction.pgm.pgm as pgm
 import phylojunction.interface.grammar.dn_discrete_sse_makers as make_dnsse
 import phylojunction.utility.exception_classes as ec
+from phylojunction.interface.grammar.dn_quasse_makers import make_quasse
 # from user_interface.dn_discrete_sse import make_discrete_SSE_dn # https://stackoverflow.com/questions/16981921/relative-imports-in-python-3
 
 __author__ = "Fabio K. Mendes"
@@ -19,6 +20,8 @@ class PJDnGrammar():
 
     dn_grammar_dict: ty.Dict[str, ty.Tuple[str, ...]] = \
         {
+            "quasse": ("n", "nr", "birth_rate", "death_rate", "start_trait", "drift", "diffusion",
+                       "stop", "stop_value", "method", "k", "runtime_limit", "max_steps", "max_alive"),
             "lognormal":
             tuple(["n", "nr", "meanlog", "sdlog", "log_space"]),
             "normal":
@@ -619,6 +622,12 @@ class PJDnGrammar():
         #############################
         #  Parametric distributions #
         #############################
+
+        if dn_id == "quasse":
+            for name in dn_param_dict:
+                if not cls.grammar_check(dn_id, name):
+                    raise ec.ParseNotAParameterError(name)
+            return make_quasse(dn_param_dict)
 
         if dn_id in ("lognormal",
                      "normal",
