@@ -1,4 +1,5 @@
 import unittest
+from types import SimpleNamespace
 
 # pj imports
 import phylojunction.utility.exception_classes as ec
@@ -37,6 +38,24 @@ class TestSSEStopConditionsBD(unittest.TestCase):
         
         cls.sse_stash = sseobj.SSEStash(event_handler)
 
+
+    # Aborted trajectories must not enter accepted output under any conditioning mode.
+    # Existing size/age tests do not force an abort; remove if aborts no longer return trees.
+    def test_reject_aborted_trees(self):
+        for origin in [False, True]:
+            for survival in [False, True]:
+                for stop, value in [("age", 10.0), ("size", 3)]:
+                    with self.subTest(origin=origin, survival=survival, stop=stop):
+                        sim = distsse.DnSSE(
+                            self.sse_stash, origin=origin, start_states_list=[0],
+                            stop=stop, stop_value=[value], condition_on_survival=survival)
+                        self.assertFalse(sim._is_tr_ok(SimpleNamespace(tree_invalid=True), value))
+        sim = distsse.DnSSE(
+            self.sse_stash, origin=True, start_states_list=[0], stop="age", stop_value=[10.0],
+            abort_at_alive_count=3, max_n_failed_attempts=0, rng_seed=123)
+        self.sse_stash.get_meh().sse_rate_manager.matrix_state_dep_params[0][1].value = [0.0]
+        with self.assertRaises(ec.MaxNFailedAttemptsLimit):
+            sim.generate()
 
     def test_tree_size_stop_condition_origin(self):
         """

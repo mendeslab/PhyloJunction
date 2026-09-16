@@ -2060,6 +2060,12 @@ class DnSSE(pgm.DistrForSampling):
         ##############################
         # STOP: conditioning not met #
         ##############################
+        # An aborted trajectory is never a completed draw, regardless of conditioning.
+        if ann_tr.tree_invalid:
+            if self.info:
+                print("Rejected tree, it grew out of control!")
+            return False
+
         if self.condition_on_survival and ann_tr.tree_died:
             return False
 
@@ -2105,20 +2111,6 @@ class DnSSE(pgm.DistrForSampling):
         # STOP: Tree height #
         #####################
         elif self.stop == "age":
-            # grew out of control! #
-            if ann_tr.tree_invalid:
-                # tree was cut short of stop_condition
-                # because it grew too much!
-                if self.info:
-                    print("Rejected tree, it grew out of control!")
-
-                # starting from root
-                if (not ann_tr.with_origin and
-                    isinstance(ann_tr.root_age, float)) and \
-                        (a_stop_value - ann_tr.root_age) > self.epsilon:
-                    return False
-                # starting from origin
-
             # reconstructed tree is too small
             if ann_tr.n_extant_sampled_terminal_nodes < self.min_rec_taxa:
                 return False
