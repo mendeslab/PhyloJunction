@@ -12,7 +12,7 @@ from phylojunction.utility import exception_classes as ec
 
 
 class TestQuaSSE(unittest.TestCase):
-    # Existing discrete tests cannot check the Java logistic parameterization or its tails.
+    # Discrete tests cannot detect cancellation in positive logistic tails or resulting simulation failures.
     # Retire this group if another shared rate implementation tests this same contract.
     def test_logistic(self):
         rate = LogisticRate(1, 3, 0, 2)
@@ -20,6 +20,14 @@ class TestQuaSSE(unittest.TestCase):
         np.testing.assert_allclose(LogisticRate(1, 3, 0, -2)([-1e300, 0, 1e300]), [3, 2, 1])
         np.testing.assert_allclose(LogisticRate(2, 2, 0, 2)([-1, 0, 1]), 2)
         np.testing.assert_allclose(LogisticRate(1, 3, 1e308, 0)([-1e308]), 2)
+        zero = LogisticRate(0, 0, 0, 0)
+        for slope in (-1, 1):
+            for y0, y1, x in ((1, 0, 40 * slope), (0, 1, -40 * slope)):
+                tail = LogisticRate(y0, y1, 0, slope)
+                np.testing.assert_allclose(tail(x), 1 / (1 + np.exp(40)), rtol=1e-14, atol=0)
+                with patch('numpy.random.random', return_value=.5):
+                    tree = DnQuaSSE(tail, zero, 'age', 1, start_trait=x).generate()[0]
+                self.assertEqual(tree.n_extant_terminal_nodes, 1)
         for values in [(-1, 2, 0, 0), (0, 1, np.inf, 0)]:
             with self.assertRaises(ValueError):
                 LogisticRate(*values)
@@ -136,32 +144,60 @@ class TestQuaSSE(unittest.TestCase):
         with self.assertRaises(ec.RunTimeLimit):
             DnQuaSSE(one, zero, 'age', 1).simulate(deadline=0)
 
-    # Rendering must preserve trait values and normalization across complete/reconstructed views.
-    # Existing discrete plots cannot check colorbars; retire if shared continuous plotting covers it.
+    # Preserve colors and layout when redrawing or switching DAG values, including CLI/GUI axes.
+    # Discrete tests lack colorbars; retire if shared continuous plotting covers these transitions.
     def test_tip_coloring(self):
         from matplotlib import pyplot as plt
+        from phylojunction.interface.pjcli.cli_plotting import start_fig_and_axes
         one, zero = LogisticRate(1, 1, 0, 0), LogisticRate(0, 0, 0, 0)
         dn = DnQuaSSE(one, zero, 'size', 2, k=1)
         with patch('numpy.random.random', return_value=0), patch('numpy.random.choice', return_value=0):
             tree = dn.generate()[0]
         tips = list(tree.tree.leaf_node_iter())
         tips[0].trait, tips[1].trait = -2, 3
-        fig, ax = plt.subplots()
-        try:
-            for reconstructed in (False, True, False):
-                tree.plot_node(ax, draw_reconstructed=reconstructed)
-                fig.canvas.draw()
-                self.assertEqual(len(fig.axes), 2)
-                self.assertEqual(ax._pj_trait_colorbar.mappable.get_clim(), (-2, 3))
-                np.testing.assert_array_equal(ax.collections[-1].get_array(), [-2, 3])
-            empty = DnQuaSSE(zero, zero, 'age', 0, sampling_prob=0).generate()[0]
-            empty.plot_node(ax, draw_reconstructed=True)
-            self.assertEqual(len(fig.axes), 1)
-            self.assertIsNone(ax._pj_trait_colorbar)
-            tree.plot_node(ax)
-            self.assertEqual(len(fig.axes), 2)
-        finally:
-            plt.close(fig)
+        dag = DirectedAcyclicGraph()
+        for line in ['numbers <- [1,2,3]', 'rate := quasse_logistic(y0=1,y1=2,midpoint=0,slope=1)']:
+            cmdline2dag(dag, line)
+        empty = DnQuaSSE(zero, zero, 'age', 0, sampling_prob=0).generate()[0]
+        for factory in (plt.subplots, start_fig_and_axes):
+            with self.subTest(axes=factory.__name__):
+                fig, ax = factory()
+                original = ax.get_position().bounds
+                colored = None
+                try:
+                    for reconstructed in (False, True, False, True):
+                        tree.plot_node(ax, draw_reconstructed=reconstructed)
+                        fig.canvas.draw()
+                        if colored is None:
+                            colored = ax.get_position().bounds
+                        np.testing.assert_allclose(ax.get_position().bounds, colored)
+                        self.assertEqual(len(fig.axes), 2)
+                        self.assertEqual(ax._pj_trait_colorbar.mappable.get_clim(), (-2, 3))
+                        np.testing.assert_array_equal(ax.collections[-1].get_array(), [-2, 3])
+                    empty.plot_node(ax, draw_reconstructed=True)
+                    self.assertEqual(len(fig.axes), 1)
+                    self.assertIsNone(ax._pj_trait_colorbar)
+                    np.testing.assert_allclose(ax.get_position().bounds, original)
+                    for name in ('numbers', 'rate'):
+                        tree.plot_node(ax)
+                        dag.name_node_dict[name].plot_node(ax, sample_idx=None)
+                        fig.canvas.draw()
+                        self.assertEqual(len(fig.axes), 1)
+                        self.assertIsNone(ax._pj_trait_colorbar)
+                        self.assertIsNone(ax._pj_trait_position)
+                        np.testing.assert_allclose(ax.get_position().bounds, original)
+                        self.assertFalse(ax.collections)
+                        if name == 'numbers':
+                            self.assertTrue(ax.patches)
+                        else:
+                            self.assertFalse(ax.patches or ax.lines or ax.texts)
+                        # Blank/histogram redraws with no colorbar also remain valid.
+                        dag.name_node_dict[name].plot_node(ax, sample_idx=None)
+                    tree.plot_node(ax)
+                    self.assertEqual(len(fig.axes), 2)
+                    np.testing.assert_allclose(ax.get_position().bounds, colored)
+                finally:
+                    plt.close(fig)
 
     # Continuous export must retain all node traits without generating discrete state matrices.
     # Existing discrete export tests cover the other format; retire if a shared trait writer replaces both.

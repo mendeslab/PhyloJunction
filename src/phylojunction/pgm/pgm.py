@@ -826,6 +826,9 @@ class DeterministicNodeDAG(NodeDAG):
                         self.value[sample_idx * repl_size + repl_idx] \
                             .plot_node(axes)
 
+            else:
+                plot_blank(axes)
+
         else:
             plot_blank(axes)
 
@@ -855,6 +858,7 @@ def plot_node_histogram(axes: plt.Axes,
         values_list_to_plot = [float(v) for v in values_list]
 
     # figure canvas was created outside main loop in GUI
+    pjtr.clear_trait_colorbar(axes)
     axes.cla()
     counts, bins, _ = \
         axes.hist(values_list_to_plot,
@@ -876,6 +880,7 @@ def plot_node_histogram(axes: plt.Axes,
 
 
 def plot_blank(axes: plt.Axes) -> None:
+    pjtr.clear_trait_colorbar(axes)
     axes.cla()
     axes.patch.set_alpha(0.0)
     axes.xaxis.set_ticks([])
