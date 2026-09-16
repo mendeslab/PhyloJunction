@@ -1,5 +1,6 @@
 import unittest
 from types import SimpleNamespace
+from unittest.mock import patch
 
 # pj imports
 import phylojunction.utility.exception_classes as ec
@@ -72,6 +73,41 @@ class TestSSEStopConditionsBD(unittest.TestCase):
                             distsse.DnSSE(self.sse_stash, **kwargs)
                     else:
                         distsse.DnSSE(self.sse_stash, **kwargs)
+
+    # Exercise inactive lineages and epoch reactivation deterministically; positive-rate
+    # statistical tests cannot guarantee these paths. Remove if event scheduling is replaced.
+    def test_zero_rate_boundaries(self):
+        transition = sseobj.DiscreteStateDependentRate(
+            name="q", val=1.0, event=sseobj.MacroevolEvent.ANAGENETIC_TRANSITION, states=[0, 1])
+        death = sseobj.DiscreteStateDependentRate(
+            name="mu", val=1.0, event=sseobj.MacroevolEvent.EXTINCTION, states=[1])
+        for epochs in [False, True]:
+            with self.subTest(epochs=epochs):
+                manager = sseobj.DiscreteStateDependentParameterManager(
+                    [[transition], [death]] if epochs else [[transition]], 2,
+                    seed_age_for_time_slicing=2.0,
+                    list_time_slice_age_ends=[1.0] if epochs else None)
+                stash = sseobj.SSEStash(sseobj.MacroevolEventHandler(manager))
+                sim = distsse.DnSSE(stash, origin=True, start_states_list=[0],
+                                   stop="age", stop_value=[2.0], condition_on_survival=False)
+                with patch.object(distsse.dnpar.DnExponential, "draw_exp", return_value=[0.25]) as draw:
+                    tree = sim.generate()[0]
+                self.assertEqual(draw.call_count, 2 if epochs else 1)
+                self.assertEqual(tree.tree_died, epochs)
+                self.assertAlmostEqual(tree.origin_age, 1.25 if epochs else 2.0)
+                self.assertEqual(tree.n_extant_sampled_terminal_nodes, 0 if epochs else 1)
+        manager = sseobj.DiscreteStateDependentParameterManager([[transition]], 2)
+        stash = sseobj.SSEStash(sseobj.MacroevolEventHandler(manager))
+        for origin in [False, True]:
+            with self.subTest(origin=origin):
+                sim = distsse.DnSSE(stash, origin=origin, start_states_list=[1],
+                                   stop="age", stop_value=[2.0])
+                tree = sim.generate()[0]
+                self.assertEqual(tree.n_extant_sampled_terminal_nodes, 1 if origin else 2)
+                self.assertAlmostEqual(tree.origin_age if origin else tree.root_age, 2.0)
+        sim = distsse.DnSSE(stash, origin=True, start_states_list=[0], stop="size", stop_value=[3])
+        with self.assertRaisesRegex(ec.GenerateFailError, "total event rate is zero"):
+            sim.generate()
 
     def test_tree_size_stop_condition_origin(self):
         """

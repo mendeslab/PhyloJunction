@@ -1722,20 +1722,25 @@ class DnSSE(pgm.DistrForSampling):
                                        debug=self.debug)
             # [1] are all states with >= 1 representation
 
-            # (2) get the time to the next event
-            t_to_next_event = \
-                _get_next_event_time(rate_for_exponential_distn)
-            latest_t += t_to_next_event
+            # (2) determine the next finite boundary before advancing the clock.
+            # Age-based epochs are anchored to the observation horizon; size stopping
+            # has no future epoch at which an inactive process could restart.
+            next_max_t = t_stop
+            if self.stop == "age" and self.n_time_slices > 1:
+                next_max_t = self.slice_t_ends[time_slice_idx]
 
-            # (3) get end time of this time slice (epoch) #
-            # 
-            # user provides it as end ages, but self.events
-            # (MacroevolEventHandler) converts it to time slice ends
-            # upon initialization
-            next_max_t: float
-            t_end = self.slice_t_ends[time_slice_idx]
-            if isinstance(t_end, float):
-                next_max_t = t_end
+            # A zero total rate means no event can occur in this epoch. Advance to its
+            # boundary without sampling an exponential or evaluating infinity minus infinity.
+            # Positive rates retain their event sampling and strict boundary comparison.
+            no_event = rate_for_exponential_distn == 0.0
+            if no_event and self.stop == "size":
+                raise ec.GenerateFailError(
+                    self.DN_NAME,
+                    "The total event rate is zero; no further event can occur to reach size stopping.")
+            previous_t = latest_t
+            t_to_next_event = (next_max_t - latest_t if no_event else
+                               _get_next_event_time(rate_for_exponential_distn))
+            latest_t += t_to_next_event
 
             # (4) check if new event time cut through the end of a #
             # time slice 
@@ -1743,17 +1748,14 @@ class DnSSE(pgm.DistrForSampling):
             # NOTE: this step executes if there is more than 1 time
             # slice (epoch) and the stop condition is maximum age
             #
-            # next_max_t will be None if self.slice_t_ends is empty
-            excess_t = 0.0
             if self.stop == "age" and self.n_time_slices > 1 \
-                    and latest_t > next_max_t:
-                excess_t = latest_t - next_max_t
+                    and (no_event or latest_t > next_max_t):
                 latest_t = next_max_t
                 time_slice_idx += 1
 
                 # extend all lineages (could keep just the extend in the else-block
                 # below) and keep everything up-to-date
-                _extend_all_living_nodes(t_to_next_event - excess_t)
+                _extend_all_living_nodes(next_max_t - previous_t)
 
                 # STOP CHECK: tree grew beyond its maximum time duration #
                 #
@@ -1807,10 +1809,10 @@ class DnSSE(pgm.DistrForSampling):
                 # we check here as well as the if-block in (4) above because
                 # that one only executes if there is more than one time slice
                 # (epoch)
-                if (self.stop == "age" and (latest_t > t_stop)) or \
+                if (self.stop == "age" and (no_event or latest_t > t_stop)) or \
                         latest_t < 0.0:
                     _extend_all_living_nodes(
-                        t_stop - (latest_t - t_to_next_event))
+                        t_stop - previous_t)
 
                     # updates SA info for plotting
                     sa_lineage_node_labels = \
