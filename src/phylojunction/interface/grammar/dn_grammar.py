@@ -21,7 +21,9 @@ class PJDnGrammar():
     dn_grammar_dict: ty.Dict[str, ty.Tuple[str, ...]] = \
         {
             "quasse": ("n", "nr", "birth_rate", "death_rate", "start_trait", "drift", "diffusion",
-                       "stop", "stop_value", "method", "k", "runtime_limit", "max_steps", "max_alive"),
+                       "stop", "stop_value", "method", "k", "runtime_limit", "max_steps", "max_alive",
+                       "sampling_prob", "cond_surv", "cond_spn", "cond_obs_both_sides",
+                       "min_rec_taxa", "max_rec_taxa", "max_n_attempts"),
             "lognormal":
             tuple(["n", "nr", "meanlog", "sdlog", "log_space"]),
             "normal":
