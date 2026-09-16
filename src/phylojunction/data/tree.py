@@ -26,7 +26,7 @@ __email__ = "fmendes@lsu.edu"
 
 
 class AnnotatedTree(dp.Tree):
-    """Tree annotated with discrete states. 
+    """Tree annotated with discrete states or a continuous trait. 
 
     Parameters:
         tree (dendropy.Tree): Main class member, holding the full tree.
@@ -99,7 +99,9 @@ class AnnotatedTree(dp.Tree):
         slice_age_ends (dict): List of floats with the end ages for
             specified time slices (epochs). If not provided by user
             Upon instantiation of class, will be 'None'.
-        state_count (int): How many states there are.
+        state_count (int, optional): Number of discrete states, or None for continuous traits.
+        continuous_trait (str, optional): Name of the continuous node attribute; when set,
+            terminal status comes from alive/sampled flags, including zero-length branches.
         state_count_dict (dict): Dictionary tabulating how many
             terminal nodes in the full tree are in each state. Keys are
             integers representing states and values are their counts.
@@ -330,7 +332,6 @@ class AnnotatedTree(dp.Tree):
         self.slice_age_ends = slice_age_ends
 
         # state related
-        self.state_count = total_state_count
         self.state_count_dict = \
             dict((int(s), 0) for s in range(0, self.state_count or 0, 1))
         self.extant_terminal_state_count_dict = \
@@ -1485,7 +1486,10 @@ class AnnotatedTree(dp.Tree):
             tip = rec.seed_node
             tip.edge_length = self.node_heights_dict[tip.label]
             origin = dp.Node(label="origin", edge_length=0.0)
-            origin.trait = getattr(self.tree.seed_node, self.continuous_trait)
+            setattr(origin, self.continuous_trait, getattr(self.tree.seed_node, self.continuous_trait))
+            origin.alive = origin.sampled = False
+            origin.is_sa = origin.is_sa_dummy_parent = origin.is_sa_lineage = False
+            origin.annotations.add_bound_attribute(self.continuous_trait)
             origin.add_child(tip)
             rec.seed_node = origin
         else:
@@ -1940,7 +1944,10 @@ class AnnotatedTree(dp.Tree):
                 Defaults to 'False'.
         """
 
-        if draw_reconstructed:
+        if self.continuous_trait is not None:
+            node_attr = self.continuous_trait if node_attr in (None, "state") else node_attr
+
+        if draw_reconstructed and self.continuous_trait is None:
             self.extract_reconstructed_tree(plotting_overhead=True)
 
         if not node_attr:
@@ -2375,6 +2382,17 @@ def get_y_coord_from_n_obs_nodes(ann_tr: AnnotatedTree,
     return y_coords
 
 
+# Remove the trait colorbar and undo the space it took from the plotting axes.
+# Manually positioned CLI/GUI axes are not restored by Colorbar.remove() itself.
+def clear_trait_colorbar(axes: plt.Axes) -> None:
+    colorbar = getattr(axes, "_pj_trait_colorbar", None)
+    if colorbar is not None:
+        colorbar.remove()
+        axes.set_position(axes._pj_trait_position, which="both")
+        axes._pj_trait_colorbar = None
+        axes._pj_trait_position = None
+
+
 def plot_ann_tree(ann_tr: AnnotatedTree,
                   axes: plt.Axes,
                   use_age: bool = False,
@@ -2410,6 +2428,22 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
         testing purposes only. Keys are node names, values are either x-
         or y-coordinates.
     """
+
+    # A colorbar belongs to the axes, not to an individual tree; remove it before redrawing.
+    clear_trait_colorbar(axes)
+    continuous_attr = None
+    if ann_tr.continuous_trait is not None:
+        continuous_attr = (ann_tr.continuous_trait if attr_of_interest in (None, "state")
+                           else attr_of_interest)
+        attr_of_interest = None  # Branches stay black; only terminal markers encode traits.
+        if draw_reconstructed:
+            ann_tr.extract_reconstructed_tree()
+            if ann_tr.rec_tr_root_node is None:
+                axes.cla()
+                axes.text(.5, .5, "No sampled tips", ha="center", va="center", transform=axes.transAxes)
+                axes.set_axis_off()
+                return {}, {}
+        axes.set_axis_on()
 
     color_map: ty.Dict[int, str]
     attr_found: bool = True
@@ -2945,6 +2979,8 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
 
     # add margins around the tree to prevent overlapping the axes
     xmax = max(x_coords.values())
+    if continuous_attr is not None:
+        xmax = max(xmax, ann_tr.rec_tr_root_age if draw_reconstructed else ann_tr.seed_age, 1e-6)
     axes.set_xlim(-0.05 * xmax, 1.05 * xmax)
 
     # also invert the y-axis (origin at the top)
@@ -2958,6 +2994,22 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
     axes.spines['left'].set_visible(False)
     axes.spines['right'].set_visible(False)
     axes.spines['top'].set_visible(False)
+
+    if continuous_attr is not None:
+        complete_tips = list(ann_tr.tree.leaf_node_iter())
+        values = [float(getattr(nd, continuous_attr)) for nd in complete_tips]
+        low, high = min(values), max(values)
+        if low == high:
+            padding = max(abs(low) * .01, .01)
+            low, high = low - padding, high + padding
+        norm = colors.Normalize(low, high)
+        tree = ann_tr.tree_reconstructed if draw_reconstructed else ann_tr.tree
+        tips = list(tree.leaf_node_iter())
+        markers = axes.scatter([x_coords[nd.label] for nd in tips], [y_coords[nd.label] for nd in tips],
+                               c=[getattr(nd, continuous_attr) for nd in tips], cmap="viridis", norm=norm,
+                               s=24, zorder=10)
+        axes._pj_trait_position = axes.get_position(original=True).frozen()
+        axes._pj_trait_colorbar = axes.figure.colorbar(markers, ax=axes, label=continuous_attr)
 
     return x_coords, y_coords
 

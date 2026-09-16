@@ -702,7 +702,8 @@ class StochasticNodeDAG(NodeDAG):
                 if isinstance(sample_idx, int) and \
                     isinstance(self.value[sample_idx * repl_size + repl_idx],
                                pjtr.AnnotatedTree):
-                    if self.value[0].state_count > 1:
+                    if (self.value[0].continuous_trait is not None or
+                            (self.value[0].state_count is not None and self.value[0].state_count > 1)):
                         self.value[sample_idx * repl_size + repl_idx]\
                             .plot_node(axes,
                                        node_attr=branch_attr,
@@ -816,7 +817,8 @@ class DeterministicNodeDAG(NodeDAG):
                 if isinstance(sample_idx, int) and \
                         isinstance(self.value[sample_idx * repl_size + repl_idx],
                                    pjtr.AnnotatedTree):
-                    if self.value[0].state_count > 1:
+                    if (self.value[0].continuous_trait is not None or
+                            (self.value[0].state_count is not None and self.value[0].state_count > 1)):
                         self.value[sample_idx * repl_size + repl_idx] \
                             .plot_node(axes, node_attr=branch_attr)
 
