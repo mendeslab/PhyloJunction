@@ -310,28 +310,17 @@ class DnSSE(pgm.DistrForSampling):
         ############################
         # Checking starting states #
         ############################
-        # multiplying starting states if only one was passed
-        # and the number of simulations is > 1
-        n_start_states: int = len(self.start_states)
-        if n_start_states == 1 and self.n_sim > 1:
-                # len(self.start_states) < self.n_sim:
-            self.start_states = \
-                [int(self.start_states[0]) for i in range(self.n_sim)]
-
-        # do not know how to multiply, error!
-        elif n_start_states > 1:
-            if ((n_start_states / self.n_sim) != self.n_repl) and \
-                    (n_start_states != self.n_sim):
-                raise ec.DimensionalityError(
-                    self.DN_NAME,
-                    par_name="'state_state'")
-            
-            # if number of starting states is identical
-            # to number of samples (simulations), we assume all
-            # replicates within a sample will share the starting
-            # state of that sample -- here, we multiply them
-            elif n_start_states == self.n_sim:
-                self.start_states *= self.n_repl
+        # Replicates are consecutive within each sample, matching generate()'s indexing.
+        # Build a new list so expansion does not modify the caller's starting states.
+        n_start_states = len(self.start_states)
+        if n_start_states == 1:
+            self.start_states = [int(self.start_states[0])] * (self.n_sim * self.n_repl)
+        elif n_start_states == self.n_sim:
+            self.start_states = [state for state in self.start_states for _ in range(self.n_repl)]
+        elif n_start_states == self.n_sim * self.n_repl:
+            self.start_states = list(self.start_states)
+        elif n_start_states > 0:
+            raise ec.DimensionalityError(self.DN_NAME, par_name="'start_state'")
 
         ########################
         # Checking stop values #

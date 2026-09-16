@@ -11,6 +11,23 @@ __email__ = "fmendes@lsu.edu"
 
 class TestDnSSEObject(unittest.TestCase):
 
+    # Protect sample-major replicate ordering and caller-owned inputs; the existing
+    # simulation test has no replicates. Remove if starting states cease to be vectorized.
+    def test_start_state_expansion(self):
+        rate = sseobj.DiscreteStateDependentRate(
+            name="lambda", val=1.0, event=sseobj.MacroevolEvent.W_SPECIATION, states=[0, 0, 0])
+        for n, states, expected in [(1, [0], [0, 0]), (2, [0], [0, 0, 0, 0]),
+                                    (2, [0, 1], [0, 0, 1, 1]),
+                                    (2, [0, 1, 1, 0], [0, 1, 1, 0])]:
+            with self.subTest(n=n, states=states):
+                original = list(states)
+                manager = sseobj.DiscreteStateDependentParameterManager([[rate]], 2)
+                stash = sseobj.SSEStash(sseobj.MacroevolEventHandler(manager))
+                sim = distsse.DnSSE(stash, n=n, n_replicates=2, origin=True,
+                                   start_states_list=states, stop="age", stop_value=[1.0])
+                self.assertEqual(sim.start_states, expected)
+                self.assertEqual(states, original)
+
     def test_dnsse_vectorization(self):
         """Test if DnSSE takes vectorized input correctly."""
 
