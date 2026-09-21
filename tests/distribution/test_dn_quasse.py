@@ -4,7 +4,10 @@ import unittest
 from unittest.mock import patch
 import numpy as np
 
-from phylojunction.calculation.continuous_sse import LogisticRate
+from phylojunction.calculation.continuous_sse import (
+    LogisticRate, ConstantRate, GaussianRate, StepRate, LinearRate,
+    SkewGaussianRate, QuadraticRate, AbsoluteRate,
+)
 from phylojunction.data.trait import ContinuousTrait
 from phylojunction.distribution.dn_quasse import DnQuaSSE
 from phylojunction.interface.cmdbox.cmd_parse import cmdline2dag
@@ -13,6 +16,48 @@ from phylojunction.utility import exception_classes as ec
 
 
 class TestQuaSSE(unittest.TestCase):
+    # Direct checks cover rate shapes and caps that stochastic tree tests cannot isolate.
+    # Retire if the rate families move to another library with equivalent mathematical tests.
+    def test_rate_families(self):
+        cases = [(ConstantRate, (2,), [2, 2, 2]),
+                 (LogisticRate, (1, 3, 0, 0), [2, 2, 2]),
+                 (GaussianRate, (2, 0, 0, 1), [2 * (1 - np.exp(-.5)), 0, 2 * (1 - np.exp(-.5))]),
+                 (StepRate, (1, 3, 0), [1, 3, 3]),
+                 (LinearRate, (0, 2), [0, 0, 2]),
+                 (SkewGaussianRate, (1, 2, 0, 1, 0), [1 + 2 * np.exp(-.5), 3, 1 + 2 * np.exp(-.5)]),
+                 (QuadraticRate, (1, 2, 0), [3, 1, 3]),
+                 (AbsoluteRate, (1, 2, 0), [3, 1, 3])]
+        for cls, args, expected in cases:
+            with self.subTest(rate=cls.__name__):
+                rate = cls(*args)
+                np.testing.assert_allclose(rate([-1, 0, 1]), expected)
+                self.assertAlmostEqual(float(rate(0)), expected[1])
+                capped = cls(*args, cap=.5)
+                np.testing.assert_allclose(capped([-1, 0, 1]), np.minimum(expected, .5))
+                self.assertLessEqual(capped.upper_bound, .5)
+                self.assertIn('cap=0.5', str(capped))
+                self.assertTrue(cls(*args, cap=0).is_identically_zero)
+                for cap in (-1, np.inf, np.nan):
+                    with self.assertRaises(ValueError):
+                        cls(*args, cap=cap)
+        x = np.array([-2., 0., 2.])
+        np.testing.assert_allclose(SkewGaussianRate(1, 2, 0, 1, 3)(x),
+                                   SkewGaussianRate(1, 2, 0, 1, -3)(-x))
+        for rate in (LinearRate(0, 1), QuadraticRate(0, 1, 0), AbsoluteRate(0, 1, 0)):
+            self.assertIsNone(rate.upper_bound)
+            self.assertFalse(rate.is_identically_zero)
+            self.assertEqual(float(rate(0)), 0)
+            self.assertGreater(float(rate(100)), float(rate(10)))
+        self.assertTrue(LinearRate(-1, 0).is_identically_zero)
+        np.testing.assert_allclose(QuadraticRate(0, 1e-300, 0, cap=1e200)(1e200), 1e100)
+        self.assertEqual(float(QuadraticRate(1, 1, 0, cap=3)(1e300)), 3)
+        for cls, args in [(ConstantRate, (-1,)), (GaussianRate, (0, 1, 0, 0)),
+                          (StepRate, (0, -1, 0)), (LinearRate, (0, np.inf)),
+                          (SkewGaussianRate, (0, -1, 0, 1, 0)),
+                          (QuadraticRate, (0, -1, 0)), (AbsoluteRate, (0, 1, np.nan))]:
+            with self.assertRaises(ValueError):
+                cls(*args)
+
     # Discrete tests cannot detect cancellation in positive logistic tails or resulting simulation failures.
     # Retire this group if another shared rate implementation tests this same contract.
     def test_logistic(self):
