@@ -10,7 +10,7 @@ import time
 import numpy as np
 import dendropy as dp
 
-from phylojunction.calculation.continuous_sse import LogisticRate
+from phylojunction.calculation.continuous_sse import RateFunction
 from phylojunction.data.tree import AnnotatedTree
 from phylojunction.pgm.pgm import DistrForSampling
 from phylojunction.utility import exception_classes as ec
@@ -32,7 +32,7 @@ class DnQuaSSE(DistrForSampling):
                  drift=0.0, diffusion=0.0, n=1, nr=1, method="diversitree", k=500,
                  runtime_limit=300, max_steps=1000000, max_alive=100000, rng_seed=None,
                  sampling_prob=1.0, cond_surv=True, cond_spn=False, cond_obs_both_sides=False,
-                 min_rec_taxa=None, max_rec_taxa=None, max_n_attempts=200):
+                 min_rec_taxa=None, max_rec_taxa=None, max_n_attempts=200, dt_max=None):
         self.n_sim = _integer(n, "n")
         self.n_repl = _integer(nr, "nr")
         self.method = method
@@ -40,6 +40,9 @@ class DnQuaSSE(DistrForSampling):
         self.k = _integer(k, "k")
         self.max_steps = _integer(max_steps, "max_steps")
         self.max_alive = _integer(max_alive, "max_alive")
+        self.dt_max = None if dt_max is None else float(dt_max)
+        if self.dt_max is not None and (not np.isfinite(self.dt_max) or self.dt_max <= 0):
+            raise ValueError("dt_max must be positive and finite.")
         self.runtime_limit = float(runtime_limit)
         if not np.isfinite(self.runtime_limit) or self.runtime_limit <= 0:
             raise ValueError("runtime_limit must be positive and finite.")
@@ -75,8 +78,8 @@ class DnQuaSSE(DistrForSampling):
             if len(values) not in (1, self.n_sim):
                 raise ValueError(f"{name} must have length 1 or n={self.n_sim}.")
             if name in ("birth_rate", "death_rate"):
-                if not all(isinstance(v, LogisticRate) for v in values):
-                    raise ValueError(f"{name} requires quasse_logistic rate objects.")
+                if not all(isinstance(v, RateFunction) for v in values):
+                    raise ValueError(f"{name} requires QuaSSE rate objects.")
             else:
                 values = [float(v) for v in values]
                 if not np.all(np.isfinite(values)):
@@ -127,7 +130,7 @@ class DnQuaSSE(DistrForSampling):
         elapsed = 0.0
         node_count = 0
         steps = 0
-        zero_rates = birth.y0 == birth.y1 == death.y0 == death.y1 == 0
+        zero_rates = birth.is_identically_zero and death.is_identically_zero
         if self.stop == "size" and zero_rates:
             raise ec.GenerateFailError(self.DN_NAME, "Zero rates cannot reach the size-stopping birth.")
         while living and (self.stop == "size" or elapsed < target):
@@ -142,14 +145,18 @@ class DnQuaSSE(DistrForSampling):
                 total = birth_sum + death_sum
             if not np.isfinite(total):
                 raise ec.GenerateFailError(self.DN_NAME, "Nonfinite total event rate.")
-            if total == 0 and not zero_rates:
-                raise ec.GenerateFailError(self.DN_NAME, "Rate underflow: zero total from nonzero functions.")
+            if total == 0 and not zero_rates and self.dt_max is None:
+                raise ec.GenerateFailError(self.DN_NAME,
+                                          "Zero total rate from nonzero functions: supply dt_max to advance traits.")
             remaining = target - elapsed if self.stop == "age" else float("inf")
             full_step = (1.0 / self.k) / total if total else float("inf")
-            dt = min(full_step, remaining)
+            # Locally zero rates need periodic trait updates; identically zero rates can
+            # use a single exact Brownian transition. Shortened steps have event chance R*dt.
+            dt_limit = self.dt_max if self.dt_max is not None and not zero_rates else float("inf")
+            dt = min(full_step, dt_limit, remaining)
             if not np.isfinite(dt) or dt <= 0 or elapsed + dt == elapsed:
                 raise ec.GenerateFailError(self.DN_NAME, "Cannot advance simulation time.")
-            probability = 1.0 / self.k if full_step <= remaining else total * dt
+            probability = 1.0 / self.k if dt == full_step else total * dt
             final_step = self.stop == "age" and dt == remaining
             if total and np.random.random() < probability:
                 is_birth = np.random.random() < birth_sum / total

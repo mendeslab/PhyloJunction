@@ -33,7 +33,7 @@ quoted_character_value_regex = re.compile(r"\s*(\"[a-zA-Z]+\")\s*")
 
 # sampling dn
 sampled_as_regex = re.compile(r"\s*(~)\s*")
-sampling_dn_spec_regex = re.compile(r"([a-zA-Z]+_*[a-zA-Z]*)\((.+)\)")
+sampling_dn_spec_regex = re.compile(r"([a-zA-Z][a-zA-Z_]*)\((.+)\)")
 
 # det functions
 deterministic_regex = re.compile(r"\s*(:=)\s*")

@@ -134,6 +134,40 @@ class TestQuaSSE(unittest.TestCase):
         self.assertEqual(trees[0].extract_reconstructed_tree().seed_node.child_nodes()[0].trait, 0)
         self.assertEqual(str(trees[-1].extract_reconstructed_tree()), ';')
         self.assertIn(dag.name_node_dict['b'], dag.name_node_dict['t'].parent_nd_list)
+        constructors = ["constant(rate=2", "gaussian(baseline=1,center_rate=3,center=0,width=1",
+                        "step(left=1,right=2,threshold=0", "linear(intercept=1,slope=2",
+                        "skew_gaussian(baseline=1,amplitude=2,location=0,width=1,skew=3",
+                        "quadratic(baseline=1,strength=2,center=0", "absolute(baseline=1,strength=2,center=0"]
+        for constructor in constructors:
+            cmdline2dag(dag, f"r := quasse_{constructor},cap=x)")
+            rates = dag.name_node_dict['r'].value
+            self.assertEqual(len(rates), 2)
+            self.assertTrue(rates[0].is_identically_zero)
+            self.assertIn(dag.name_node_dict['x'], dag.name_node_dict['r'].parent_nd_list)
+        cmdline2dag(dag, 'u ~ quasse(n=2,birth_rate=r,death_rate=b,stop="age",stop_value=0,dt_max=.1)')
+        self.assertEqual(len(dag.name_node_dict['u'].value), 2)
+        for spec in ('quasse_constant(rate=[1,2],cap=[1,2,3])', 'quasse_constant(rate=1,cap=-1)',
+                     'quasse_gaussian(baseline=1,center_rate=2,center=0)', 'quasse_constant(rate=1,typo=2)'):
+            with self.assertRaises(ec.ParseDetFnInitFailError):
+                cmdline2dag(dag, f'invalid := {spec}')
+
+    # Frozen-rate steps must cross zero-rate regions and scale event chance with dt_max.
+    # Random tree tests cannot isolate either; retire when this integration method is replaced.
+    def test_dt_max(self):
+        zero = ConstantRate(0)
+        dn = DnQuaSSE(StepRate(0, 1, .5), zero, 'age', 1, drift=1, dt_max=.5, k=1)
+        with patch('numpy.random.random', side_effect=[0., 0.]), \
+                patch('numpy.random.choice', return_value=0):
+            tree = dn.simulate()
+        self.assertEqual(tree.n_extant_terminal_nodes, 2)
+        self.assertEqual(tree.root_node.trait, .5)
+        with patch('numpy.random.random', return_value=.3):
+            tree = DnQuaSSE(ConstantRate(1), zero, 'age', 1, k=1, dt_max=.25).simulate()
+        self.assertEqual(tree.n_extant_terminal_nodes, 1)
+        with patch('numpy.random.normal', return_value=np.array([2.])) as normal:
+            tree = DnQuaSSE(zero, zero, 'age', 1, diffusion=1, dt_max=.01).simulate()
+        normal.assert_called_once_with(0., 1., 1)
+        self.assertEqual(tree.brosc_node.trait, 2.)
 
     # Count and root-side conditions must inspect observations, without changing parameters.
     # These tests supplement numerical checks and become obsolete with a shared acceptance layer.
@@ -173,7 +207,7 @@ class TestQuaSSE(unittest.TestCase):
         one, zero = LogisticRate(1, 1, 0, 0), LogisticRate(0, 0, 0, 0)
         for kwargs in [{'method': 'unknown'}, {'k': 1.5}, {'diffusion': -1},
                        {'sampling_prob': 2}, {'min_rec_taxa': 3, 'max_rec_taxa': 2},
-                       {'drift': [0, 1]}]:
+                       {'drift': [0, 1]}, {'dt_max': 0}, {'dt_max': np.inf}]:
             with self.assertRaises(ValueError):
                 DnQuaSSE(one, zero, 'age', 1, **kwargs)
         for kwargs in [{'sampling_prob': .5}, {'min_rec_taxa': 0}]:
