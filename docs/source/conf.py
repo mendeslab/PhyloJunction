@@ -18,7 +18,7 @@ release = '0.0.1'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ["sphinx.ext.napoleon", "sphinx_new_tab_link"]
+extensions = ["sphinx.ext.autodoc", "sphinx.ext.napoleon", "sphinx_new_tab_link"]
 # "sphinx_new_tab_link" makes new links be opened in separate tabs; it needs module sphinx-new-tab-link
 
 # necessary to load this custom css, which 
@@ -104,5 +104,4 @@ rst_prolog += """
 .. _RevBayes: https://revbayes.github.io
 .. |cpp| replace:: C++
 .. _C++: https://isocpp.org/"""
-
 
