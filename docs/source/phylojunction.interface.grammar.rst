@@ -60,6 +60,22 @@ phylojunction.interface.grammar.dn\_grammar module
    :undoc-members:
    :show-inheritance:
 
+phylojunction.interface.grammar.det\_fn\_quasse\_makers module
+--------------------------------------------------------------
+
+.. automodule:: phylojunction.interface.grammar.det_fn_quasse_makers
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+phylojunction.interface.grammar.dn\_quasse\_makers module
+---------------------------------------------------------
+
+.. automodule:: phylojunction.interface.grammar.dn_quasse_makers
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 
