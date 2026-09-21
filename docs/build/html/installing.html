@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" data-content_root="./">
 <head>
@@ -5,20 +7,17 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Installing and configuring PhyloJunction &mdash; PhyloJunction 0.0.1 documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="_static/sphinx-new-tab-link.css?v=d87cb1ac" />
       <link rel="stylesheet" type="text/css" href="_static/css/pj_custom.css?v=b916aa57" />
 
   
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-        <script src="_static/jquery.js?v=5d32c60e"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=d45e8c67"></script>
-        <script src="_static/doctools.js?v=888ff710"></script>
-        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=d45e8c67"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -106,26 +105,26 @@
 <p>For the most part, PhyloJunction has been developed and tested on an M1-chip Apple machine (running macOS Sonoma), though it is periodically tested on Linux (Ubuntu).
 There is no support for Microsoft Windows.</p>
 <p>PhyloJunction currently runs under Python 3.11 and has various Python library dependencies.
-Fortunately those are automatically handled by the <a class="reference external" href="https://pip.pypa.io/en/stable/getting-started/" rel="noopener noreferrer" target="_blank">pip</a> installer, as shown below.</p>
+Fortunately those are automatically handled by the <a class="reference external" href="https://pip.pypa.io/en/stable/getting-started/" rel="noreferrer" target="_blank">pip</a> installer, as shown below.</p>
 </section>
 <section id="typical-user-installation">
 <h2>Typical user installation<a class="headerlink" href="#typical-user-installation" title="Link to this heading"></a></h2>
 <section id="unix-operating-systems">
 <h3>Unix operating systems<a class="headerlink" href="#unix-operating-systems" title="Link to this heading"></a></h3>
-<p>PhyloJunction is hosted in the Python package index (PyPI; <a class="reference external" href="https://pypi.org/project/PhyloJunction/" rel="noopener noreferrer" target="_blank">here</a>), and can be automatically installed with the <code class="docutils literal notranslate"><span class="pre">pip</span></code> tool.
+<p>PhyloJunction is hosted in the Python package index (PyPI; <a class="reference external" href="https://pypi.org/project/PhyloJunction/" rel="noreferrer" target="_blank">here</a>), and can be automatically installed with the <code class="docutils literal notranslate"><span class="pre">pip</span></code> tool.
 With <code class="docutils literal notranslate"><span class="pre">pip</span></code> installed, all that needs to be done is running the following command on the Terminal:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3.11<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>phylojunction
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">pip</span></code> will take care of installing all of PhyloJunction’s dependencies, and will proceed to place PhyloJunction’s entry-point executables (<cite>pjcli</cite> and <cite>pjgui</cite>) and the library’s source files inside appropriate directories.</p>
-<p>If you are running an Apple operating system and installed Python with <a class="reference external" href="https://brew.sh/" rel="noopener noreferrer" target="_blank">Homebrew</a>, <code class="docutils literal notranslate"><span class="pre">pip</span></code> will place the entry points in <code class="docutils literal notranslate"><span class="pre">/opt/homebrew/bin</span></code> and the source files in <code class="docutils literal notranslate"><span class="pre">/opt/homebrew/lib/python3.11/site-packages/phylojunction</span></code>.</p>
+<p>If you are running an Apple operating system and installed Python with <a class="reference external" href="https://brew.sh/" rel="noreferrer" target="_blank">Homebrew</a>, <code class="docutils literal notranslate"><span class="pre">pip</span></code> will place the entry points in <code class="docutils literal notranslate"><span class="pre">/opt/homebrew/bin</span></code> and the source files in <code class="docutils literal notranslate"><span class="pre">/opt/homebrew/lib/python3.11/site-packages/phylojunction</span></code>.</p>
 <p>If you are running a Debian Linux distribution, <code class="docutils literal notranslate"><span class="pre">pip</span></code> will normally place the entry points in <code class="docutils literal notranslate"><span class="pre">/usr/local/bin</span></code> if you have superuser access, and if not, in <code class="docutils literal notranslate"><span class="pre">~/.local/bin</span></code>.
 Source files, in turn, are placed in <code class="docutils literal notranslate"><span class="pre">/usr/local/lib/python3.11/dist-packages/</span></code> with superuser access, and in <code class="docutils literal notranslate"><span class="pre">~/.local/lib/python3.11/site-packages/</span></code> without.</p>
 </section>
 </section>
 <section id="development-installation">
 <h2>Development installation<a class="headerlink" href="#development-installation" title="Link to this heading"></a></h2>
-<p>On both macOS and Linux, we will start by cloning the PhyloJunction <a class="reference external" href="https://github.com/fkmendes/PhyloJunction" rel="noopener noreferrer" target="_blank">GitHub repository</a>.
+<p>On both macOS and Linux, we will start by cloning the PhyloJunction <a class="reference external" href="https://github.com/fkmendes/PhyloJunction" rel="noreferrer" target="_blank">GitHub repository</a>.
 Open your Terminal, go to a directory of choice, and do:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/fkmendes/PhyloJunction.git
 </pre></div>
@@ -144,7 +143,7 @@ This is because the environment <code class="docutils literal notranslate"><span
 </pre></div>
 </div>
 <p>With this command, <code class="docutils literal notranslate"><span class="pre">pip</span></code> will place PhyloJunction’s entry-point executables (<code class="docutils literal notranslate"><span class="pre">pjcli</span></code> and <code class="docutils literal notranslate"><span class="pre">pjgui</span></code>) into the <code class="docutils literal notranslate"><span class="pre">bin/</span></code> directory of wherever you Python 3.11 lives.
-If Python 3.11 was installed with <a class="reference external" href="https://brew.sh/" rel="noopener noreferrer" target="_blank">Homebrew</a>, for example, that could be <code class="docutils literal notranslate"><span class="pre">/opt/homebrew/bin</span></code>.
+If Python 3.11 was installed with <a class="reference external" href="https://brew.sh/" rel="noreferrer" target="_blank">Homebrew</a>, for example, that could be <code class="docutils literal notranslate"><span class="pre">/opt/homebrew/bin</span></code>.
 Other package information files would then be placed in <code class="docutils literal notranslate"><span class="pre">/opt/homebrew/lib/python3.11/site-packages/PhyloJunction-X.Y.Z.dist-info</span></code>.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">-e</span></code> flag tells <code class="docutils literal notranslate"><span class="pre">pip</span></code> to do an editable install, which further writes the path to PhyloJunction modules to, for example, <code class="docutils literal notranslate"><span class="pre">/opt/homebrew/lib/python3.11/site-packages/__editable__.PhyloJunction-X.Y.Z.pth</span></code>.
 The last argument <code class="docutils literal notranslate"><span class="pre">.</span></code> tells <code class="docutils literal notranslate"><span class="pre">pip</span></code> where the local project directory is (where it can find file <code class="docutils literal notranslate"><span class="pre">setup.py</span></code>).</p>
@@ -216,7 +215,7 @@ pjgui<span class="w"> </span><span class="c1"># GUI</span>
 </div>
 <p>Alternatively, users can import all of PhyloJunction’s modules within a Python session.
 First call Python’s interpreter, and then:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">phylojunction</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">phylojunction</span>
 </pre></div>
 </div>
 <p>Lastly, users can bypass the standalone user interfaces via a “sandbox” script (<code class="docutils literal notranslate"><span class="pre">pj_sandbox.py</span></code>) that can be found <a class="reference internal" href="pjdoc/index.html#bypass"><span class="std std-ref">here</span></a>.
@@ -231,11 +230,11 @@ After replacing <code class="docutils literal notranslate"><span class="pre">[pa
 <section id="building-pj-on-an-ide">
 <h2>Building PJ on an IDE<a class="headerlink" href="#building-pj-on-an-ide" title="Link to this heading"></a></h2>
 <p>Researchers who want to navigate or expand PhyloJunction’s code base may want to build the library using an integrated development environment (IDE).
-One IDE that continues to be supported on multiple operating systems is JetBrains’ <a class="reference external" href="https://www.jetbrains.com/pycharm/" rel="noopener noreferrer" target="_blank">PyCharm</a> (Visual Studio Code for Mac will be retired in August 2024).</p>
+One IDE that continues to be supported on multiple operating systems is JetBrains’ <a class="reference external" href="https://www.jetbrains.com/pycharm/" rel="noreferrer" target="_blank">PyCharm</a> (Visual Studio Code for Mac will be retired in August 2024).</p>
 <p>Assuming the user has a fresh install of PyCharm, the first thing to do is to open the IDE and set up a Python interpreter.
 This can be done by clicking “&lt;No interpreter&gt;” in the bottom-right corner, and then doing “Add New Interpreter” &gt; “Add Local Interpreter” &gt; “System Interpreter” (left menu) &gt; Interpreter: [path to Python 3 binary].</p>
 <figure class="align-center" id="id6" style="width: 100%">
-<img alt="_images/pj_IDE.png" src="_images/pj_IDE.png" />
+<img alt="images/pj_IDE.png" src="images/pj_IDE.png" />
 <figcaption>
 <p><span class="caption-text"><strong>Figure 1.</strong> The PhyloJunction project after being built with PyCharm.</span><a class="headerlink" href="#id6" title="Link to this image"></a></p>
 </figcaption>

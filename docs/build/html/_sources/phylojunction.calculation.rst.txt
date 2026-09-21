@@ -20,6 +20,14 @@ phylojunction.calculation.math\_utils module
    :undoc-members:
    :show-inheritance:
 
+phylojunction.calculation.continuous\_sse module
+------------------------------------------------
+
+.. automodule:: phylojunction.calculation.continuous_sse
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 

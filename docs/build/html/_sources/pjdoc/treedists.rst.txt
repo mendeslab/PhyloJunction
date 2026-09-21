@@ -2,7 +2,7 @@
     :class: underline
 
 Phylogenetic tree stochastic nodes can be added to a model's DAG using tree distributions.
-At the moment, |pj| comes with one tree distribution that produce a variety of tree types.
+|pj| provides discrete SSE and continuous-trait QuaSSE tree distributions.
 
 Discrete SSE
 ------------
@@ -131,3 +131,5 @@ Below, an example of assigning a discrete SSE to a stochastic DAG node represent
     6. `Time-heterogeneous binary state-dependent speciation and extinction <https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/bisse_timehet.pj>`_ (skyline BiSSE) model;
     7. `Geographic state-dependent speciation and extinction <https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/geosse.pj>`_ (GeoSSE) model;
     8. `Time-heterogeneous geographic state-dependent speciation and extinction <https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/geosse_timehet.pj>`_ (skyline GeoSSE) model;
+
+.. include:: quasse.rst

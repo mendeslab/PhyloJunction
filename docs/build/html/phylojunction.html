@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" data-content_root="./">
 <head>
@@ -5,20 +7,17 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>phylojunction package &mdash; PhyloJunction 0.0.1 documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="_static/sphinx-new-tab-link.css?v=d87cb1ac" />
       <link rel="stylesheet" type="text/css" href="_static/css/pj_custom.css?v=b916aa57" />
 
   
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-        <script src="_static/jquery.js?v=5d32c60e"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=d45e8c67"></script>
-        <script src="_static/doctools.js?v=888ff710"></script>
-        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=d45e8c67"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -150,6 +149,7 @@
 <li class="toctree-l4"><a class="reference internal" href="phylojunction.calculation.html#phylojunction.calculation.discrete_sse.DiscreteStateDependentRate.departing_state"><code class="docutils literal notranslate"><span class="pre">DiscreteStateDependentRate.departing_state</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="phylojunction.calculation.html#phylojunction.calculation.discrete_sse.DiscreteStateDependentRate.event"><code class="docutils literal notranslate"><span class="pre">DiscreteStateDependentRate.event</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="phylojunction.calculation.html#phylojunction.calculation.discrete_sse.DiscreteStateDependentRate.state_tuple"><code class="docutils literal notranslate"><span class="pre">DiscreteStateDependentRate.state_tuple</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="phylojunction.calculation.html#phylojunction.calculation.discrete_sse.DiscreteStateDependentRate.states"><code class="docutils literal notranslate"><span class="pre">DiscreteStateDependentRate.states</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="phylojunction.calculation.html#phylojunction.calculation.discrete_sse.DiscreteStateDependentRate.str_representation"><code class="docutils literal notranslate"><span class="pre">DiscreteStateDependentRate.str_representation</span></code></a></li>
 </ul>
 </li>
@@ -205,6 +205,10 @@
 </li>
 <li class="toctree-l3"><a class="reference internal" href="phylojunction.calculation.html#phylojunction.calculation.math_utils.exp_extant_count_bd"><code class="docutils literal notranslate"><span class="pre">exp_extant_count_bd()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="phylojunction.calculation.html#phylojunction.calculation.math_utils.exp_root_height_yule_ntaxa"><code class="docutils literal notranslate"><span class="pre">exp_root_height_yule_ntaxa()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="phylojunction.calculation.html#module-phylojunction.calculation.continuous_sse">phylojunction.calculation.continuous_sse module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="phylojunction.calculation.html#phylojunction.calculation.continuous_sse.LogisticRate"><code class="docutils literal notranslate"><span class="pre">LogisticRate</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="phylojunction.calculation.html#module-phylojunction.calculation">Module contents</a></li>
@@ -303,6 +307,7 @@
 <li class="toctree-l4"><a class="reference internal" href="phylojunction.data.html#phylojunction.data.tree.AnnotatedTree.with_origin"><code class="docutils literal notranslate"><span class="pre">AnnotatedTree.with_origin</span></code></a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="phylojunction.data.html#phylojunction.data.tree.clear_trait_colorbar"><code class="docutils literal notranslate"><span class="pre">clear_trait_colorbar()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="phylojunction.data.html#phylojunction.data.tree.get_color_map"><code class="docutils literal notranslate"><span class="pre">get_color_map()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="phylojunction.data.html#phylojunction.data.tree.get_node_name"><code class="docutils literal notranslate"><span class="pre">get_node_name()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="phylojunction.data.html#phylojunction.data.tree.get_x_coord_from_nd_heights"><code class="docutils literal notranslate"><span class="pre">get_x_coord_from_nd_heights()</span></code></a></li>
@@ -435,6 +440,17 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="phylojunction.distribution.html#module-phylojunction.distribution.dn_quasse">phylojunction.distribution.dn_quasse module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="phylojunction.distribution.html#phylojunction.distribution.dn_quasse.DnQuaSSE"><code class="docutils literal notranslate"><span class="pre">DnQuaSSE</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="phylojunction.distribution.html#phylojunction.distribution.dn_quasse.DnQuaSSE.DN_NAME"><code class="docutils literal notranslate"><span class="pre">DnQuaSSE.DN_NAME</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="phylojunction.distribution.html#phylojunction.distribution.dn_quasse.DnQuaSSE.generate"><code class="docutils literal notranslate"><span class="pre">DnQuaSSE.generate()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="phylojunction.distribution.html#phylojunction.distribution.dn_quasse.DnQuaSSE.get_rev_inference_spec_info"><code class="docutils literal notranslate"><span class="pre">DnQuaSSE.get_rev_inference_spec_info()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="phylojunction.distribution.html#phylojunction.distribution.dn_quasse.DnQuaSSE.init_check_vectorize_sample_size"><code class="docutils literal notranslate"><span class="pre">DnQuaSSE.init_check_vectorize_sample_size()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="phylojunction.distribution.html#phylojunction.distribution.dn_quasse.DnQuaSSE.simulate"><code class="docutils literal notranslate"><span class="pre">DnQuaSSE.simulate()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="phylojunction.distribution.html#module-phylojunction.distribution">Module contents</a></li>
 </ul>
 </li>
@@ -470,6 +486,8 @@
 <li class="toctree-l4"><a class="reference internal" href="phylojunction.interface.grammar.html#module-phylojunction.interface.grammar.det_fn_map_attribute">phylojunction.interface.grammar.det_fn_map_attribute module</a></li>
 <li class="toctree-l4"><a class="reference internal" href="phylojunction.interface.grammar.html#module-phylojunction.interface.grammar.dn_discrete_sse_makers">phylojunction.interface.grammar.dn_discrete_sse_makers module</a></li>
 <li class="toctree-l4"><a class="reference internal" href="phylojunction.interface.grammar.html#module-phylojunction.interface.grammar.dn_grammar">phylojunction.interface.grammar.dn_grammar module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="phylojunction.interface.grammar.html#module-phylojunction.interface.grammar.det_fn_quasse_makers">phylojunction.interface.grammar.det_fn_quasse_makers module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="phylojunction.interface.grammar.html#module-phylojunction.interface.grammar.dn_quasse_makers">phylojunction.interface.grammar.dn_quasse_makers module</a></li>
 <li class="toctree-l4"><a class="reference internal" href="phylojunction.interface.grammar.html#module-phylojunction.interface.grammar">Module contents</a></li>
 </ul>
 </li>

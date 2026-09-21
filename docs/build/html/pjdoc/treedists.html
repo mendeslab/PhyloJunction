@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" data-content_root="../">
 <head>
@@ -5,20 +7,17 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Discrete SSE &mdash; PhyloJunction 0.0.1 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/sphinx-new-tab-link.css?v=d87cb1ac" />
       <link rel="stylesheet" type="text/css" href="../_static/css/pj_custom.css?v=b916aa57" />
 
   
-  <!--[if lt IE 9]>
-    <script src="../_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-        <script src="../_static/jquery.js?v=5d32c60e"></script>
-        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../_static/documentation_options.js?v=d45e8c67"></script>
-        <script src="../_static/doctools.js?v=888ff710"></script>
-        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=d45e8c67"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" /> 
@@ -76,22 +75,22 @@
            <div itemprop="articleBody">
              
   <p>Phylogenetic tree stochastic nodes can be added to a model’s DAG using tree distributions.
-At the moment, PhyloJunction comes with one tree distribution that produce a variety of tree types.</p>
+PhyloJunction provides discrete SSE and continuous-trait QuaSSE tree distributions.</p>
 <section id="discrete-sse">
 <h1>Discrete SSE<a class="headerlink" href="#discrete-sse" title="Link to this heading"></a></h1>
 <p>Discrete SSE (<code class="docutils literal notranslate"><span class="pre">discrete_sse</span></code>) stands for discrete state-dependent speciation and extinction process, a general model that includes many popular special cases documented below.</p>
 <p><span class="underline">Rate types</span></p>
-<p>The implementation and usage of <code class="docutils literal notranslate"><span class="pre">discrete_sse</span></code> in PhyloJunction is very flexible and takes inspiration from Tim Vaughan’s great <a class="reference external" href="https://tgvaughan.github.io/remaster/" rel="noopener noreferrer" target="_blank">ReMASTER</a> simulator program: a model with any number of rates of whatever types may be specified.
+<p>The implementation and usage of <code class="docutils literal notranslate"><span class="pre">discrete_sse</span></code> in PhyloJunction is very flexible and takes inspiration from Tim Vaughan’s great <a class="reference external" href="https://tgvaughan.github.io/remaster/" rel="noreferrer" target="_blank">ReMASTER</a> simulator program: a model with any number of rates of whatever types may be specified.
 Of course, this flexibility comes at the price of user responsibility!</p>
 <p>SSE rates are added to a DAG by passing deterministic function <code class="docutils literal notranslate"><span class="pre">sse_rate</span></code> a stochastic or constant node containing a rate’s value (the value can also be passed directly):</p>
 <div class="literal-block-wrapper docutils container" id="id1">
 <div class="code-block-caption"><span class="caption-text"><strong>Script excerpt 1.</strong> Command in <em>phylojunction</em> to add a birth rate (deterministic node) to the DAG.</span><a class="headerlink" href="#id1" title="Link to this code"></a></div>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">birth_rate</span> <span class="o">~</span> <span class="n">exponential</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">nr</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">rate</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
 
-<span class="n">det_birth_rate</span> <span class="o">:=</span> <span class="n">sse_rate</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;lambda&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">birth_rate</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="s2">&quot;speciation&quot;</span><span class="p">)</span>
+<span class="n">det_birth_rate</span> <span class="o">:=</span> <span class="n">sse_rate</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"lambda"</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">birth_rate</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="s2">"speciation"</span><span class="p">)</span>
 
 <span class="c1"># alternatively, one could pass values directly to sse_rate()</span>
-<span class="c1"># det_birth_rate := sse_rate(name=&quot;lambda&quot;, value=[0.95, 1.05], event=&quot;speciation&quot;)</span>
+<span class="c1"># det_birth_rate := sse_rate(name="lambda", value=[0.95, 1.05], event="speciation")</span>
 </pre></div>
 </div>
 </div>
@@ -122,7 +121,7 @@ Of course, this flexibility comes at the price of user responsibility!</p>
 Specifying SSE probabilities can be done like so:</p>
 <div class="literal-block-wrapper docutils container" id="id2">
 <div class="code-block-caption"><span class="caption-text"><strong>Script excerpt 2.</strong> Command in the <em>phylojunction</em> language to add a sampling probability parameter (deterministic node) to the DAG.</span><a class="headerlink" href="#id2" title="Link to this code"></a></div>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">det_sampling_prob</span> <span class="o">:=</span> <span class="n">sse_prob</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;rho&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">state</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">det_sampling_prob</span> <span class="o">:=</span> <span class="n">sse_prob</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"rho"</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">state</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 <span class="c1"># by setting the value to 1.0, we assume complete sampling!</span>
 </pre></div>
 </div>
@@ -155,8 +154,8 @@ In the presence of time-heterogeneity, these parameters are assumed to vary acco
 The limits of each “piece” of that function are given by the argument to <code class="docutils literal notranslate"><span class="pre">epoch_age_ends</span></code> (see above).</p>
 <div class="literal-block-wrapper docutils container" id="id3">
 <div class="code-block-caption"><span class="caption-text"><strong>Script excerpt 3.</strong> Command in the <em>phylojunction</em> language to organize rate and probability parameters into a stash (a deterministic node in the DAG).</span><a class="headerlink" href="#id3" title="Link to this code"></a></div>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">det_birth_rate1</span> <span class="o">:=</span> <span class="n">sse_rate</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;lambda1&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="s2">&quot;speciation&quot;</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-<span class="n">det_birth_rate2</span> <span class="o">:=</span> <span class="n">sse_rate</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;lambda2&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="s2">&quot;speciation&quot;</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">det_birth_rate1</span> <span class="o">:=</span> <span class="n">sse_rate</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"lambda1"</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="s2">"speciation"</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">det_birth_rate2</span> <span class="o">:=</span> <span class="n">sse_rate</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"lambda2"</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="s2">"speciation"</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
 
 <span class="n">stash</span> <span class="o">:=</span> <span class="n">sse_stash</span><span class="p">(</span><span class="n">flat_rate_mat</span><span class="o">=</span><span class="p">[</span><span class="n">det_birth_rate1</span><span class="p">,</span> <span class="n">det_birth_rate2</span><span class="p">],</span> <span class="n">n_epochs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">seed_age</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">epoch_age_ends</span><span class="o">=</span><span class="p">[</span><span class="mf">1.0</span><span class="p">])</span>
 <span class="c1"># there are two epochs, the oldest one ends at age 1.0, the youngest one ends at the present</span>
@@ -189,28 +188,229 @@ The parameters of this function are:</p>
 <p>Below, an example of assigning a discrete SSE to a stochastic DAG node representing phylogenetic tree samples:</p>
 <div class="literal-block-wrapper docutils container" id="id4">
 <div class="code-block-caption"><span class="caption-text"><strong>Script excerpt 4.</strong> Commands in <em>phylojunction</em> to build a discrete SSE distribution and assign it to a stochastic DAG node.</span><a class="headerlink" href="#id4" title="Link to this code"></a></div>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">det_birth_rate1</span> <span class="o">:=</span> <span class="n">sse_rate</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;lambda1&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="s2">&quot;speciation&quot;</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-<span class="n">det_birth_rate2</span> <span class="o">:=</span> <span class="n">sse_rate</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;lambda2&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="s2">&quot;speciation&quot;</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">det_birth_rate1</span> <span class="o">:=</span> <span class="n">sse_rate</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"lambda1"</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="s2">"speciation"</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">det_birth_rate2</span> <span class="o">:=</span> <span class="n">sse_rate</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"lambda2"</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="s2">"speciation"</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
 
 <span class="n">stash</span> <span class="o">:=</span> <span class="n">sse_stash</span><span class="p">(</span><span class="n">flat_rate_mat</span><span class="o">=</span><span class="p">[</span><span class="n">det_birth_rate1</span><span class="p">,</span> <span class="n">det_birth_rate2</span><span class="p">],</span> <span class="n">n_epochs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">seed_age</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">epoch_age_ends</span><span class="o">=</span><span class="p">[</span><span class="mf">1.0</span><span class="p">])</span>
 
-<span class="n">trs</span> <span class="o">~</span> <span class="n">discrete_sse</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">stash</span><span class="o">=</span><span class="n">stash</span><span class="p">,</span> <span class="n">start_state</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> <span class="n">stop</span><span class="o">=</span><span class="s2">&quot;age&quot;</span><span class="p">,</span> <span class="n">stop_value</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="s2">&quot;true&quot;</span><span class="p">)</span>
+<span class="n">trs</span> <span class="o">~</span> <span class="n">discrete_sse</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">stash</span><span class="o">=</span><span class="n">stash</span><span class="p">,</span> <span class="n">start_state</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> <span class="n">stop</span><span class="o">=</span><span class="s2">"age"</span><span class="p">,</span> <span class="n">stop_value</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="s2">"true"</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <p><span class="underline">Special cases of discrete SSE tree models</span></p>
 <blockquote>
 <div><ol class="arabic simple">
-<li><p><a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/yule.pj" rel="noopener noreferrer" target="_blank">Yule</a> (pure-birth) model;</p></li>
-<li><p><a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/birthdeath.pj" rel="noopener noreferrer" target="_blank">Birth-death</a> model;</p></li>
-<li><p><a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/birthdeath_incomplete_sampling.pj" rel="noopener noreferrer" target="_blank">Birth-death with incomplete sampling</a> model;</p></li>
-<li><p><a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/fbd.pj" rel="noopener noreferrer" target="_blank">Fossilized birth-death</a> (FBD) model;</p></li>
-<li><p><a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/bisse.pj" rel="noopener noreferrer" target="_blank">Binary state-dependent speciation and extinction</a> (BiSSE) model;</p></li>
-<li><p><a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/bisse_timehet.pj" rel="noopener noreferrer" target="_blank">Time-heterogeneous binary state-dependent speciation and extinction</a> (skyline BiSSE) model;</p></li>
-<li><p><a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/geosse.pj" rel="noopener noreferrer" target="_blank">Geographic state-dependent speciation and extinction</a> (GeoSSE) model;</p></li>
-<li><p><a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/geosse_timehet.pj" rel="noopener noreferrer" target="_blank">Time-heterogeneous geographic state-dependent speciation and extinction</a> (skyline GeoSSE) model;</p></li>
+<li><p><a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/yule.pj" rel="noreferrer" target="_blank">Yule</a> (pure-birth) model;</p></li>
+<li><p><a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/birthdeath.pj" rel="noreferrer" target="_blank">Birth-death</a> model;</p></li>
+<li><p><a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/birthdeath_incomplete_sampling.pj" rel="noreferrer" target="_blank">Birth-death with incomplete sampling</a> model;</p></li>
+<li><p><a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/fbd.pj" rel="noreferrer" target="_blank">Fossilized birth-death</a> (FBD) model;</p></li>
+<li><p><a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/bisse.pj" rel="noreferrer" target="_blank">Binary state-dependent speciation and extinction</a> (BiSSE) model;</p></li>
+<li><p><a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/bisse_timehet.pj" rel="noreferrer" target="_blank">Time-heterogeneous binary state-dependent speciation and extinction</a> (skyline BiSSE) model;</p></li>
+<li><p><a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/geosse.pj" rel="noreferrer" target="_blank">Geographic state-dependent speciation and extinction</a> (GeoSSE) model;</p></li>
+<li><p><a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/geosse_timehet.pj" rel="noreferrer" target="_blank">Time-heterogeneous geographic state-dependent speciation and extinction</a> (skyline GeoSSE) model;</p></li>
 </ol>
 </div></blockquote>
+</section>
+<section id="quasse">
+<h1>QuaSSE<a class="headerlink" href="#quasse" title="Link to this heading"></a></h1>
+<p>QuaSSE couples a real-valued Brownian trait to trait-dependent speciation and extinction.
+Simulation uses an approximate method based on <code class="docutils literal notranslate"><span class="pre">diversitree</span></code>.</p>
+<p>With PhyloJunction installed, run these commands from the repository root (where
+<code class="docutils literal notranslate"><span class="pre">examples/</span></code> is located):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pjcli<span class="w"> </span>examples/quasse.pj<span class="w"> </span>-d<span class="w"> </span>-f<span class="w"> </span><span class="s1">'trees;1-2'</span><span class="w"> </span>-r<span class="w"> </span><span class="m">42</span><span class="w"> </span>-o<span class="w"> </span>/tmp/quasse-output
+pjcli<span class="w"> </span>examples/quasse_size.pj<span class="w"> </span>-d<span class="w"> </span>-r<span class="w"> </span><span class="m">42</span><span class="w"> </span>-o<span class="w"> </span>/tmp/quasse-size
+pjcli<span class="w"> </span>examples/quasse_conditioned.pj<span class="w"> </span>-d<span class="w"> </span>-r<span class="w"> </span><span class="m">42</span><span class="w"> </span>-o<span class="w"> </span>/tmp/quasse-conditioned
+</pre></div>
+</div>
+<p>Each <code class="docutils literal notranslate"><span class="pre">.pj</span></code> statement must occupy one line. <code class="docutils literal notranslate"><span class="pre">-d</span></code> writes data; <code class="docutils literal notranslate"><span class="pre">-f</span></code> selects figures.
+The GUI’s normal tree display also colors continuous terminal traits.</p>
+<section id="model">
+<h2>Model<a class="headerlink" href="#model" title="Link to this heading"></a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span># Brownian diffusion is variance per unit time. All commands occupy one line.
+birth := quasse_logistic(y0=0.4, y1=0.8, midpoint=0.0, slope=2.0)
+death := quasse_logistic(y0=0.02, y1=0.1, midpoint=1.0, slope=2.0)
+trees ~ quasse(n=2, nr=2, birth_rate=birth, death_rate=death, start_trait=0.0, drift=0.0, diffusion=0.1, stop="age", stop_value=3.0, method="diversitree", k=500)
+</pre></div>
+</div>
+<p>Download <a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/quasse.pj" rel="noreferrer" target="_blank">quasse.pj</a>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">quasse_logistic</span></code> matches Java SSE’s link function:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>f(x) = y0 + (y1 − y0) / (1 + exp(slope × (midpoint − x)))
+</pre></div>
+</div>
+<p>The plateau values are finite and nonnegative. The midpoint and slope are finite. Either
+slope sign and either plateau ordering are supported. Equal plateaus produce a rate independent
+of the trait. Rate functions have no explicit time dependence; rates change as traits evolve.</p>
+<p>The trait increment over duration δ has mean <code class="docutils literal notranslate"><span class="pre">drift</span> <span class="pre">×</span> <span class="pre">δ</span></code> and variance <code class="docutils literal notranslate"><span class="pre">diffusion</span> <span class="pre">×</span> <span class="pre">δ</span></code>.
+<code class="docutils literal notranslate"><span class="pre">diffusion</span></code> is variance per unit time, not a standard deviation. Drift and diffusion are
+independent of the trait and constant through time within each simulation.
+Zero diffusion is supported.
+Each tree starts with one lineage at the origin. Daughters inherit the parent’s trait and
+then evolve independently. There are no fossil samples or sampled ancestors.</p>
+<p>Rate-constructor parameters broadcast to a common vector length. Distribution model
+parameters, rate objects, <code class="docutils literal notranslate"><span class="pre">stop_value</span></code>, and <code class="docutils literal notranslate"><span class="pre">sampling_prob</span></code> have length one or <code class="docutils literal notranslate"><span class="pre">n</span></code>.
+Each of the <code class="docutils literal notranslate"><span class="pre">n</span></code> samples has <code class="docutils literal notranslate"><span class="pre">nr</span></code> independent replicates using the same parameter values;
+output ordering is sample first, then replicate. Rejected trees do not resample DAG parents.</p>
+</section>
+<section id="diversitree-method-and-stopping">
+<h2>Diversitree method and stopping<a class="headerlink" href="#diversitree-method-and-stopping" title="Link to this heading"></a></h2>
+<p>At the current living traits, compute total birth–death rate R. A full step has duration
+1/(kR), and one event occurs with probability 1/k. Choose the event type and lineage using
+the current rates. Apply the event first, then extend and evolve the resulting living
+lineages. A newborn daughter therefore evolves during that step, while a dead lineage does not.</p>
+<p>For <code class="docutils literal notranslate"><span class="pre">stop=&quot;age&quot;</span></code>, shorten the final interval to the remaining duration δ and use event
+probability Rδ. Surviving branches end exactly at the observation age. Completely extinct
+trees retain the actual extinction times, with node ages measured relative to observation.</p>
+<p>For <code class="docutils literal notranslate"><span class="pre">stop=&quot;size&quot;</span></code>, stop immediately before the birth that would increase the living count
+from N to N+1. Omit that birth and its following trait update. The count can fall below N
+before reaching this terminating birth. The stopping age is random. Complete sampling is
+required. If survival conditioning is disabled, extinct outcomes can also be returned.</p>
+<p>The interior algorithm follows <code class="docutils literal notranslate"><span class="pre">diversitree/R/simulate-quasse.R</span></code>. Intentional differences are:</p>
+<ul class="simple">
+<li><p>The final age-limited interval and event probability are shortened, preventing overshoot.</p></li>
+<li><p>Size stopping omits diffusion after the terminating birth, matching PhyloJunction’s convention.</p></li>
+<li><p>No artificial initial branch length of 1e-8 is added; genuine zero-length branches are valid.</p></li>
+<li><p>Tree storage, observation sampling, and conditioning use PhyloJunction’s conventions.</p></li>
+</ul>
+<p>The method is approximate. Increasing <code class="docutils literal notranslate"><span class="pre">k</span></code> generally improves resolution at greater cost;
+<code class="docutils literal notranslate"><span class="pre">k</span></code> does not specify an absolute time-step tolerance. It defaults to 500 and must be an integer
+at least one. The default and currently only method is <code class="docutils literal notranslate"><span class="pre">&quot;diversitree&quot;</span></code>.</p>
+</section>
+<section id="observation-and-conditions">
+<h2>Observation and conditions<a class="headerlink" href="#observation-and-conditions" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25.0%" />
+<col style="width: 15.0%" />
+<col style="width: 60.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Argument</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Meaning</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">sampling_prob</span></code></p></td>
+<td><p>1</p></td>
+<td><p>Independent sampling probability for each living terminal</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">cond_surv</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;true&quot;</span></code></p></td>
+<td><p>Require at least one living lineage</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">cond_spn</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;false&quot;</span></code></p></td>
+<td><p>Require a retained speciation event</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">cond_obs_both_sides</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;false&quot;</span></code></p></td>
+<td><p>Require living sampled descendants on both sides of the original root</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">min_rec_taxa</span></code></p></td>
+<td><p>0</p></td>
+<td><p>Minimum living sampled-tip count, for age stopping</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">max_rec_taxa</span></code></p></td>
+<td><p>unbounded</p></td>
+<td><p>Maximum living sampled-tip count, for age stopping</p></td>
+</tr>
+</tbody>
+</table>
+<p>Equal count bounds request an exact observed count. Sampling precedes these checks.
+Survival does not imply observation: with <code class="docutils literal notranslate"><span class="pre">sampling_prob=0</span></code>, a surviving tree has no observed
+terminals. Root-side checks use the original root, before pruning can replace it.
+For unconditional age-based simulation set <code class="docutils literal notranslate"><span class="pre">cond_surv=&quot;false&quot;</span></code> and leave other conditions unset.
+Explicit count bounds with size stopping, or incomplete sampling with size stopping, are errors.</p>
+<p>Rejected attempts use fresh simulation randomness with unchanged model parameters. Rare or
+impossible conditions can exhaust the rejection budget. Limits are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25.0%" />
+<col style="width: 15.0%" />
+<col style="width: 60.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Argument</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Scope</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">max_n_attempts</span></code></p></td>
+<td><p>200</p></td>
+<td><p>Total rejected attempts across one <code class="docutils literal notranslate"><span class="pre">generate()</span></code> call</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">runtime_limit</span></code></p></td>
+<td><p>300 seconds</p></td>
+<td><p>Entire <code class="docutils literal notranslate"><span class="pre">generate()</span></code> call, including retries</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">max_steps</span></code></p></td>
+<td><p>1,000,000</p></td>
+<td><p>Iterations per attempt</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">max_alive</span></code></p></td>
+<td><p>100,000</p></td>
+<td><p>Living lineages per attempt</p></td>
+</tr>
+</tbody>
+</table>
+<p>All limits are positive; count limits are integers. Reaching the rejection budget raises an
+error. Numerical failures and exceeded resource limits also raise errors, without rejection
+and retry. In particular, transiently exceeding <code class="docutils literal notranslate"><span class="pre">max_rec_taxa</span></code> does not reject an attempt.</p>
+<p>When both rate functions are identically zero, age stopping uses a direct Brownian transition.
+Size stopping then fails because its terminating birth is unreachable. Numerically zero rates
+from nonzero functions raise an underflow error, rather than assuming rates stay zero forever.</p>
+</section>
+<section id="trees-plots-and-output">
+<h2>Trees, plots, and output<a class="headerlink" href="#trees-plots-and-output" title="Link to this heading"></a></h2>
+<p>Complete trees retain extinct and unsampled tips. Reconstructed trees retain living sampled
+paths. All complete-tree nodes carry the trait at that node’s time; no full trait trajectory is
+stored. Black branches and colored terminal markers show traits using a continuous colorbar.
+The complete tree’s terminal range determines colors in both complete and reconstructed views.
+Plotting uses no randomness. An empty reconstructed tree displays <code class="docutils literal notranslate"><span class="pre">No</span> <span class="pre">sampled</span> <span class="pre">tips</span></code>.</p>
+<p>Data output includes complete/reconstructed Newick tables, annotated variants, generic tree
+summaries, and <code class="docutils literal notranslate"><span class="pre">&lt;node&gt;_traits.tsv</span></code>. The trait table has columns <code class="docutils literal notranslate"><span class="pre">sample</span></code>, <code class="docutils literal notranslate"><span class="pre">replicate</span></code>, <code class="docutils literal notranslate"><span class="pre">node</span></code>,
+<code class="docutils literal notranslate"><span class="pre">trait</span></code>, <code class="docutils literal notranslate"><span class="pre">alive</span></code>, and <code class="docutils literal notranslate"><span class="pre">sampled</span></code>; sample and replicate indices start at one. It includes internal
+nodes and the origin as well as living and extinct tips. Discrete state tables and discrete
+NEXUS character matrices are not generated for these trees.</p>
+<p>QuaSSE RevBayes inference export is not supported and fails before script generation.</p>
+</section>
+<section id="python-interface">
+<h2>Python interface<a class="headerlink" href="#python-interface" title="Link to this heading"></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">phylojunction.calculation.continuous_sse</span><span class="w"> </span><span class="kn">import</span> <span class="n">LogisticRate</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">phylojunction.distribution.dn_quasse</span><span class="w"> </span><span class="kn">import</span> <span class="n">DnQuaSSE</span>
+
+<span class="n">simulator</span> <span class="o">=</span> <span class="n">DnQuaSSE</span><span class="p">(</span>
+    <span class="n">birth_rate</span><span class="o">=</span><span class="n">LogisticRate</span><span class="p">(</span><span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">),</span>
+    <span class="n">death_rate</span><span class="o">=</span><span class="n">LogisticRate</span><span class="p">(</span><span class="mf">0.02</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">),</span>
+    <span class="n">stop</span><span class="o">=</span><span class="s2">"size"</span><span class="p">,</span> <span class="n">stop_value</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">diffusion</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">rng_seed</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">trees</span> <span class="o">=</span> <span class="n">simulator</span><span class="o">.</span><span class="n">generate</span><span class="p">()</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">generate()</span></code> applies conditions and returns a list. <code class="docutils literal notranslate"><span class="pre">simulate(sample_idx=0)</span></code> returns one
+attempt after observation sampling, without rejection conditioning. The Python constructor’s
+<code class="docutils literal notranslate"><span class="pre">rng_seed</span></code> and CLI <code class="docutils literal notranslate"><span class="pre">-r</span></code> use NumPy’s existing global random stream; instances do not own
+independent random generators.</p>
+</section>
+<section id="additional-scripts">
+<h2>Additional scripts<a class="headerlink" href="#additional-scripts" title="Link to this heading"></a></h2>
+<p>Size stopping (<a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/quasse_size.pj" rel="noreferrer" target="_blank">quasse_size.pj</a>):</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span># Return ten living tips, immediately before the birth that would produce eleven.
+birth := quasse_logistic(y0=0.4, y1=0.8, midpoint=0.0, slope=2.0)
+death := quasse_logistic(y0=0.02, y1=0.1, midpoint=1.0, slope=2.0)
+trees ~ quasse(n=2, birth_rate=birth, death_rate=death, diffusion=0.1, stop="size", stop_value=10, cond_surv="true", method="diversitree", k=500)
+</pre></div>
+</div>
+<p>Conditioning on observed tip count
+(<a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/quasse_conditioned.pj" rel="noreferrer" target="_blank">quasse_conditioned.pj</a>):</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span># Fix age, sample each survivor independently, and retain exactly three observed tips.
+birth := quasse_logistic(y0=0.4, y1=0.8, midpoint=0.0, slope=2.0)
+death := quasse_logistic(y0=0.02, y1=0.1, midpoint=1.0, slope=2.0)
+trees ~ quasse(n=2, birth_rate=birth, death_rate=death, diffusion=0.1, stop="age", stop_value=3.0, sampling_prob=0.8, min_rec_taxa=3, max_rec_taxa=3, method="diversitree", k=500)
+</pre></div>
+</div>
+</section>
 </section>
 
 

@@ -20,6 +20,14 @@ phylojunction.distribution.dn\_parametric module
    :undoc-members:
    :show-inheritance:
 
+phylojunction.distribution.dn\_quasse module
+--------------------------------------------
+
+.. automodule:: phylojunction.distribution.dn_quasse
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 
