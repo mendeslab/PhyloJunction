@@ -68,7 +68,10 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#command-line-interface-cli">Command-line interface (CLI)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#sandbox-bypassing-the-interfaces">Sandbox: Bypassing the interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#sandbox-bypassing-the-interfaces">Sandbox: Bypassing the interfaces</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#annotated-tree-traits-in-python">Annotated tree traits in Python</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#lexicon">Lexicon</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#parametric-distributions">Parametric distributions</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#uniform">Uniform</a></li>
@@ -141,30 +144,34 @@
 </ul>
 </li>
 <li><p><a class="reference internal" href="#command-line-interface-cli" id="id30">Command-line interface (CLI)</a></p></li>
-<li><p><a class="reference internal" href="#sandbox-bypassing-the-interfaces" id="id31">Sandbox: Bypassing the interfaces</a></p></li>
-<li><p><a class="reference internal" href="#lexicon" id="id32">Lexicon</a></p>
+<li><p><a class="reference internal" href="#sandbox-bypassing-the-interfaces" id="id31">Sandbox: Bypassing the interfaces</a></p>
 <ul>
-<li><p><a class="reference internal" href="#parametric-distributions" id="id33">Parametric distributions</a></p>
-<ul>
-<li><p><a class="reference internal" href="#uniform" id="id34">Uniform</a></p></li>
-<li><p><a class="reference internal" href="#exponential" id="id35">Exponential</a></p></li>
-<li><p><a class="reference internal" href="#gamma" id="id36">Gamma</a></p></li>
-<li><p><a class="reference internal" href="#normal" id="id37">Normal</a></p></li>
-<li><p><a class="reference internal" href="#log-normal" id="id38">Log-normal</a></p></li>
-<li><p><a class="reference internal" href="#categorical" id="id39">Categorical</a></p></li>
+<li><p><a class="reference internal" href="#annotated-tree-traits-in-python" id="id32">Annotated tree traits in Python</a></p></li>
 </ul>
 </li>
-<li><p><a class="reference internal" href="#tree-distributions" id="id40">Tree distributions</a></p>
+<li><p><a class="reference internal" href="#lexicon" id="id33">Lexicon</a></p>
 <ul>
-<li><p><a class="reference internal" href="#discrete-sse" id="id41">Discrete SSE</a></p></li>
-<li><p><a class="reference internal" href="#quasse" id="id42">QuaSSE</a></p>
+<li><p><a class="reference internal" href="#parametric-distributions" id="id34">Parametric distributions</a></p>
 <ul>
-<li><p><a class="reference internal" href="#model" id="id43">Model</a></p></li>
-<li><p><a class="reference internal" href="#diversitree-method-and-stopping" id="id44">Diversitree method and stopping</a></p></li>
-<li><p><a class="reference internal" href="#observation-and-conditions" id="id45">Observation and conditions</a></p></li>
-<li><p><a class="reference internal" href="#trees-plots-and-output" id="id46">Trees, plots, and output</a></p></li>
-<li><p><a class="reference internal" href="#python-interface" id="id47">Python interface</a></p></li>
-<li><p><a class="reference internal" href="#additional-scripts" id="id48">Additional scripts</a></p></li>
+<li><p><a class="reference internal" href="#uniform" id="id35">Uniform</a></p></li>
+<li><p><a class="reference internal" href="#exponential" id="id36">Exponential</a></p></li>
+<li><p><a class="reference internal" href="#gamma" id="id37">Gamma</a></p></li>
+<li><p><a class="reference internal" href="#normal" id="id38">Normal</a></p></li>
+<li><p><a class="reference internal" href="#log-normal" id="id39">Log-normal</a></p></li>
+<li><p><a class="reference internal" href="#categorical" id="id40">Categorical</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#tree-distributions" id="id41">Tree distributions</a></p>
+<ul>
+<li><p><a class="reference internal" href="#discrete-sse" id="id42">Discrete SSE</a></p></li>
+<li><p><a class="reference internal" href="#quasse" id="id43">QuaSSE</a></p>
+<ul>
+<li><p><a class="reference internal" href="#model" id="id44">Model</a></p></li>
+<li><p><a class="reference internal" href="#diversitree-method-and-stopping" id="id45">Diversitree method and stopping</a></p></li>
+<li><p><a class="reference internal" href="#observation-and-conditions" id="id46">Observation and conditions</a></p></li>
+<li><p><a class="reference internal" href="#trees-plots-and-output" id="id47">Trees, plots, and output</a></p></li>
+<li><p><a class="reference internal" href="#python-interface" id="id48">Python interface</a></p></li>
+<li><p><a class="reference internal" href="#additional-scripts" id="id49">Additional scripts</a></p></li>
 </ul>
 </li>
 </ul>
@@ -522,6 +529,29 @@ Each example is wrapped within its own function, like so:</p>
 </div>
 </div>
 </div></blockquote>
+<section id="annotated-tree-traits-in-python">
+<h3>Annotated tree traits in Python<a class="headerlink" href="#annotated-tree-traits-in-python" title="Link to this heading"></a></h3>
+<p>Python callers describe a tree’s primary trait when constructing an <code class="docutils literal notranslate"><span class="pre">AnnotatedTree</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">phylojunction.data.tree</span><span class="w"> </span><span class="kn">import</span> <span class="n">AnnotatedTree</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">phylojunction.data.trait</span><span class="w"> </span><span class="kn">import</span> <span class="n">DiscreteTrait</span><span class="p">,</span> <span class="n">ContinuousTrait</span>
+
+<span class="c1"># Given DendroPy trees with the corresponding node attributes and status flags:</span>
+<span class="n">discrete</span> <span class="o">=</span> <span class="n">AnnotatedTree</span><span class="p">(</span><span class="n">discrete_tree</span><span class="p">,</span> <span class="n">DiscreteTrait</span><span class="p">(</span><span class="n">states</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+<span class="n">continuous</span> <span class="o">=</span> <span class="n">AnnotatedTree</span><span class="p">(</span><span class="n">continuous_tree</span><span class="p">,</span> <span class="n">ContinuousTrait</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>The default node attribute names are <code class="docutils literal notranslate"><span class="pre">state</span></code> and <code class="docutils literal notranslate"><span class="pre">trait</span></code>, respectively. Both descriptions
+accept an explicit name, such as <code class="docutils literal notranslate"><span class="pre">DiscreteTrait(states=2,</span> <span class="pre">name=&quot;habitat&quot;)</span></code> or
+<code class="docutils literal notranslate"><span class="pre">ContinuousTrait(name=&quot;body_size&quot;)</span></code>. The named attribute must already exist on the
+nodes; a description does not rename attributes or their Newick annotations.</p>
+<p>The descriptions are immutable. To update metadata, replace <code class="docutils literal notranslate"><span class="pre">tree.trait</span></code>; this does not
+recompute cached counts. Plotting uses the described attribute by default (<code class="docutils literal notranslate"><span class="pre">None</span></code>), while
+an explicit plotting attribute selects that name literally.</p>
+<p>This Python interface replaces the constructor’s <code class="docutils literal notranslate"><span class="pre">total_state_count</span></code> and
+<code class="docutils literal notranslate"><span class="pre">continuous_trait</span></code> arguments, and the tree’s <code class="docutils literal notranslate"><span class="pre">state_count</span></code> and <code class="docutils literal notranslate"><span class="pre">continuous_trait</span></code>
+members. Discrete counts are available as <code class="docutils literal notranslate"><span class="pre">tree.trait.states</span></code>; both descriptions provide
+<code class="docutils literal notranslate"><span class="pre">tree.trait.name</span></code>. The <em>phylojunction</em> scripting language is unchanged.</p>
+</section>
 </section>
 <section id="lexicon">
 <h2>Lexicon<a class="headerlink" href="#lexicon" title="Link to this heading"></a></h2>

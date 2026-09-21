@@ -420,6 +420,34 @@ The example above is then invoked later in ``pj_sandbox.py``:
         ...
 
 
+Annotated tree traits in Python
+===============================
+
+Python callers describe a tree's primary trait when constructing an ``AnnotatedTree``:
+
+.. code-block:: python
+
+    from phylojunction.data.tree import AnnotatedTree
+    from phylojunction.data.trait import DiscreteTrait, ContinuousTrait
+
+    # Given DendroPy trees with the corresponding node attributes and status flags:
+    discrete = AnnotatedTree(discrete_tree, DiscreteTrait(states=2))
+    continuous = AnnotatedTree(continuous_tree, ContinuousTrait())
+
+The default node attribute names are ``state`` and ``trait``, respectively. Both descriptions
+accept an explicit name, such as ``DiscreteTrait(states=2, name="habitat")`` or
+``ContinuousTrait(name="body_size")``. The named attribute must already exist on the
+nodes; a description does not rename attributes or their Newick annotations.
+
+The descriptions are immutable. To update metadata, replace ``tree.trait``; this does not
+recompute cached counts. Plotting uses the described attribute by default (``None``), while
+an explicit plotting attribute selects that name literally.
+
+This Python interface replaces the constructor's ``total_state_count`` and
+``continuous_trait`` arguments, and the tree's ``state_count`` and ``continuous_trait``
+members. Discrete counts are available as ``tree.trait.states``; both descriptions provide
+``tree.trait.name``. The *phylojunction* scripting language is unchanged.
+
 -------
 Lexicon
 -------
