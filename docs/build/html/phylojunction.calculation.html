@@ -805,10 +805,76 @@ number of tips</p>
 <span id="phylojunction-calculation-continuous-sse-module"></span><h2>phylojunction.calculation.continuous_sse module<a class="headerlink" href="#module-phylojunction.calculation.continuous_sse" title="Link to this heading"></a></h2>
 <p>Continuous-trait rate functions shared by QuaSSE simulators.</p>
 <dl class="py class">
+<dt class="sig sig-object py" id="phylojunction.calculation.continuous_sse.AbsoluteRate">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">phylojunction.calculation.continuous_sse.</span></span><span class="sig-name descname"><span class="pre">AbsoluteRate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">baseline</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strength</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">center</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#phylojunction.calculation.continuous_sse.AbsoluteRate" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#phylojunction.calculation.continuous_sse.RateFunction" title="phylojunction.calculation.continuous_sse.RateFunction"><code class="xref py py-class docutils literal notranslate"><span class="pre">RateFunction</span></code></a></p>
+<p>A V-shaped rate, unbounded in trait unless explicitly capped.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="phylojunction.calculation.continuous_sse.ConstantRate">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">phylojunction.calculation.continuous_sse.</span></span><span class="sig-name descname"><span class="pre">ConstantRate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rate</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#phylojunction.calculation.continuous_sse.ConstantRate" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#phylojunction.calculation.continuous_sse.RateFunction" title="phylojunction.calculation.continuous_sse.RateFunction"><code class="xref py py-class docutils literal notranslate"><span class="pre">RateFunction</span></code></a></p>
+<p>A rate constant in both trait and time.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="phylojunction.calculation.continuous_sse.GaussianRate">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">phylojunction.calculation.continuous_sse.</span></span><span class="sig-name descname"><span class="pre">GaussianRate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">baseline</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">center_rate</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">center</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#phylojunction.calculation.continuous_sse.GaussianRate" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#phylojunction.calculation.continuous_sse.RateFunction" title="phylojunction.calculation.continuous_sse.RateFunction"><code class="xref py py-class docutils literal notranslate"><span class="pre">RateFunction</span></code></a></p>
+<p>A Gaussian peak or trough between nonnegative center and tail rates.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="phylojunction.calculation.continuous_sse.LinearRate">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">phylojunction.calculation.continuous_sse.</span></span><span class="sig-name descname"><span class="pre">LinearRate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">intercept</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slope</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#phylojunction.calculation.continuous_sse.LinearRate" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#phylojunction.calculation.continuous_sse.RateFunction" title="phylojunction.calculation.continuous_sse.RateFunction"><code class="xref py py-class docutils literal notranslate"><span class="pre">RateFunction</span></code></a></p>
+<p>A linear rate with negative values replaced by zero, not an implicit upper cap.</p>
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="phylojunction.calculation.continuous_sse.LogisticRate">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">phylojunction.calculation.continuous_sse.</span></span><span class="sig-name descname"><span class="pre">LogisticRate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">midpoint</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slope</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#phylojunction.calculation.continuous_sse.LogisticRate" title="Link to this definition"></a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">phylojunction.calculation.continuous_sse.</span></span><span class="sig-name descname"><span class="pre">LogisticRate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">midpoint</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slope</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#phylojunction.calculation.continuous_sse.LogisticRate" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#phylojunction.calculation.continuous_sse.RateFunction" title="phylojunction.calculation.continuous_sse.RateFunction"><code class="xref py py-class docutils literal notranslate"><span class="pre">RateFunction</span></code></a></p>
 <p>The four-parameter logistic link used by the Java SSE package.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="phylojunction.calculation.continuous_sse.QuadraticRate">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">phylojunction.calculation.continuous_sse.</span></span><span class="sig-name descname"><span class="pre">QuadraticRate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">baseline</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strength</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">center</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#phylojunction.calculation.continuous_sse.QuadraticRate" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#phylojunction.calculation.continuous_sse.RateFunction" title="phylojunction.calculation.continuous_sse.RateFunction"><code class="xref py py-class docutils literal notranslate"><span class="pre">RateFunction</span></code></a></p>
+<p>A nonnegative parabola, unbounded in trait unless explicitly capped.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="phylojunction.calculation.continuous_sse.RateFunction">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">phylojunction.calculation.continuous_sse.</span></span><span class="sig-name descname"><span class="pre">RateFunction</span></span><a class="headerlink" href="#phylojunction.calculation.continuous_sse.RateFunction" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A nonnegative trait-dependent rate, optionally capped explicitly.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="phylojunction.calculation.continuous_sse.RateFunction.is_identically_zero">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">is_identically_zero</span></span><a class="headerlink" href="#phylojunction.calculation.continuous_sse.RateFunction.is_identically_zero" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="phylojunction.calculation.continuous_sse.RateFunction.upper_bound">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">upper_bound</span></span><a class="headerlink" href="#phylojunction.calculation.continuous_sse.RateFunction.upper_bound" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="phylojunction.calculation.continuous_sse.SkewGaussianRate">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">phylojunction.calculation.continuous_sse.</span></span><span class="sig-name descname"><span class="pre">SkewGaussianRate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">baseline</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">amplitude</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">location</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skew</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#phylojunction.calculation.continuous_sse.SkewGaussianRate" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#phylojunction.calculation.continuous_sse.RateFunction" title="phylojunction.calculation.continuous_sse.RateFunction"><code class="xref py py-class docutils literal notranslate"><span class="pre">RateFunction</span></code></a></p>
+<p>An asymmetric peak; location and amplitude need not be its maximum coordinates.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="phylojunction.calculation.continuous_sse.StepRate">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">phylojunction.calculation.continuous_sse.</span></span><span class="sig-name descname"><span class="pre">StepRate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">left</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">right</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#phylojunction.calculation.continuous_sse.StepRate" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#phylojunction.calculation.continuous_sse.RateFunction" title="phylojunction.calculation.continuous_sse.RateFunction"><code class="xref py py-class docutils literal notranslate"><span class="pre">RateFunction</span></code></a></p>
+<p>Two constant rates; the threshold belongs to the right interval.</p>
 </dd></dl>
 
 </section>

@@ -103,6 +103,57 @@ trees ~ quasse(n=2, nr=2, birth_rate=birth, death_rate=death, start_trait=0.0, d
 <p>The plateau values are finite and nonnegative. The midpoint and slope are finite. Either
 slope sign and either plateau ordering are supported. Equal plateaus produce a rate independent
 of the trait. Rate functions have no explicit time dependence; rates change as traits evolve.</p>
+<p>Other rate families are available for either speciation or extinction:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 45.0%" />
+<col style="width: 55.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Constructor and required arguments</p></th>
+<th class="head"><p>Rate at trait x</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">quasse_constant(rate)</span></code></p></td>
+<td><p>rate</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">quasse_gaussian(baseline,</span> <span class="pre">center_rate,</span> <span class="pre">center,</span> <span class="pre">width)</span></code></p></td>
+<td><p>baseline + (center_rate − baseline) exp(−z²/2), z = (x − center)/width</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">quasse_step(left,</span> <span class="pre">right,</span> <span class="pre">threshold)</span></code></p></td>
+<td><p>left when x &lt; threshold; right otherwise, including equality</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">quasse_linear(intercept,</span> <span class="pre">slope)</span></code></p></td>
+<td><p>max(0, intercept + slope × x)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">quasse_skew_gaussian(baseline,</span> <span class="pre">amplitude,</span> <span class="pre">location,</span> <span class="pre">width,</span> <span class="pre">skew)</span></code></p></td>
+<td><p>baseline + 2 amplitude exp(−z²/2) Φ(skew × z), z = (x − location)/width</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">quasse_quadratic(baseline,</span> <span class="pre">strength,</span> <span class="pre">center)</span></code></p></td>
+<td><p>baseline + strength × (x − center)²</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">quasse_absolute(baseline,</span> <span class="pre">strength,</span> <span class="pre">center)</span></code></p></td>
+<td><p>baseline + strength × abs(x − center)</p></td>
+</tr>
+</tbody>
+</table>
+<p>Supply arguments by name in scripts. All parameters must be finite; rate levels, amplitudes
+and strengths must be nonnegative, and widths positive. Locations, slopes, skew and the linear
+intercept can have either sign. Gaussian curves include troughs when <code class="docutils literal notranslate"><span class="pre">center_rate</span> <span class="pre">&lt;</span> <span class="pre">baseline</span></code>.
+Φ is the standard normal cumulative distribution function. The asymmetric peak’s <code class="docutils literal notranslate"><span class="pre">location</span></code>
+and <code class="docutils literal notranslate"><span class="pre">amplitude</span></code> are not generally its peak position and height; <code class="docutils literal notranslate"><span class="pre">skew=0</span></code> gives a symmetric
+Gaussian peak. All constructor parameters are constant through time within a simulation.</p>
+<p>Every constructor accepts optional <code class="docutils literal notranslate"><span class="pre">cap</span></code>: the evaluated rate is min(cap, f(x)). The cap must
+be finite and nonnegative, may be below the baseline, and may be zero. It broadcasts with the
+other parameters. Without it, linear, quadratic and absolute-value rates remain unbounded
+when their slope or strength is nonzero. There is no hidden upper truncation.</p>
+<p>An explicit cap changes the biological model; computational resource limits do not cap rates.
+For example, pure branching Brownian motion with quadratic speciation can have an infinite
+expected population after a finite time even though each finite-time population is finite
+almost surely. A large realization or exceeded node budget is not proof of infinitely many
+nodes. General birth–death models should not be assigned an explosion classification from
+these runtime checks.</p>
 <p>The trait increment over duration δ has mean <code class="docutils literal notranslate"><span class="pre">drift</span> <span class="pre">×</span> <span class="pre">δ</span></code> and variance <code class="docutils literal notranslate"><span class="pre">diffusion</span> <span class="pre">×</span> <span class="pre">δ</span></code>.
 <code class="docutils literal notranslate"><span class="pre">diffusion</span></code> is variance per unit time, not a standard deviation. Drift and diffusion are
 independent of the trait and constant through time within each simulation.
@@ -137,6 +188,12 @@ required. If survival conditioning is disabled, extinct outcomes can also be ret
 <p>The method is approximate. Increasing <code class="docutils literal notranslate"><span class="pre">k</span></code> generally improves resolution at greater cost;
 <code class="docutils literal notranslate"><span class="pre">k</span></code> does not specify an absolute time-step tolerance. It defaults to 500 and must be an integer
 at least one. The default and currently only method is <code class="docutils literal notranslate"><span class="pre">&quot;diversitree&quot;</span></code>.</p>
+<p>Optional <code class="docutils literal notranslate"><span class="pre">dt_max</span></code> is a positive finite duration. When supplied, each interval is at most
+min(1/(kR), dt_max, remaining age), with event probability R times that interval. This can
+resolve trait changes where present rates are small, but is not an error tolerance or an exact
+simulation method. Step discontinuities and rapidly varying or unbounded rates require
+resolution checks using smaller <code class="docutils literal notranslate"><span class="pre">dt_max</span></code> and larger <code class="docutils literal notranslate"><span class="pre">k</span></code>. Omitting it preserves the original
+step selection for positive total rates.</p>
 </section>
 <section id="observation-and-conditions">
 <h2>Observation and conditions<a class="headerlink" href="#observation-and-conditions" title="Link to this heading"></a></h2>
@@ -215,14 +272,22 @@ impossible conditions can exhaust the rejection budget. Limits are:</p>
 <td><p>100,000</p></td>
 <td><p>Living lineages per attempt</p></td>
 </tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">max_nodes</span></code></p></td>
+<td><p>unset</p></td>
+<td><p>All nodes per attempt, including extinct nodes, origin and initial lineage</p></td>
+</tr>
 </tbody>
 </table>
 <p>All limits are positive; count limits are integers. Reaching the rejection budget raises an
 error. Numerical failures and exceeded resource limits also raise errors, without rejection
 and retry. In particular, transiently exceeding <code class="docutils literal notranslate"><span class="pre">max_rec_taxa</span></code> does not reject an attempt.</p>
-<p>When both rate functions are identically zero, age stopping uses a direct Brownian transition.
-Size stopping then fails because its terminating birth is unreachable. Numerically zero rates
-from nonzero functions raise an underflow error, rather than assuming rates stay zero forever.</p>
+<p><code class="docutils literal notranslate"><span class="pre">max_nodes</span></code> is checked before creating the initial two nodes or either daughter at a birth.
+The omitted size-stopping birth does not consume nodes. This is a memory safeguard, not an
+infinite-population detector; hitting it raises an error without returning a truncated tree.</p>
+<p>When both rate functions are identically zero, age stopping uses a direct Brownian transition,
+even with <code class="docutils literal notranslate"><span class="pre">dt_max</span></code> set. Size stopping then fails because its terminating birth is unreachable.
+If the total rate is zero only at the current traits (including numerical underflow), supply
+<code class="docutils literal notranslate"><span class="pre">dt_max</span></code> so traits can advance and rates be reevaluated; without it, simulation raises an error.</p>
 </section>
 <section id="trees-plots-and-output">
 <h2>Trees, plots, and output<a class="headerlink" href="#trees-plots-and-output" title="Link to this heading"></a></h2>
@@ -255,6 +320,12 @@ NEXUS character matrices are not generated for these trees.</p>
 attempt after observation sampling, without rejection conditioning. The Python constructor’s
 <code class="docutils literal notranslate"><span class="pre">rng_seed</span></code> and CLI <code class="docutils literal notranslate"><span class="pre">-r</span></code> use NumPy’s existing global random stream; instances do not own
 independent random generators.</p>
+<p>The Python rate classes are <code class="docutils literal notranslate"><span class="pre">ConstantRate</span></code>, <code class="docutils literal notranslate"><span class="pre">LogisticRate</span></code>, <code class="docutils literal notranslate"><span class="pre">GaussianRate</span></code>, <code class="docutils literal notranslate"><span class="pre">StepRate</span></code>,
+<code class="docutils literal notranslate"><span class="pre">LinearRate</span></code>, <code class="docutils literal notranslate"><span class="pre">SkewGaussianRate</span></code>, <code class="docutils literal notranslate"><span class="pre">QuadraticRate</span></code> and <code class="docutils literal notranslate"><span class="pre">AbsoluteRate</span></code>, all in
+<code class="docutils literal notranslate"><span class="pre">phylojunction.calculation.continuous_sse</span></code>. They accept the same named arguments as the
+script constructors and evaluate NumPy arrays or scalars. Their shared <code class="docutils literal notranslate"><span class="pre">RateFunction</span></code>
+interface exposes <code class="docutils literal notranslate"><span class="pre">is_identically_zero</span></code> and <code class="docutils literal notranslate"><span class="pre">upper_bound</span></code> (a conservative finite bound,
+or <code class="docutils literal notranslate"><span class="pre">None</span></code> when unavailable). A zero rate at one trait is not an identically zero function.</p>
 </section>
 <section id="additional-scripts">
 <h2>Additional scripts<a class="headerlink" href="#additional-scripts" title="Link to this heading"></a></h2>
@@ -271,6 +342,16 @@ trees ~ quasse(n=2, birth_rate=birth, death_rate=death, diffusion=0.1, stop="siz
 birth := quasse_logistic(y0=0.4, y1=0.8, midpoint=0.0, slope=2.0)
 death := quasse_logistic(y0=0.02, y1=0.1, midpoint=1.0, slope=2.0)
 trees ~ quasse(n=2, birth_rate=birth, death_rate=death, diffusion=0.1, stop="age", stop_value=3.0, sampling_prob=0.8, min_rec_taxa=3, max_rec_taxa=3, method="diversitree", k=500)
+</pre></div>
+</div>
+<p>Bounded and explicitly unbounded rates
+(<a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/quasse_rates.pj" rel="noreferrer" target="_blank">quasse_rates.pj</a>):</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span># Caps change rates; max_nodes only aborts excessive allocations. dt_max is a duration.
+bounded := quasse_gaussian(baseline=0.1, center_rate=0.8, center=0, width=1, cap=0.6)
+unbounded := quasse_quadratic(baseline=0.1, strength=0.05, center=0)
+death := quasse_constant(rate=0.02)
+bounded_trees ~ quasse(birth_rate=bounded, death_rate=death, diffusion=0.1, stop="age", stop_value=2, dt_max=0.01, max_nodes=10000)
+unbounded_trees ~ quasse(birth_rate=unbounded, death_rate=death, diffusion=0.1, stop="age", stop_value=2, dt_max=0.01, max_nodes=10000)
 </pre></div>
 </div>
 </section>

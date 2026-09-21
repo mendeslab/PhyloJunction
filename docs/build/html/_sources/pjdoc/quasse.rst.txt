@@ -36,6 +36,48 @@ The plateau values are finite and nonnegative. The midpoint and slope are finite
 slope sign and either plateau ordering are supported. Equal plateaus produce a rate independent
 of the trait. Rate functions have no explicit time dependence; rates change as traits evolve.
 
+Other rate families are available for either speciation or extinction:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 45 55
+
+   * - Constructor and required arguments
+     - Rate at trait x
+   * - ``quasse_constant(rate)``
+     - rate
+   * - ``quasse_gaussian(baseline, center_rate, center, width)``
+     - baseline + (center_rate − baseline) exp(−z²/2), z = (x − center)/width
+   * - ``quasse_step(left, right, threshold)``
+     - left when x < threshold; right otherwise, including equality
+   * - ``quasse_linear(intercept, slope)``
+     - max(0, intercept + slope × x)
+   * - ``quasse_skew_gaussian(baseline, amplitude, location, width, skew)``
+     - baseline + 2 amplitude exp(−z²/2) Φ(skew × z), z = (x − location)/width
+   * - ``quasse_quadratic(baseline, strength, center)``
+     - baseline + strength × (x − center)²
+   * - ``quasse_absolute(baseline, strength, center)``
+     - baseline + strength × abs(x − center)
+
+Supply arguments by name in scripts. All parameters must be finite; rate levels, amplitudes
+and strengths must be nonnegative, and widths positive. Locations, slopes, skew and the linear
+intercept can have either sign. Gaussian curves include troughs when ``center_rate < baseline``.
+Φ is the standard normal cumulative distribution function. The asymmetric peak's ``location``
+and ``amplitude`` are not generally its peak position and height; ``skew=0`` gives a symmetric
+Gaussian peak. All constructor parameters are constant through time within a simulation.
+
+Every constructor accepts optional ``cap``: the evaluated rate is min(cap, f(x)). The cap must
+be finite and nonnegative, may be below the baseline, and may be zero. It broadcasts with the
+other parameters. Without it, linear, quadratic and absolute-value rates remain unbounded
+when their slope or strength is nonzero. There is no hidden upper truncation.
+
+An explicit cap changes the biological model; computational resource limits do not cap rates.
+For example, pure branching Brownian motion with quadratic speciation can have an infinite
+expected population after a finite time even though each finite-time population is finite
+almost surely. A large realization or exceeded node budget is not proof of infinitely many
+nodes. General birth–death models should not be assigned an explosion classification from
+these runtime checks.
+
 The trait increment over duration δ has mean ``drift × δ`` and variance ``diffusion × δ``.
 ``diffusion`` is variance per unit time, not a standard deviation. Drift and diffusion are
 independent of the trait and constant through time within each simulation.
@@ -75,6 +117,13 @@ The interior algorithm follows ``diversitree/R/simulate-quasse.R``. Intentional 
 The method is approximate. Increasing ``k`` generally improves resolution at greater cost;
 ``k`` does not specify an absolute time-step tolerance. It defaults to 500 and must be an integer
 at least one. The default and currently only method is ``"diversitree"``.
+
+Optional ``dt_max`` is a positive finite duration. When supplied, each interval is at most
+min(1/(kR), dt_max, remaining age), with event probability R times that interval. This can
+resolve trait changes where present rates are small, but is not an error tolerance or an exact
+simulation method. Step discontinuities and rapidly varying or unbounded rates require
+resolution checks using smaller ``dt_max`` and larger ``k``. Omitting it preserves the original
+step selection for positive total rates.
 
 Observation and conditions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -133,14 +182,22 @@ impossible conditions can exhaust the rejection budget. Limits are:
    * - ``max_alive``
      - 100,000
      - Living lineages per attempt
+   * - ``max_nodes``
+     - unset
+     - All nodes per attempt, including extinct nodes, origin and initial lineage
 
 All limits are positive; count limits are integers. Reaching the rejection budget raises an
 error. Numerical failures and exceeded resource limits also raise errors, without rejection
 and retry. In particular, transiently exceeding ``max_rec_taxa`` does not reject an attempt.
 
-When both rate functions are identically zero, age stopping uses a direct Brownian transition.
-Size stopping then fails because its terminating birth is unreachable. Numerically zero rates
-from nonzero functions raise an underflow error, rather than assuming rates stay zero forever.
+``max_nodes`` is checked before creating the initial two nodes or either daughter at a birth.
+The omitted size-stopping birth does not consume nodes. This is a memory safeguard, not an
+infinite-population detector; hitting it raises an error without returning a truncated tree.
+
+When both rate functions are identically zero, age stopping uses a direct Brownian transition,
+even with ``dt_max`` set. Size stopping then fails because its terminating birth is unreachable.
+If the total rate is zero only at the current traits (including numerical underflow), supply
+``dt_max`` so traits can advance and rates be reevaluated; without it, simulation raises an error.
 
 Trees, plots, and output
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -180,6 +237,13 @@ attempt after observation sampling, without rejection conditioning. The Python c
 ``rng_seed`` and CLI ``-r`` use NumPy's existing global random stream; instances do not own
 independent random generators.
 
+The Python rate classes are ``ConstantRate``, ``LogisticRate``, ``GaussianRate``, ``StepRate``,
+``LinearRate``, ``SkewGaussianRate``, ``QuadraticRate`` and ``AbsoluteRate``, all in
+``phylojunction.calculation.continuous_sse``. They accept the same named arguments as the
+script constructors and evaluate NumPy arrays or scalars. Their shared ``RateFunction``
+interface exposes ``is_identically_zero`` and ``upper_bound`` (a conservative finite bound,
+or ``None`` when unavailable). A zero rate at one trait is not an identically zero function.
+
 Additional scripts
 ^^^^^^^^^^^^^^^^^^
 
@@ -192,4 +256,10 @@ Conditioning on observed tip count
 (`quasse_conditioned.pj <https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/quasse_conditioned.pj>`_):
 
 .. literalinclude:: ../../../examples/quasse_conditioned.pj
+   :language: text
+
+Bounded and explicitly unbounded rates
+(`quasse_rates.pj <https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/quasse_rates.pj>`_):
+
+.. literalinclude:: ../../../examples/quasse_rates.pj
    :language: text
