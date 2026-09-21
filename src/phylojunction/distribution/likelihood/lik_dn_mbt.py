@@ -1,3 +1,4 @@
+from phylojunction.data.trait import DiscreteTrait
 import typing as ty
 import dendropy as dp
 import numpy as np
@@ -207,7 +208,7 @@ if __name__ == "__main__":
         setattr(nd, "state", state_val)
 
     ann_tr = AnnotatedTree(dp_tree,
-                           n_states,
+                           DiscreteTrait(n_states),
                            start_at_origin=False,
                            max_age=2.0,
                            tree_died=False,

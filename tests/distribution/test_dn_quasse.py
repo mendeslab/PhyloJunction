@@ -5,6 +5,7 @@ from unittest.mock import patch
 import numpy as np
 
 from phylojunction.calculation.continuous_sse import LogisticRate
+from phylojunction.data.trait import ContinuousTrait
 from phylojunction.distribution.dn_quasse import DnQuaSSE
 from phylojunction.interface.cmdbox.cmd_parse import cmdline2dag
 from phylojunction.pgm.pgm import DirectedAcyclicGraph
@@ -155,6 +156,14 @@ class TestQuaSSE(unittest.TestCase):
             tree = dn.generate()[0]
         tips = list(tree.tree.leaf_node_iter())
         tips[0].trait, tips[1].trait = -2, 3
+        # Use only a custom attribute to catch hard-coded names in both plotting views;
+        # the simulator tests cover the default. Retire if general rename tests replace this.
+        tree.trait = ContinuousTrait(name="body_size")
+        for node in tree.tree:
+            node.body_size = node.trait
+            node.annotations.drop(name="trait")
+            node.annotations.add_bound_attribute("body_size")
+            del node.trait
         dag = DirectedAcyclicGraph()
         for line in ['numbers <- [1,2,3]', 'rate := quasse_logistic(y0=1,y1=2,midpoint=0,slope=1)']:
             cmdline2dag(dag, line)
@@ -213,6 +222,15 @@ class TestQuaSSE(unittest.TestCase):
                      't ~ quasse(n=2,nr=2,birth_rate=b,death_rate=b,stop="age",'
                      'stop_value=[0,2000],start_trait=[1,3],sampling_prob=[1,0])']:
             cmdline2dag(dag, line)
+        # Export must read the description, not assume the simulator's default attribute.
+        # Existing expected values cover output equivalence; no separate export test is needed.
+        for tree in dag.name_node_dict['t'].value:
+            tree.trait = ContinuousTrait(name="body_size")
+            for node in tree.tree:
+                node.body_size = node.trait
+                node.annotations.drop(name="trait")
+                node.annotations.add_bound_attribute("body_size")
+                del node.trait
         filenames, contents = prep_data_filepaths_dfs(*prep_data_df(dag, write_nex_states=True))
         output = dict(zip(filenames, contents))
         self.assertIn('t_annotated_complete.tsv', output)

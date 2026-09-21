@@ -1,3 +1,4 @@
+from phylojunction.data.trait import DiscreteTrait
 import io
 import unittest
 import matplotlib
@@ -276,7 +277,7 @@ class TestSmapWrite(unittest.TestCase):
             max_age = 5.0
             ann_tr = pjtr.AnnotatedTree(
                 tr_complete,
-                total_state_count,
+                DiscreteTrait(total_state_count),
                 at_dict=at_dict,
                 clado_at_dict=clado_at_dict,
                 start_at_origin=True,
@@ -590,7 +591,7 @@ class TestSmapWrite(unittest.TestCase):
             max_age = 5.0
             ann_tr = pjtr.AnnotatedTree(
                 tr_complete,
-                total_state_count,
+                DiscreteTrait(total_state_count),
                 at_dict=at_dict,
                 clado_at_dict=clado_at_dict,
                 start_at_origin=True,

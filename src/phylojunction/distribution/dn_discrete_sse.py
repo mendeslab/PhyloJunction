@@ -1,3 +1,4 @@
+from phylojunction.data.trait import DiscreteTrait
 import typing as ty
 import numpy as np  # type: ignore
 import dendropy as dp  # type: ignore
@@ -2018,7 +2019,7 @@ class DnSSE(pgm.DistrForSampling):
             # print("dn_discrete_sse.py: at (11)")
             at = AnnotatedTree(
                 tr,
-                self.events.state_count,
+                DiscreteTrait(self.events.state_count),
                 start_at_origin=self.with_origin,
                 max_age=a_stop_value,
                 slice_t_ends=self.slice_t_ends,
@@ -2034,7 +2035,7 @@ class DnSSE(pgm.DistrForSampling):
         elif self.stop == "size":
             at = AnnotatedTree(
                 tr,
-                self.events.state_count,
+                DiscreteTrait(self.events.state_count),
                 start_at_origin=self.with_origin,
                 sa_lineage_dict=sa_lineage_dict,
                 at_dict=state_transition_dict,

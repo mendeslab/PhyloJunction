@@ -1,3 +1,4 @@
+from phylojunction.data.trait import DiscreteTrait
 import unittest
 from dendropy import Tree, Node, Taxon
 
@@ -98,7 +99,7 @@ class TestAnnotateTreeWithSAsFromRoot(unittest.TestCase):
 
         ann_tr_sa_survives_max_age = pjtr.AnnotatedTree(
             tr_sa_survives,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=False,
             max_age=max_age,
             sa_lineage_dict=sa_lineage_dict,
@@ -130,7 +131,7 @@ class TestAnnotateTreeWithSAsFromRoot(unittest.TestCase):
 
         ann_tr_sa_survives_no_max_age = pjtr.AnnotatedTree(
             tr_sa_survives_no_max_age,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=False,
             sa_lineage_dict=sa_lineage_dict,
             epsilon=1e-12)
@@ -237,7 +238,7 @@ class TestAnnotateTreeWithSAsFromRoot(unittest.TestCase):
 
         ann_tr_sa_dies_max_age = pjtr.AnnotatedTree(
             tr_sa_dies,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=False,
             max_age=max_age,
             sa_lineage_dict=sa_lineage_dict,
@@ -257,7 +258,7 @@ class TestAnnotateTreeWithSAsFromRoot(unittest.TestCase):
 
         ann_tr_sa_dies_no_max_age = pjtr.AnnotatedTree(
             tr_sa_dies_no_max_age,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=False,
             sa_lineage_dict=sa_lineage_dict,
             epsilon=1e-12)

@@ -1,3 +1,4 @@
+from phylojunction.data.trait import DiscreteTrait
 import os
 import typing as ty
 import numpy as np
@@ -426,7 +427,7 @@ def read_nwk_tree_str(nwk_tree_path_or_str: str,
 
     # note the empty attribute transition dict members
     ann_tr = AnnotatedTree(dp_tr,
-                           n_states,
+                           DiscreteTrait(n_states),
                            alternative_root_label=root_alternative_label,
                            start_at_origin=is_origin,
                            tree_died=False,

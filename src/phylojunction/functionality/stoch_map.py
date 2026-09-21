@@ -1130,7 +1130,7 @@ class StochMapsOnTree():
                 print("nd_name", nd_name, stoch_map_attr_name, smap.from_state)
 
             clado_state_trans = AttributeTransition(
-                "state",
+                stoch_map_attr_name,
                 nd_name,
                 smap.time,
                 smap.from_state,
@@ -1188,7 +1188,7 @@ class StochMapsOnTree():
                     print("nd_name", nd_name, stoch_map_attr_name, smap.to_state)
 
                 ana_state_trans = AttributeTransition(
-                    "state",
+                    stoch_map_attr_name,
                     nd_name,
                     smap.time,
                     smap.from_state,
@@ -1297,7 +1297,7 @@ class StochMapsOnTreeCollection():
                  stoch_maps_file_path: str,
                  ann_trs: ty.List[pjtr.AnnotatedTree],
                  state2bit_lookup: pjbio.State2BitLookup,
-                 stoch_map_attr_name: str = "",
+                 stoch_map_attr_name: ty.Optional[str] = "",
                  node_states_file_path: str = "") -> None:
 
         self.stoch_maps_tree_dict = dict()
@@ -1329,7 +1329,7 @@ class StochMapsOnTreeCollection():
     def _read_stoch_maps_file(self,
                               stoch_maps_file_path: str,
                               node_states_file_path: str,
-                              stoch_map_attr_name: str,
+                              stoch_map_attr_name: ty.Optional[str],
                               ann_trs: ty.List[pjtr.AnnotatedTree],
                               state2bit_lookup: \
                               pjbio.State2BitLookup) -> None:
@@ -1351,7 +1351,7 @@ class StochMapsOnTreeCollection():
                 as metadata for each node.
             stoch_map_attr_name (str): Name of the attribute (e.g.,
                 'state') whose transitions are being stochastically
-                mapped.
+                mapped. None selects each tree's primary trait attribute.
             ann_trs (AnnotatedTree): List of AnnotatedTree objects. Can
                 have a single tree inside, in which case it is deep-
                 cloned should there be multiple iterations of
@@ -1418,7 +1418,8 @@ class StochMapsOnTreeCollection():
                                       ann_trs[n_different_iterations],
                                       state2bit_lookup,
                                       node_states_file_path,
-                                      stoch_map_attr_name)
+                                      (ann_trs[n_different_iterations].trait.name
+                                       if stoch_map_attr_name is None else stoch_map_attr_name))
 
                 n_different_iterations += 1
 
@@ -1441,7 +1442,8 @@ class StochMapsOnTreeCollection():
             # if iteration_idx == 11:
             #     smot.update_tree_attributes(stoch_map_attr_name, debug=True)
             # else:
-            smot.update_tree_attributes(stoch_map_attr_name)
+            smot.update_tree_attributes(smot.ann_tr.trait.name
+                                        if stoch_map_attr_name is None else stoch_map_attr_name)
 
 
     def _report_clado_map_issue_str(self) -> None:

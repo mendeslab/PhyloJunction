@@ -1,3 +1,4 @@
+from phylojunction.data.trait import DiscreteTrait
 import dendropy as dp
 import matplotlib
 
@@ -298,7 +299,7 @@ def run_example_manual_tree_building(ax: matplotlib.pyplot.Axes) -> None:
         ann_tr_sa_with_root_survives_max_age = \
             pjtr.AnnotatedTree(
                 tr_sa_with_root_survives,
-                total_state_count,
+                DiscreteTrait(total_state_count),
                 start_at_origin=True,
                 max_age=max_age,
                 sa_lineage_dict=sa_lineage_dict,
@@ -375,7 +376,7 @@ def run_example_read_tree_function(ax: matplotlib.pyplot.Axes) -> None:
 
     ann_tr.at_dict = at_dict
     ann_tr.populate_nd_attr_dict(["state"], attr_dict_added_separately_from_tree=True)
-    ann_tr.state_count = 3 # need it for plotting colors
+    ann_tr.trait = DiscreteTrait(3, name=ann_tr.trait.name) # need it for plotting colors
 
     print(ann_tr.tree.as_string(schema="newick"))
 

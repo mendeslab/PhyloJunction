@@ -1,3 +1,4 @@
+from phylojunction.data.trait import DiscreteTrait
 import unittest
 import matplotlib
 from dendropy import Tree, Node, Taxon
@@ -92,7 +93,7 @@ class TestReconstructedTreePrint(unittest.TestCase):
         max_age = 2.0
         ann_tr = pjtr.AnnotatedTree(
             tr_complete,
-            1,
+            DiscreteTrait(1),
             start_at_origin=True,
             max_age=max_age,
             epsilon=1e-12)
@@ -349,7 +350,7 @@ class TestReconstructedTreePrint(unittest.TestCase):
         max_age = 5.0
         ann_tr = pjtr.AnnotatedTree(
             tr_complete,
-            1,
+            DiscreteTrait(1),
             start_at_origin=True,
             max_age=max_age,
             sa_lineage_dict=sa_lineage_dict,
@@ -596,7 +597,7 @@ class TestReconstructedTreePrint(unittest.TestCase):
         max_age = 5.0
         ann_tr = pjtr.AnnotatedTree(
             tr_complete,
-            1,
+            DiscreteTrait(1),
             start_at_origin=False,
             max_age=max_age,
             sa_lineage_dict=sa_lineage_dict,
@@ -843,7 +844,7 @@ class TestReconstructedTreePrint(unittest.TestCase):
         max_age = 4.0
         ann_tr = pjtr.AnnotatedTree(
             tr_complete,
-            1,
+            DiscreteTrait(1),
             start_at_origin=False,
             max_age=max_age,
             sa_lineage_dict=sa_lineage_dict,
@@ -1064,7 +1065,7 @@ class TestReconstructedTreePrint(unittest.TestCase):
         max_age = 4.0
         ann_tr = pjtr.AnnotatedTree(
             tr_complete,
-            1,
+            DiscreteTrait(1),
             start_at_origin=False,
             max_age=max_age,
             sa_lineage_dict=sa_lineage_dict,
@@ -1219,7 +1220,7 @@ class TestReconstructedTreePrint(unittest.TestCase):
         max_age = 2.0
         ann_tr = pjtr.AnnotatedTree(
             tr_complete,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             at_dict=at_dict,
             start_at_origin=True,
             max_age=max_age,
@@ -1480,7 +1481,7 @@ class TestReconstructedTreePrint(unittest.TestCase):
         max_age = 5.0
         ann_tr = pjtr.AnnotatedTree(
             tr_complete,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             at_dict=at_dict,
             start_at_origin=True,
             max_age=max_age,

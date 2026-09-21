@@ -1,3 +1,4 @@
+from phylojunction.data.trait import DiscreteTrait
 import copy
 import os.path
 import typing as ty
@@ -141,7 +142,7 @@ def make_mapped_ann_tree(det_fn_name: str,
 
         # updating the number of states in trees
         for ann_tr in mapped_ann_tr_list:
-            ann_tr.state_count = state2bit_lookup.n_states
+            ann_tr.trait = DiscreteTrait(state2bit_lookup.n_states, name=ann_tr.trait.name)
 
         # side-effect:
         # (i) annotated trees in mapped_ann_tr_list can now be plotted
@@ -152,9 +153,6 @@ def make_mapped_ann_tree(det_fn_name: str,
                                              mapped_ann_tr_list,
                                              state2bit_lookup,
                                              node_states_file_path=tip_attr_file_path,
-                                             stoch_map_attr_name="state")
+                                             stoch_map_attr_name=None)
 
         return mapped_ann_tr_list
-
-
-

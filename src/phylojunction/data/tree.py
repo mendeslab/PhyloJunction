@@ -1,3 +1,4 @@
+from phylojunction.data.trait import DiscreteTrait, ContinuousTrait
 import typing as ty
 import dendropy as dp  # type: ignore
 import matplotlib  # type: ignore
@@ -99,9 +100,7 @@ class AnnotatedTree(dp.Tree):
         slice_age_ends (dict): List of floats with the end ages for
             specified time slices (epochs). If not provided by user
             Upon instantiation of class, will be 'None'.
-        state_count (int, optional): Number of discrete states, or None for continuous traits.
-        continuous_trait (str, optional): Name of the continuous node attribute; when set,
-            terminal status comes from alive/sampled flags, including zero-length branches.
+        trait (DiscreteTrait or ContinuousTrait): State space and node attribute holding values.
         state_count_dict (dict): Dictionary tabulating how many
             terminal nodes in the full tree are in each state. Keys are
             integers representing states and values are their counts.
@@ -195,7 +194,7 @@ class AnnotatedTree(dp.Tree):
     slice_age_ends: ty.Optional[ty.List[float]]
 
     # state related #
-    state_count: ty.Optional[int]
+    trait: ty.Union[DiscreteTrait, ContinuousTrait]
     state_count_dict: ty.Dict[int, int]
     extant_terminal_state_count_dict: ty.Dict[int, int]
     extant_terminal_sampled_state_count_dict: ty.Dict[int, int]
@@ -255,7 +254,7 @@ class AnnotatedTree(dp.Tree):
     def __init__(
             self,
             a_tree: dp.Tree,
-            total_state_count: ty.Optional[int],
+            trait: ty.Union[DiscreteTrait, ContinuousTrait],
             start_at_origin: bool = False,
             alternative_root_label: str = "",
             condition_on_obs_both_sides_root: bool = False,
@@ -274,13 +273,11 @@ class AnnotatedTree(dp.Tree):
             tree_died: ty.Optional[bool] = None,
             tree_invalid: ty.Optional[bool] = None,
             read_as_newick_string: bool = False,
-            epsilon: float = 1e-12,
-            continuous_trait: ty.Optional[str] = None):
+            epsilon: float = 1e-12):
 
         # using during initialization
         self.epsilon = epsilon
-        self.continuous_trait = continuous_trait
-        self.state_count = total_state_count
+        self.trait = trait
 
         # trees
         self.tree = a_tree
@@ -322,7 +319,7 @@ class AnnotatedTree(dp.Tree):
         self.origin_edge_length = 0.0
         self.seed_age = self.tree.max_distance_from_root()
         self.max_age = max_age
-        if self.continuous_trait is not None and max_age is not None:
+        if isinstance(self.trait, ContinuousTrait) and max_age is not None:
             self.seed_age = max_age
         self.node_heights_dict = dict()
         self.rec_tr_node_heights_dict = dict()
@@ -332,18 +329,19 @@ class AnnotatedTree(dp.Tree):
         self.slice_age_ends = slice_age_ends
 
         # state related
+        state_count = self.trait.states if isinstance(self.trait, DiscreteTrait) else 0
         self.state_count_dict = \
-            dict((int(s), 0) for s in range(0, self.state_count or 0, 1))
+            dict((int(s), 0) for s in range(0, state_count, 1))
         self.extant_terminal_state_count_dict = \
-            dict((int(s), 0) for s in range(0, self.state_count or 0, 1))
+            dict((int(s), 0) for s in range(0, state_count, 1))
         self.extant_terminal_sampled_state_count_dict = \
-            dict((int(s), 0) for s in range(0, self.state_count or 0, 1))
+            dict((int(s), 0) for s in range(0, state_count, 1))
         self.extinct_terminal_state_count_dict = \
-            dict((int(s), 0) for s in range(0, self.state_count or 0, 1))
+            dict((int(s), 0) for s in range(0, state_count, 1))
         self.sa_state_count_dict = \
-            dict((int(s), 0) for s in range(0, self.state_count or 0, 1))
+            dict((int(s), 0) for s in range(0, state_count, 1))
         # Continuous trees have no discrete or ambiguous-state categories.
-        if self.state_count is not None:
+        if isinstance(self.trait, DiscreteTrait):
             ## ambiguous states
             self.state_count_dict[-1] = 0
             self.extant_terminal_state_count_dict[-1] = 0
@@ -372,7 +370,7 @@ class AnnotatedTree(dp.Tree):
         # self.tree_died
         # self.brosc_node
         self._init_and_update_origin_root_members()
-        if self.continuous_trait is not None and self.with_origin:
+        if isinstance(self.trait, ContinuousTrait) and self.with_origin:
             # Extinction does not move the observation horizon to the last death.
             self.origin_age = self.seed_age
             if self.root_node is not None:
@@ -418,7 +416,7 @@ class AnnotatedTree(dp.Tree):
         # (ii)  self.extant_terminal_state_count_dict
         # (iii) self.extant_terminal_sampled_state_count_dict
         # (iv)  self.sa_state_count_dict
-        if self.state_count is not None:
+        if isinstance(self.trait, DiscreteTrait):
             self._count_node_states()
 
         # initializes (side-effect):
@@ -457,7 +455,7 @@ class AnnotatedTree(dp.Tree):
         # successfully initializing AnnotatedTree
         for nd in self.tree.preorder_node_iter():
             # first we check that we have all attributes in place
-            trait_attr = self.continuous_trait or "state"
+            trait_attr = self.trait.name
             if not hasattr(nd, trait_attr):
                 raise ec.AnnotatedTreeNodeMissingAttrError(
                     nd.label,
@@ -788,7 +786,7 @@ class AnnotatedTree(dp.Tree):
             (vi)  self.extinct_terminal_nodes_labels
         """
 
-        if self.continuous_trait is not None:
+        if isinstance(self.trait, ContinuousTrait):
             # Continuous simulations explicitly annotate terminal status, including zero-length
             # branches. Distance and branch-length heuristics would misclassify immediate events.
             tips = list(self.tree.leaf_node_iter())
@@ -941,8 +939,8 @@ class AnnotatedTree(dp.Tree):
             # dealing with ambiguous states '?' passed as string
             # to newick reader
             st = -1
-            if nd.state in self.state_count_dict:
-                st = nd.state
+            if getattr(nd, self.trait.name) in self.state_count_dict:
+                st = getattr(nd, self.trait.name)
 
             # now we count
             self.state_count_dict[st] += 1
@@ -1486,10 +1484,10 @@ class AnnotatedTree(dp.Tree):
             tip = rec.seed_node
             tip.edge_length = self.node_heights_dict[tip.label]
             origin = dp.Node(label="origin", edge_length=0.0)
-            setattr(origin, self.continuous_trait, getattr(self.tree.seed_node, self.continuous_trait))
+            setattr(origin, self.trait.name, getattr(self.tree.seed_node, self.trait.name))
             origin.alive = origin.sampled = False
             origin.is_sa = origin.is_sa_dummy_parent = origin.is_sa_lineage = False
-            origin.annotations.add_bound_attribute(self.continuous_trait)
+            origin.annotations.add_bound_attribute(self.trait.name)
             origin.add_child(tip)
             rec.seed_node = origin
         else:
@@ -1541,7 +1539,7 @@ class AnnotatedTree(dp.Tree):
                 reconstructed tree extracted from AnnotatedTree's
                 instance owning the method call.
         """
-        if self.continuous_trait is not None:
+        if isinstance(self.trait, ContinuousTrait):
             return self._extract_continuous_reconstructed_tree(require_obs_both_sides)
 
 
@@ -1925,7 +1923,7 @@ class AnnotatedTree(dp.Tree):
 
     def plot_node(self,
                   axes: plt.Axes,
-                  node_attr: str = "state",
+                  node_attr: ty.Optional[str] = None,
                   draw_reconstructed: ty.Optional[bool] = False,
                   **kwargs) -> None:
         """Draw tree on provided Axes instance.
@@ -1938,16 +1936,16 @@ class AnnotatedTree(dp.Tree):
                 drawing the tree.
             node_attr (str): Name of the attribute according to which
                 one wants to color the AnnotatedTree's branches with.
-                Defaults to 'state'.
+                Defaults to the tree's trait attribute.
             draw_reconstructed (bool, optional): Whether we are drawing
                 the reconstructed tree instead of the complete tree.
                 Defaults to 'False'.
         """
 
-        if self.continuous_trait is not None:
-            node_attr = self.continuous_trait if node_attr in (None, "state") else node_attr
+        if node_attr is None:
+            node_attr = self.trait.name
 
-        if draw_reconstructed and self.continuous_trait is None:
+        if draw_reconstructed and isinstance(self.trait, DiscreteTrait):
             self.extract_reconstructed_tree(plotting_overhead=True)
 
         if not node_attr:
@@ -1992,7 +1990,7 @@ class AnnotatedTree(dp.Tree):
     def _get_taxon_states_dict(self) -> ty.Tuple[ty.Dict[str, int], ...]:
         """Collect and return non-extinct node states into dicts.
 
-        This method gets the value of attribute 'state' for all
+        This method gets the value of the tree's trait attribute for all
         non-extinct nodes in the tree, and returns terminal and
         internal node states as two separate dictionaries.
 
@@ -2002,7 +2000,7 @@ class AnnotatedTree(dp.Tree):
                 internal nodes (second dictionary).
         """
 
-        self.populate_nd_attr_dict(["state"])
+        self.populate_nd_attr_dict([self.trait.name])
 
         sampled_node_states_dict: ty.Dict[str, int] = dict()
         int_node_states_dict: ty.Dict[str, int] = dict()
@@ -2011,10 +2009,10 @@ class AnnotatedTree(dp.Tree):
 
             # internal nodes
             if a_node.is_internal():
-                int_node_states_dict[taxon_name] = attr_val_dict["state"]
+                int_node_states_dict[taxon_name] = attr_val_dict[self.trait.name]
 
             elif a_node.alive and a_node.sampled:
-                sampled_node_states_dict[taxon_name] = attr_val_dict["state"]
+                sampled_node_states_dict[taxon_name] = attr_val_dict[self.trait.name]
 
         return sampled_node_states_dict, int_node_states_dict
 
@@ -2036,7 +2034,7 @@ class AnnotatedTree(dp.Tree):
         sampled_node_state_dict, int_node_states_dict = \
             self._get_taxon_states_dict()
 
-        n_char = int(math.log(self.state_count + 1, 2))
+        n_char = int(math.log(self.trait.states + 1, 2))
         state2bit_lookup = pjbio.State2BitLookup(n_char, 2, geosse=True)
 
         terminal_node_states_str = ""
@@ -2079,7 +2077,7 @@ class AnnotatedTree(dp.Tree):
         if nexus:
             # numerical (not bit pattern) symbols
             symbols = \
-                "symbols=\"" + "".join(str(i) for i in range(self.state_count)) + "\""
+                "symbols=\"" + "".join(str(i) for i in range(self.trait.states)) + "\""
             # bit-pattern number of characters
             n_char = str(n_char)
 
@@ -2397,7 +2395,7 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
                   axes: plt.Axes,
                   use_age: bool = False,
                   start_at_origin: bool = False,
-                  attr_of_interest: str = "state",
+                  attr_of_interest: ty.Optional[str] = None,
                   sa_along_branches: bool = True,
                   draw_reconstructed: bool = False) -> ty.Tuple[ty.Dict[str, float]]:
     """Plot instance of AnnotatedTree on provided Axes instance.
@@ -2431,10 +2429,11 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
 
     # A colorbar belongs to the axes, not to an individual tree; remove it before redrawing.
     clear_trait_colorbar(axes)
+    if attr_of_interest is None:
+        attr_of_interest = ann_tr.trait.name
     continuous_attr = None
-    if ann_tr.continuous_trait is not None:
-        continuous_attr = (ann_tr.continuous_trait if attr_of_interest in (None, "state")
-                           else attr_of_interest)
+    if isinstance(ann_tr.trait, ContinuousTrait):
+        continuous_attr = attr_of_interest
         attr_of_interest = None  # Branches stay black; only terminal markers encode traits.
         if draw_reconstructed:
             ann_tr.extract_reconstructed_tree()
@@ -2453,7 +2452,7 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
         attr_found = False
 
     else:
-        color_map = get_color_map(ann_tr.state_count)
+        color_map = get_color_map(ann_tr.trait.states)
 
     ####################################################
     # Setting up flags and checking tree content is OK #
@@ -2915,10 +2914,11 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
     ########
     color = "black"
 
-    # if the attribute of interest is 'state' and
+    # if the attribute of interest is the tree's discrete trait and
     # there is only one state, we keep it all black
     keep_it_black = False
-    if attr_of_interest == "state" and ann_tr.state_count == 1:
+    if (isinstance(ann_tr.trait, DiscreteTrait) and
+            attr_of_interest == ann_tr.trait.name and ann_tr.trait.states == 1):
         keep_it_black = True
 
     # grabbing the color at the start of the process
@@ -3253,7 +3253,7 @@ if __name__ == "__main__":
     ann_tr_sa_with_root_survives_max_age = \
         AnnotatedTree(
             tr_sa_with_root_survives,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=True,
             max_age=max_age,
             sa_lineage_dict=sa_lineage_dict,

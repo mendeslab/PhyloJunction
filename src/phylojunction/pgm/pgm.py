@@ -1,4 +1,5 @@
 from __future__ import annotations
+from phylojunction.data.trait import DiscreteTrait, ContinuousTrait
 import typing as ty
 import numpy as np
 import random
@@ -460,7 +461,7 @@ class NodeDAG(ABC):
                   sample_idx: int = 0,
                   repl_idx: int = 0,
                   repl_size: int = 1,
-                  branch_attr: ty.Optional[str] = "state",
+                  branch_attr: ty.Optional[str] = None,
                   draw_reconstructed: ty.Optional[bool] = False) -> None:
         pass
 
@@ -675,7 +676,7 @@ class StochasticNodeDAG(NodeDAG):
                   sample_idx: int = 0,
                   repl_idx: int = 0,
                   repl_size: int = 1,
-                  branch_attr: str = "state",
+                  branch_attr: ty.Optional[str] = None,
                   draw_reconstructed: ty.Optional[bool] = False) -> None:
         """Plot node (side-effect) on provided Axes object
 
@@ -702,8 +703,8 @@ class StochasticNodeDAG(NodeDAG):
                 if isinstance(sample_idx, int) and \
                     isinstance(self.value[sample_idx * repl_size + repl_idx],
                                pjtr.AnnotatedTree):
-                    if (self.value[0].continuous_trait is not None or
-                            (self.value[0].state_count is not None and self.value[0].state_count > 1)):
+                    if (isinstance(self.value[0].trait, ContinuousTrait) or
+                            (isinstance(self.value[0].trait, DiscreteTrait) and self.value[0].trait.states > 1)):
                         self.value[sample_idx * repl_size + repl_idx]\
                             .plot_node(axes,
                                        node_attr=branch_attr,
@@ -806,7 +807,7 @@ class DeterministicNodeDAG(NodeDAG):
                   sample_idx: ty.Optional[int] = 0,
                   repl_idx: ty.Optional[int] = 0,
                   repl_size: ty.Optional[int] = 1,
-                  branch_attr: ty.Optional[str] = "state",
+                  branch_attr: ty.Optional[str] = None,
                   draw_reconstructed: ty.Optional[bool] = False) -> None:
 
         # if list
@@ -817,8 +818,8 @@ class DeterministicNodeDAG(NodeDAG):
                 if isinstance(sample_idx, int) and \
                         isinstance(self.value[sample_idx * repl_size + repl_idx],
                                    pjtr.AnnotatedTree):
-                    if (self.value[0].continuous_trait is not None or
-                            (self.value[0].state_count is not None and self.value[0].state_count > 1)):
+                    if (isinstance(self.value[0].trait, ContinuousTrait) or
+                            (isinstance(self.value[0].trait, DiscreteTrait) and self.value[0].trait.states > 1)):
                         self.value[sample_idx * repl_size + repl_idx] \
                             .plot_node(axes, node_attr=branch_attr)
 

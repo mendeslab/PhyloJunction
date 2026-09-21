@@ -1,3 +1,4 @@
+from phylojunction.data.trait import DiscreteTrait, ContinuousTrait
 import os
 import typing as ty
 import dendropy as dp
@@ -765,7 +766,8 @@ def prep_data_df(
                             summaries=True,
                             summaries_avg_over_repl=False)
 
-                total_n_states = node_val[0].state_count
+                total_n_states = (node_val[0].trait.states
+                                  if isinstance(node_val[0].trait, DiscreteTrait) else None)
 
                 # populating tree_summary_df_dict,
                 # iterating over samples and replicates
@@ -794,7 +796,7 @@ def prep_data_df(
                     # NOTE: at the moment, all leaves are counted (in the
                     # future, maybe just the sampled ones)
                     if total_n_states is not None and total_n_states > 1:
-                        for ith_state in range(replicate_tree.state_count):
+                        for ith_state in range(replicate_tree.trait.states):
                             tree_summary_df_dict[rv_name].at[idx, "n_" + str(ith_state)] = \
                                 replicate_tree.state_count_dict[ith_state]
 
@@ -892,14 +894,14 @@ def prep_data_df(
                 # Doing dictionaries with tsv and nexus #
                 # strings for states                    #
                 #########################################
-                if node_val[0].continuous_trait is not None:
+                if isinstance(node_val[0].trait, ContinuousTrait):
                     # The existing filename-to-text table also carries continuous trait TSVs.
                     # Keep one row per complete-tree node, including internal and extinct nodes.
                     rows = []
                     for idx, tree in enumerate(node_val):
                         for nd in tree.tree.preorder_node_iter():
                             rows.append((idx // n_repl + 1, idx % n_repl + 1, nd.label,
-                                         getattr(nd, tree.continuous_trait), nd.alive, nd.sampled))
+                                         getattr(nd, tree.trait.name), nd.alive, nd.sampled))
                     traits = pd.DataFrame(rows, columns=["sample", "replicate", "node", "trait",
                                                         "alive", "sampled"])
                     tree_living_nd_states_str_dict[rv_name + "_traits.tsv"] = traits.to_csv(sep="\t", index=False)

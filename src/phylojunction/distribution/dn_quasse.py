@@ -4,6 +4,7 @@ The initial method follows diversitree/R/simulate-quasse.R. Events precede trait
 updates. The final age-limited interval and its event probability are shortened;
 size stopping omits the terminating birth and its subsequent trait update.
 """
+from phylojunction.data.trait import ContinuousTrait
 
 import time
 import numpy as np
@@ -192,10 +193,10 @@ class DnQuaSSE(DistrForSampling):
         for node in tree.leaf_node_iter():
             node.sampled = node.alive and (probability == 1 or
                                           (probability > 0 and np.random.random() < probability))
-        return AnnotatedTree(tree, None, start_at_origin=True, max_age=horizon,
+        return AnnotatedTree(tree, ContinuousTrait(), start_at_origin=True, max_age=horizon,
                              condition_on_obs_both_sides_root=self.cond_obs_both_sides,
                              tree_died=not any(nd.alive for nd in tree.leaf_node_iter()),
-                             tree_invalid=False, continuous_trait="trait")
+                             tree_invalid=False)
 
     # Check observations on the complete tree: pruning can replace the original root.
     def _is_tree_accepted(self, tree):
