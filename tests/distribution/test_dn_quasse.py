@@ -144,7 +144,7 @@ class TestQuaSSE(unittest.TestCase):
             self.assertEqual(len(rates), 2)
             self.assertTrue(rates[0].is_identically_zero)
             self.assertIn(dag.name_node_dict['x'], dag.name_node_dict['r'].parent_nd_list)
-        cmdline2dag(dag, 'u ~ quasse(n=2,birth_rate=r,death_rate=b,stop="age",stop_value=0,dt_max=.1)')
+        cmdline2dag(dag, 'u ~ quasse(n=2,birth_rate=r,death_rate=b,stop="age",stop_value=0,dt_max=.1,max_nodes=2)')
         self.assertEqual(len(dag.name_node_dict['u'].value), 2)
         for spec in ('quasse_constant(rate=[1,2],cap=[1,2,3])', 'quasse_constant(rate=1,cap=-1)',
                      'quasse_gaussian(baseline=1,center_rate=2,center=0)', 'quasse_constant(rate=1,typo=2)'):
@@ -168,6 +168,26 @@ class TestQuaSSE(unittest.TestCase):
             tree = DnQuaSSE(zero, zero, 'age', 1, diffusion=1, dt_max=.01).simulate()
         normal.assert_called_once_with(0., 1., 1)
         self.assertEqual(tree.brosc_node.trait, 2.)
+
+    # Historical nodes consume memory even after death; max_alive cannot protect that bound.
+    # Retire if simulation no longer retains dead nodes or uses a shared allocation limiter.
+    def test_max_nodes(self):
+        one, zero = ConstantRate(1), ConstantRate(0)
+        with patch.object(DnQuaSSE, '_new_node') as allocate:
+            with self.assertRaisesRegex(ec.GenerateFailError, 'max_nodes'):
+                DnQuaSSE(one, zero, 'age', 1, max_nodes=1).generate()
+            allocate.assert_not_called()
+        dn = DnQuaSSE(one, one, 'age', 2, k=1, max_nodes=4)
+        # Birth, death, birth: only one lineage remains, but the third event needs nodes 5/6.
+        with patch('numpy.random.random', side_effect=[0., 0., 0., .9, 0., 0.]), \
+                patch('numpy.random.choice', return_value=0), \
+                patch.object(dn, '_new_node', wraps=dn._new_node) as allocate:
+            with self.assertRaisesRegex(ec.GenerateFailError, 'max_nodes'):
+                dn.generate()
+            self.assertEqual(allocate.call_count, 4)
+        with patch('numpy.random.random', return_value=0.), patch('numpy.random.choice', return_value=0):
+            tree = DnQuaSSE(one, zero, 'size', 2, k=1, max_nodes=4).generate()[0]
+        self.assertEqual(len(list(tree.tree)), 4)
 
     # Count and root-side conditions must inspect observations, without changing parameters.
     # These tests supplement numerical checks and become obsolete with a shared acceptance layer.
@@ -207,7 +227,8 @@ class TestQuaSSE(unittest.TestCase):
         one, zero = LogisticRate(1, 1, 0, 0), LogisticRate(0, 0, 0, 0)
         for kwargs in [{'method': 'unknown'}, {'k': 1.5}, {'diffusion': -1},
                        {'sampling_prob': 2}, {'min_rec_taxa': 3, 'max_rec_taxa': 2},
-                       {'drift': [0, 1]}, {'dt_max': 0}, {'dt_max': np.inf}]:
+                       {'drift': [0, 1]}, {'dt_max': 0}, {'dt_max': np.inf},
+                       {'max_nodes': 0}, {'max_nodes': 2.5}]:
             with self.assertRaises(ValueError):
                 DnQuaSSE(one, zero, 'age', 1, **kwargs)
         for kwargs in [{'sampling_prob': .5}, {'min_rec_taxa': 0}]:

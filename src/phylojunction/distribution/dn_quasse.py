@@ -32,7 +32,7 @@ class DnQuaSSE(DistrForSampling):
                  drift=0.0, diffusion=0.0, n=1, nr=1, method="diversitree", k=500,
                  runtime_limit=300, max_steps=1000000, max_alive=100000, rng_seed=None,
                  sampling_prob=1.0, cond_surv=True, cond_spn=False, cond_obs_both_sides=False,
-                 min_rec_taxa=None, max_rec_taxa=None, max_n_attempts=200, dt_max=None):
+                 min_rec_taxa=None, max_rec_taxa=None, max_n_attempts=200, dt_max=None, max_nodes=None):
         self.n_sim = _integer(n, "n")
         self.n_repl = _integer(nr, "nr")
         self.method = method
@@ -40,6 +40,7 @@ class DnQuaSSE(DistrForSampling):
         self.k = _integer(k, "k")
         self.max_steps = _integer(max_steps, "max_steps")
         self.max_alive = _integer(max_alive, "max_alive")
+        self.max_nodes = None if max_nodes is None else _integer(max_nodes, "max_nodes")
         self.dt_max = None if dt_max is None else float(dt_max)
         if self.dt_max is not None and (not np.isfinite(self.dt_max) or self.dt_max <= 0):
             raise ValueError("dt_max must be positive and finite.")
@@ -122,6 +123,8 @@ class DnQuaSSE(DistrForSampling):
         birth, death = self.birth_rate[sample_idx], self.death_rate[sample_idx]
         drift, variance = self.drift[sample_idx], self.diffusion[sample_idx]
         target = self.stop_value[sample_idx]
+        if self.max_nodes is not None and self.max_nodes < 2:
+            raise ec.GenerateFailError(self.DN_NAME, "Resource limit max_nodes cannot hold origin and initial lineage.")
         tree = dp.Tree(is_rooted=True)
         origin = self._new_node(tree, "origin", self.start_trait[sample_idx])
         origin.alive = origin.sampled = False
@@ -166,6 +169,10 @@ class DnQuaSSE(DistrForSampling):
                     break
                 if is_birth and len(living) >= self.max_alive:
                     raise ec.GenerateFailError(self.DN_NAME, "Exceeded max_alive.")
+                # node_count counts all daughters ever allocated, including extinct lineages;
+                # origin and brosc add two more. Check before allocating either new daughter.
+                if is_birth and self.max_nodes is not None and node_count + 4 > self.max_nodes:
+                    raise ec.GenerateFailError(self.DN_NAME, "Exceeded resource limit max_nodes.")
                 node = living.pop(chosen)
                 node.alive = node.sampled = False
                 if is_birth:
