@@ -20,6 +20,14 @@ phylojunction.data.sampled\_ancestor module
    :undoc-members:
    :show-inheritance:
 
+phylojunction.data.trait module
+--------------------------------
+
+.. automodule:: phylojunction.data.trait
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 phylojunction.data.tree module
 ------------------------------
 
