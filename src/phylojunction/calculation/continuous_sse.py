@@ -42,6 +42,26 @@ class RateFunction:
             return min(bound, self.cap)
         return bound if np.isfinite(bound) else None
 
+    # Bound the capped function on a closed interval. The outward ulp guards rounding,
+    # but is not certified interval arithmetic; the simulator's proof assumes exact bounds.
+    def bound_on_interval(self, left, right):
+        left, right = float(left), float(right)
+        if not np.isfinite(left) or not np.isfinite(right) or left > right:
+            raise ValueError("Rate bounds require finite endpoints with left <= right.")
+        bound = 0.0 if self.cap == 0 else float(self._interval_bound(left, right))
+        if self.cap is not None:
+            bound = min(bound, self.cap)
+        if bound > 0:
+            with np.errstate(over="ignore"):
+                bound = float(np.nextafter(bound, np.inf))
+        if not np.isfinite(bound) or bound < 0:
+            raise ValueError("No finite nonnegative rate bound is available on this interval.")
+        return bound
+
+    # Unknown subclasses inherit only a global bound, never an assumption of monotonicity.
+    def _interval_bound(self, left, right):
+        return self._bound()
+
     # Include the cap only when supplied, keeping the original logistic description.
     def __str__(self):
         parameters = [f"{name}={getattr(self, name)}" for name in self._parameter_names]
@@ -61,6 +81,10 @@ class LogisticRate(RateFunction):
 
     def _bound(self):
         return max(self.y0, self.y1)
+
+    # Either plateau/slope ordering is monotone, so an endpoint attains the maximum.
+    def _interval_bound(self, left, right):
+        return max(float(self(left)), float(self(right)))
 
     # The logistic weight interpolates the plateaus, including decreasing curves.
     # expit handles either tail without overflowing an exponential.
@@ -108,6 +132,11 @@ class GaussianRate(RateFunction):
     def _bound(self):
         return max(self.baseline, self.center_rate)
 
+    # The center is the only interior extremum; include it for both peaks and troughs.
+    def _interval_bound(self, left, right):
+        bound = max(float(self(left)), float(self(right)))
+        return max(bound, float(self(self.center))) if left <= self.center <= right else bound
+
     # Convex weights keep peaks and troughs nonnegative, including zero center rates.
     def _evaluate(self, x):
         z = _standardized(x, self.center, self.width)
@@ -125,6 +154,10 @@ class StepRate(RateFunction):
     def _bound(self):
         return max(self.left, self.right)
 
+    # Endpoint evaluation also preserves the right-hand value at threshold equality.
+    def _interval_bound(self, left, right):
+        return max(float(self(left)), float(self(right)))
+
     def _evaluate(self, x):
         return np.where(x < self.threshold, self.left, self.right)
 
@@ -138,6 +171,10 @@ class LinearRate(RateFunction):
 
     def _bound(self):
         return float("inf") if self.slope else max(0., self.intercept)
+
+    # The maximum of zero and an affine function is convex: endpoints suffice.
+    def _interval_bound(self, left, right):
+        return max(float(self(left)), float(self(right)))
 
     def _evaluate(self, x):
         return np.maximum(0., self.intercept + self.slope * x)
@@ -186,6 +223,10 @@ class QuadraticRate(RateFunction):
     def _bound(self):
         return float("inf") if self.strength else self.baseline
 
+    # Nonnegative strength makes the uncapped function convex; capping preserves its bound.
+    def _interval_bound(self, left, right):
+        return max(float(self(left)), float(self(right)))
+
     def _evaluate(self, x):
         return self.baseline + _distance_growth(x, self.center, self.strength, 2)
 
@@ -200,6 +241,10 @@ class AbsoluteRate(RateFunction):
 
     def _bound(self):
         return float("inf") if self.strength else self.baseline
+
+    # Nonnegative strength makes the uncapped function convex; capping preserves its bound.
+    def _interval_bound(self, left, right):
+        return max(float(self(left)), float(self(right)))
 
     def _evaluate(self, x):
         return self.baseline + _distance_growth(x, self.center, self.strength, 1)

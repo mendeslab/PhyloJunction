@@ -37,6 +37,8 @@ class TestQuaSSE(unittest.TestCase):
                 self.assertLessEqual(capped.upper_bound, .5)
                 self.assertIn('cap=0.5', str(capped))
                 self.assertTrue(cls(*args, cap=0).is_identically_zero)
+                self.assertEqual(cls(*args, cap=0).bound_on_interval(-1, 1), 0)
+                self.assertAlmostEqual(capped.bound_on_interval(-1, 1), .5)
                 for cap in (-1, np.inf, np.nan):
                     with self.assertRaises(ValueError):
                         cls(*args, cap=cap)
@@ -57,6 +59,31 @@ class TestQuaSSE(unittest.TestCase):
                           (QuadraticRate, (0, -1, 0)), (AbsoluteRate, (0, 1, np.nan))]:
             with self.assertRaises(ValueError):
                 cls(*args)
+
+    # Exact maxima supplement grid checks: tree tests can miss a narrow interior peak.
+    # Retire this group if rate bounds are supplied by another verified implementation.
+    def test_interval_bounds(self):
+        cases = [(ConstantRate(2), -1, 1, 2),
+                 (LogisticRate(3, 1, 0, 2), -1, 1, float(LogisticRate(3, 1, 0, 2)(-1))),
+                 (GaussianRate(1, 5, .1, .01), -1, 1, 5),
+                 (GaussianRate(5, 1, 0, 1), -1, 2, float(GaussianRate(5, 1, 0, 1)(2))),
+                 (StepRate(3, 1, 0), 0, 1, 1), (StepRate(1, 3, 0), -1, 0, 3),
+                 (LinearRate(1, -2), -1, 1, 3), (QuadraticRate(1, 2, 0), -1, 2, 9),
+                 (AbsoluteRate(1, 2, 0), -1, 2, 5), (QuadraticRate(2, 0, 0), -1, 2, 2),
+                 (SkewGaussianRate(1, 2, 0, 1, 3), -1, 2, 5),
+                 (QuadraticRate(3, 2, 0, cap=1), -1, 2, 1)]
+        for rate, left, right, expected in cases:
+            with self.subTest(rate=str(rate)):
+                bound = rate.bound_on_interval(left, right)
+                self.assertAlmostEqual(bound, expected)
+                self.assertTrue(np.all(rate(np.linspace(left, right, 101)) <= bound))
+                self.assertGreaterEqual(rate.bound_on_interval(left, left), float(rate(left)))
+        for left, right in [(1, 0), (np.nan, 1), (0, np.inf)]:
+            with self.assertRaises(ValueError):
+                ConstantRate(1).bound_on_interval(left, right)
+        with patch.object(QuadraticRate, '_interval_bound', return_value=float('inf')):
+            with self.assertRaises(ValueError):
+                QuadraticRate(0, 1, 0).bound_on_interval(0, 1)
 
     # Discrete tests cannot detect cancellation in positive logistic tails or resulting simulation failures.
     # Retire this group if another shared rate implementation tests this same contract.
