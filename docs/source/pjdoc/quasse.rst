@@ -2,7 +2,9 @@ QuaSSE
 ------
 
 QuaSSE couples a real-valued Brownian trait to trait-dependent speciation and extinction.
-Simulation uses an approximate method based on ``diversitree``.
+Two simulation methods are available: the default ``diversitree`` approximation and
+``local_thinning``, which evaluates rates at Brownian-bridge candidate traits and has an
+explicit probability-error budget under the assumptions below.
 
 With PhyloJunction installed, run these commands from the repository root (where
 ``examples/`` is located):
@@ -12,6 +14,7 @@ With PhyloJunction installed, run these commands from the repository root (where
    pjcli examples/quasse.pj -d -f 'trees;1-2' -r 42 -o /tmp/quasse-output
    pjcli examples/quasse_size.pj -d -r 42 -o /tmp/quasse-size
    pjcli examples/quasse_conditioned.pj -d -r 42 -o /tmp/quasse-conditioned
+   pjcli examples/quasse_local_thinning.pj -d -r 42 -o /tmp/quasse-local
 
 
 Each ``.pj`` statement must occupy one line. ``-d`` writes data; ``-f`` selects figures.
@@ -116,7 +119,7 @@ The interior algorithm follows ``diversitree/R/simulate-quasse.R``. Intentional 
 
 The method is approximate. Increasing ``k`` generally improves resolution at greater cost;
 ``k`` does not specify an absolute time-step tolerance. It defaults to 500 and must be an integer
-at least one. The default and currently only method is ``"diversitree"``.
+at least one. The default method is ``"diversitree"``.
 
 Optional ``dt_max`` is a positive finite duration. When supplied, each interval is at most
 min(1/(kR), dt_max, remaining age), with event probability R times that interval. This can
@@ -124,6 +127,54 @@ resolve trait changes where present rates are small, but is not an error toleran
 simulation method. Step discontinuities and rapidly varying or unbounded rates require
 resolution checks using smaller ``dt_max`` and larger ``k``. Omitting it preserves the original
 step selection for positive total rates.
+
+Brownian bridge local thinning
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Select ``method="local_thinning"`` and supply a positive finite ``block_duration`` in the
+model's time units. Each living lineage samples a Brownian endpoint up to that duration away.
+The endpoints and a Brownian-bridge tail bound define a likely containing trait interval.
+The maximum birth and death rates over that interval bound a Poisson proposal process.
+At each candidate time the simulator samples the actual intermediate trait from the stored
+bridge and accepts a birth or death using its actual rate. Rejected candidates retain the
+same endpoint. At birth the parent ends at that time and its daughters evolve independently.
+There is no one-event-per-step restriction and no requirement that rates change slowly.
+
+Longer blocks save endpoint work but can enlarge proposal bounds and increase rejected
+candidates. Thus ``block_duration`` primarily controls cost. It need not be extremely small
+for accuracy. Local thinning does not use ``dt_max`` or ``k``: a supplied ``dt_max`` or
+nondefault ``k`` is rejected; the inherited default ``k=500`` is ignored.
+
+``bridge_error`` defaults to ``1e-8`` and must be finite and strictly between zero and one.
+It budgets excursions outside the likely trait regions across a complete ``generate()``
+call, including every sample, replicate, biological rejection and numerical restart.
+Block j receives probability allowance δ/[j(j+1)], whose infinite sum is δ.
+A direct ``simulate()`` call gets its own budget. Separate calls start new budgets.
+All existing rate families are supported, including uncapped linear, quadratic and
+absolute-value functions: a finite local bound suffices, without a global rate cap.
+
+A finite evaluated total rate exceeding its proposal bound automatically restarts the
+current tree with the same model parameters. RNG progression, error budget, deadline and
+remaining work allowance persist. Completed earlier trees are retained. This does not
+consume a biological rejection attempt. A loose valid bound merely wastes candidate work;
+an invalid bound can miss events, so restarting does not make this an exact sampler.
+
+With exact arithmetic and sampling, valid interval bounds, and a terminating, nonexplosive
+reference process, the total variation distance from the exact complete output law is at
+most ``bridge_error``. The coupling agrees until the first region excursion, which also
+covers detected violations and their restarts. This is an absolute probability bound,
+not a relative bound on population means or other unbounded statistics. It is not a claim
+of second-order convergence in block duration. Floating-point error and computational
+interruptions are outside this guarantee. Biological rejection-limit failure is included
+as an output; discarding failures and conditioning on success needs a separate bound
+(at most 2δ/p, capped at one, where p is exact success probability and both are positive).
+
+Age stopping ends living branches exactly at the requested age. Size stopping retains the
+same N-to-N+1 convention as diversitree, but uses the continuous candidate birth time and
+advances every unfinished bridge to that time. The stored future endpoints are retained
+when sampling final traits. Sampling and biological conditions are shared by both methods.
+
+The derivation and assumptions are in ``TODO/simulator.tex`` in the source repository.
 
 Observation and conditions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -178,7 +229,7 @@ impossible conditions can exhaust the rejection budget. Limits are:
      - Entire ``generate()`` call, including retries
    * - ``max_steps``
      - 1,000,000
-     - Iterations per attempt
+     - Diversitree steps or local queue actions per attempt, shared across numerical restarts
    * - ``max_alive``
      - 100,000
      - Living lineages per attempt
@@ -187,8 +238,9 @@ impossible conditions can exhaust the rejection budget. Limits are:
      - All nodes per attempt, including extinct nodes, origin and initial lineage
 
 All limits are positive; count limits are integers. Reaching the rejection budget raises an
-error. Numerical failures and exceeded resource limits also raise errors, without rejection
-and retry. In particular, transiently exceeding ``max_rec_taxa`` does not reject an attempt.
+error. Except for the finite local bound-exceedance recovery described above, numerical
+failures and exceeded resource limits raise errors without retry. In particular, transiently
+exceeding ``max_rec_taxa`` does not reject an attempt.
 
 ``max_nodes`` is checked before creating the initial two nodes or either daughter at a birth.
 The omitted size-stopping birth does not consume nodes. This is a memory safeguard, not an
@@ -196,8 +248,9 @@ infinite-population detector; hitting it raises an error without returning a tru
 
 When both rate functions are identically zero, age stopping uses a direct Brownian transition,
 even with ``dt_max`` set. Size stopping then fails because its terminating birth is unreachable.
-If the total rate is zero only at the current traits (including numerical underflow), supply
+For diversitree, if the total rate is zero only at the current traits (including underflow), supply
 ``dt_max`` so traits can advance and rates be reevaluated; without it, simulation raises an error.
+Local thinning instead renews Brownian blocks even when a local proposal bound is zero.
 
 Trees, plots, and output
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -243,6 +296,9 @@ The Python rate classes are ``ConstantRate``, ``LogisticRate``, ``GaussianRate``
 script constructors and evaluate NumPy arrays or scalars. Their shared ``RateFunction``
 interface exposes ``is_identically_zero`` and ``upper_bound`` (a conservative finite bound,
 or ``None`` when unavailable). A zero rate at one trait is not an identically zero function.
+``bound_on_interval(left, right)`` returns a finite conservative bound on a closed finite
+interval, including zero-width intervals, or raises ``ValueError`` if unavailable.
+Positive bounds have an outward floating-point guard; this is not certified interval arithmetic.
 
 Additional scripts
 ^^^^^^^^^^^^^^^^^^
@@ -262,4 +318,10 @@ Bounded and explicitly unbounded rates
 (`quasse_rates.pj <https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/quasse_rates.pj>`_):
 
 .. literalinclude:: ../../../examples/quasse_rates.pj
+   :language: text
+
+Local thinning with uncapped quadratic speciation
+(`quasse_local_thinning.pj <https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/quasse_local_thinning.pj>`_):
+
+.. literalinclude:: ../../../examples/quasse_local_thinning.pj
    :language: text

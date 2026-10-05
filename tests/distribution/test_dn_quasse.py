@@ -161,6 +161,18 @@ class TestQuaSSE(unittest.TestCase):
         self.assertEqual(trees[0].extract_reconstructed_tree().seed_node.child_nodes()[0].trait, 0)
         self.assertEqual(str(trees[-1].extract_reconstructed_tree()), ';')
         self.assertIn(dag.name_node_dict['b'], dag.name_node_dict['t'].parent_nd_list)
+        cmdline2dag(dag, 'local ~ quasse(n=2,nr=2,birth_rate=b,death_rate=b,stop="age",'
+                    'stop_value=[0,2],start_trait=x,drift=1,sampling_prob=[1,0],'
+                    'method="local_thinning",block_duration=.5,bridge_error=.00001)')
+        local = dag.name_node_dict['local'].value
+        self.assertEqual([t.seed_age for t in local], [0, 0, 2, 2])
+        self.assertEqual([t.brosc_node.trait for t in local], [0, 0, 4, 4])
+        self.assertEqual([t.n_extant_sampled_terminal_nodes for t in local], [1, 1, 0, 0])
+        for extra in ('block_duration=[1,2]', 'block_duration=-1', 'block_duration=.5,bridge_error=0',
+                      'block_duration=.5,dt_max=.1'):
+            with self.assertRaises(ec.ScriptSyntaxError):
+                cmdline2dag(dag, 'invalid ~ quasse(n=2,birth_rate=b,death_rate=b,stop="age",'
+                            'stop_value=1,method="local_thinning",' + extra + ')')
         constructors = ["constant(rate=2", "gaussian(baseline=1,center_rate=3,center=0,width=1",
                         "step(left=1,right=2,threshold=0", "linear(intercept=1,slope=2",
                         "skew_gaussian(baseline=1,amplitude=2,location=0,width=1,skew=3",

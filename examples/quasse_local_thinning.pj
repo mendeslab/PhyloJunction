@@ -1,0 +1,4 @@
+# Uncapped quadratic speciation with Brownian bridge local thinning.
+b := quasse_quadratic(baseline=0.6,strength=0.05,center=0)
+d := quasse_constant(rate=0.2)
+trees ~ quasse(n=2,nr=2,birth_rate=b,death_rate=d,stop="age",stop_value=2,start_trait=0,drift=0,diffusion=1,method="local_thinning",block_duration=0.5,bridge_error=0.00000001,cond_surv="false",max_nodes=10000)
