@@ -7,6 +7,10 @@ size stopping omits the terminating birth and its subsequent trait update.
 from phylojunction.data.trait import ContinuousTrait
 
 import time
+import math
+import heapq
+from dataclasses import dataclass
+from itertools import count
 import numpy as np
 import dendropy as dp
 
@@ -24,6 +28,20 @@ def _integer(value, name, minimum=1):
     return int(number)
 
 
+@dataclass
+class _LineageInterval:
+    """One unfinished Brownian continuation; current trait/edge remain on the node."""
+    node: dp.Node
+    time: float
+    end_time: float
+    end_trait: float
+    rate_bound: float
+
+
+class _LocalBoundExceeded(Exception):
+    """Only a finite rate exceeding a finite proposal bound permits numerical retry."""
+
+
 class DnQuaSSE(DistrForSampling):
     DN_NAME = "DnQuaSSE"
 
@@ -32,7 +50,8 @@ class DnQuaSSE(DistrForSampling):
                  drift=0.0, diffusion=0.0, n=1, nr=1, method="diversitree", k=500,
                  runtime_limit=300, max_steps=1000000, max_alive=100000, rng_seed=None,
                  sampling_prob=1.0, cond_surv=True, cond_spn=False, cond_obs_both_sides=False,
-                 min_rec_taxa=None, max_rec_taxa=None, max_n_attempts=200, dt_max=None, max_nodes=None):
+                 min_rec_taxa=None, max_rec_taxa=None, max_n_attempts=200, dt_max=None, max_nodes=None,
+                 block_duration=None, bridge_error=None):
         self.n_sim = _integer(n, "n")
         self.n_repl = _integer(nr, "nr")
         self.method = method
@@ -47,8 +66,21 @@ class DnQuaSSE(DistrForSampling):
         self.runtime_limit = float(runtime_limit)
         if not np.isfinite(self.runtime_limit) or self.runtime_limit <= 0:
             raise ValueError("runtime_limit must be positive and finite.")
-        if method != "diversitree":
-            raise ValueError(f"Unknown QuaSSE method {method!r}; supported: diversitree.")
+        if method not in ("diversitree", "local_thinning"):
+            raise ValueError(f"Unknown QuaSSE method {method!r}; supported: diversitree, local_thinning.")
+        self.block_duration = None if block_duration is None else float(block_duration)
+        self.bridge_error = None if bridge_error is None else float(bridge_error)
+        if method == "local_thinning":
+            if self.block_duration is None or not math.isfinite(self.block_duration) or self.block_duration <= 0:
+                raise ValueError("local_thinning requires a positive finite block_duration.")
+            if self.bridge_error is None:
+                self.bridge_error = 1e-8
+            if not math.isfinite(self.bridge_error) or not 0 < self.bridge_error < 1:
+                raise ValueError("bridge_error must be finite and strictly between zero and one.")
+            if self.dt_max is not None or self.k != 500:
+                raise ValueError("local_thinning uses block_duration, not dt_max or k (default k=500 is ignored).")
+        elif self.block_duration is not None or self.bridge_error is not None:
+            raise ValueError("block_duration and bridge_error apply only to local_thinning.")
         if stop not in ("age", "size"):
             raise ValueError('stop must be "age" or "size".')
         self.birth_rate, self.death_rate = birth_rate, death_rate
@@ -198,11 +230,177 @@ class DnQuaSSE(DistrForSampling):
         horizon = float(target if self.stop == "age" else elapsed)
         return tree, horizon
 
-    # Dispatch without changing the tree contract when additional methods are introduced.
-    def simulate(self, sample_idx=0, deadline=None):
+    # Reveal the existing bridge at a later time, retaining its endpoint and all past draws.
+    # Given z at t and y at e, the mean is (1-f)z+fy and variance v*u*(1-f), f=u/(e-t).
+    # Drift is already in y. Equal times do nothing; the endpoint is assigned without a draw.
+    def _advance_bridge(self, interval, new_time, variance):
+        if not math.isfinite(new_time) or not interval.time <= new_time <= interval.end_time:
+            raise ec.GenerateFailError(self.DN_NAME, "Invalid Brownian bridge time.")
+        if new_time == interval.time:
+            return
+        duration = new_time - interval.time
+        if new_time == interval.end_time:
+            trait = interval.end_trait
+        else:
+            fraction = duration / (interval.end_time - interval.time)
+            trait = (1 - fraction) * interval.node.trait + fraction * interval.end_trait
+            if variance:
+                trait += math.sqrt(variance * duration * (1 - fraction)) * np.random.normal()
+        if not math.isfinite(trait):
+            raise ec.GenerateFailError(self.DN_NAME, "Nonfinite Brownian bridge trait.")
+        interval.node.trait = float(trait)
+        interval.node.edge_length += duration
+        interval.time = new_time
+
+    # Allocate epsilon_j=delta/[j(j+1)] before sampling an unconditional endpoint.
+    # A bridge's two-sided deviation exceeds r with probability <=2*exp(-2*r*r/(v*h)).
+    # Enlarging the endpoint range by r therefore gives a likely region, not a hard barrier.
+    def _start_bridge_interval(self, node, time, end_time, birth, death, drift, variance, block_index):
+        if not math.isfinite(end_time) or end_time <= time:
+            raise ec.GenerateFailError(self.DN_NAME, "Cannot advance Brownian block time.")
+        duration = end_time - time
+        scale = math.sqrt(variance * duration)
+        endpoint = node.trait + drift * duration
+        if variance:
+            endpoint += scale * np.random.normal()
+        # Summable allocation survives arbitrary numbers of blocks and retries. Computing
+        # its log directly avoids underflow of epsilon_j; the index belongs to the full call.
+        log_inverse = math.log(2) - math.log(self.bridge_error) + math.log(block_index) + math.log(block_index + 1)
+        radius = scale * math.sqrt(log_inverse / 2)
+        left, right = min(node.trait, endpoint) - radius, max(node.trait, endpoint) + radius
+        if not all(math.isfinite(x) for x in (endpoint, left, right)):
+            raise ec.GenerateFailError(self.DN_NAME, "Nonfinite Brownian endpoint or region.")
+        bound = birth.bound_on_interval(left, right) + death.bound_on_interval(left, right)
+        if not math.isfinite(bound):
+            raise ec.GenerateFailError(self.DN_NAME, "Nonfinite total proposal bound.")
+        return _LineageInterval(node, time, end_time, float(endpoint), bound)
+
+    # Each living node owns one bridge and one queued candidate/endpoint. Pop chronologically,
+    # reveal only that trait, then thin at its actual rate. Serial numbers break ties; a
+    # candidate at the endpoint is an endpoint action. Birth/death removes the popped record,
+    # so there are no stale entries. Conditional on staying in its region, Poisson thinning
+    # is exact; the call-wide sum of excursion probabilities bounds first divergence.
+    def _simulate_local_thinning(self, sample_idx, deadline, block_indices, work_indices):
+        birth, death = self.birth_rate[sample_idx], self.death_rate[sample_idx]
+        drift, variance = self.drift[sample_idx], self.diffusion[sample_idx]
+        target = self.stop_value[sample_idx]
+        self._check_runtime(deadline)
+        if self.max_nodes is not None and self.max_nodes < 2:
+            raise ec.GenerateFailError(self.DN_NAME, "Resource limit max_nodes cannot hold origin and initial lineage.")
+        tree = dp.Tree(is_rooted=True)
+        origin = self._new_node(tree, "origin", self.start_trait[sample_idx])
+        origin.alive = origin.sampled = False
+        tree.seed_node = origin
+        initial = self._new_node(tree, "brosc", origin.trait, origin)
+        if self.stop == "age" and target == 0:
+            return tree, 0.0
+        if birth.is_identically_zero and death.is_identically_zero:
+            if self.stop == "size":
+                raise ec.GenerateFailError(self.DN_NAME, "Zero rates cannot reach the size-stopping birth.")
+            trait = initial.trait + drift * target
+            if variance:
+                trait += math.sqrt(variance * target) * np.random.normal()
+            if not math.isfinite(trait):
+                raise ec.GenerateFailError(self.DN_NAME, "Nonfinite Brownian trait update.")
+            initial.trait, initial.edge_length = float(trait), float(target)
+            return tree, float(target)
+
+        living = {}
+        queue = []
+        serials = count()
+
+        # Queue an exponential proposal or the fixed endpoint. No accepted future event is
+        # sampled here: size stopping must still be able to reveal every pending bridge.
+        def schedule(interval):
+            candidate_time = interval.end_time
+            is_candidate = False
+            if interval.rate_bound:
+                wait = float(np.random.exponential(1.0 / interval.rate_bound))
+                if math.isnan(wait) or wait <= 0:
+                    raise ec.GenerateFailError(self.DN_NAME, "Cannot advance candidate time.")
+                if wait < interval.end_time - interval.time:
+                    candidate_time = min(interval.time + wait, interval.end_time)
+                    if candidate_time <= interval.time:
+                        raise ec.GenerateFailError(self.DN_NAME, "Cannot advance candidate time.")
+                    is_candidate = candidate_time < interval.end_time
+            heapq.heappush(queue, (candidate_time, next(serials), is_candidate, interval))
+
+        # The same block creation is used for initialization, endpoint renewal, and daughters.
+        # Consuming the index before drawing prevents endpoint-dependent budget allocation.
+        def start(node, time):
+            end_time = time + self.block_duration
+            if self.stop == "age":
+                end_time = min(end_time, target)
+            interval = self._start_bridge_interval(node, time, end_time, birth, death,
+                                                   drift, variance, next(block_indices))
+            living[node] = interval
+            schedule(interval)
+
+        start(initial, 0.0)
+        node_count = 0
+        elapsed = 0.0
+        while queue:
+            self._check_runtime(deadline)
+            if next(work_indices) >= self.max_steps:
+                raise ec.GenerateFailError(self.DN_NAME, "Exceeded max_steps (local queue actions).")
+            elapsed, _, is_candidate, interval = heapq.heappop(queue)
+            self._advance_bridge(interval, elapsed, variance)
+            node = interval.node
+            if not is_candidate:
+                if self.stop != "age" or elapsed < target:
+                    start(node, elapsed)
+                continue
+            lx, mx = float(birth(node.trait)), float(death(node.trait))
+            total = lx + mx
+            if not all(math.isfinite(x) and x >= 0 for x in (lx, mx, total)):
+                raise ec.GenerateFailError(self.DN_NAME, "Nonfinite or negative event rate.")
+            if total > interval.rate_bound:
+                raise _LocalBoundExceeded(f"At time {elapsed}, trait {node.trait}: rate {total} "
+                                          f"exceeds bound {interval.rate_bound}.")
+            mark = np.random.uniform(0, interval.rate_bound)
+            if mark >= total:
+                schedule(interval)
+                continue
+            is_birth = mark < lx
+            if is_birth and self.stop == "size" and len(living) == target:
+                # Other nodes have revealed no events after this time. Conditional on their
+                # endpoints/past traits, advance each existing bridge to the stopping birth.
+                for pending in living.values():
+                    self._check_runtime(deadline)
+                    self._advance_bridge(pending, elapsed, variance)
+                return tree, elapsed
+            if is_birth and len(living) >= self.max_alive:
+                raise ec.GenerateFailError(self.DN_NAME, "Exceeded max_alive.")
+            if is_birth and self.max_nodes is not None and node_count + 4 > self.max_nodes:
+                raise ec.GenerateFailError(self.DN_NAME, "Exceeded resource limit max_nodes.")
+            del living[node]
+            node.alive = node.sampled = False
+            if is_birth:
+                if node.label == "brosc":
+                    node.label = node.taxon.label = "root"
+                for _ in range(2):
+                    node_count += 1
+                    start(self._new_node(tree, f"nd{node_count}", node.trait, node), elapsed)
+        return tree, float(target if self.stop == "age" else elapsed)
+
+    # Dispatch without changing downstream tree/observation contracts or default RNG order.
+    # Numerical retries discard only the current tree; budget, work, RNG and deadline persist.
+    def simulate(self, sample_idx=0, deadline=None, *, _block_indices=None):
         if deadline is None:
             deadline = time.monotonic() + self.runtime_limit
-        tree, horizon = self._simulate_diversitree(sample_idx, deadline)
+        if self.method == "diversitree":
+            tree, horizon = self._simulate_diversitree(sample_idx, deadline)
+        else:
+            block_indices = count(1) if _block_indices is None else _block_indices
+            work_indices = count()
+            while True:
+                try:
+                    tree, horizon = self._simulate_local_thinning(sample_idx, deadline, block_indices, work_indices)
+                    break
+                except _LocalBoundExceeded:
+                    # A detected violation already implies an excursion charged to this call's
+                    # budget. Restarting is approximate recovery, not exact rejection sampling.
+                    continue
         probability = self.sampling_prob[sample_idx]
         for node in tree.leaf_node_iter():
             node.sampled = node.alive and (probability == 1 or
@@ -227,16 +425,18 @@ class DnQuaSSE(DistrForSampling):
                 self.min_rec_taxa <= tree.n_extant_sampled_terminal_nodes <= self.max_rec_taxa)
 
     # Rejection resamples only the tree, holding each sample's model parameters fixed.
-    # Numerical and resource errors propagate; treating them as rejection would add conditioning.
+    # Other numerical/resource errors propagate. Bound-exceedance retries happen inside simulate.
     def generate(self):
         deadline = time.monotonic() + self.runtime_limit
         output = []
         rejected = 0
+        block_indices = count(1)
         for sample in range(self.n_sim):
             for _ in range(self.n_repl):
                 while True:
                     self._check_runtime(deadline)
-                    tree = self.simulate(sample, deadline)
+                    tree = (self.simulate(sample, deadline, _block_indices=block_indices)
+                            if self.method == "local_thinning" else self.simulate(sample, deadline))
                     self._check_runtime(deadline)
                     if self._is_tree_accepted(tree):
                         output.append(tree)

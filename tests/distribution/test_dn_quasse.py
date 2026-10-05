@@ -196,6 +196,119 @@ class TestQuaSSE(unittest.TestCase):
         normal.assert_called_once_with(0., 1., 1)
         self.assertEqual(tree.brosc_node.trait, 2.)
 
+    # Controlled draws protect bridge conditioning, event timing and size finalization that
+    # frozen-step tests cannot exercise. Retire if this bridge-based method is replaced.
+    def test_local_bridges_and_stopping(self):
+        one, zero = ConstantRate(1), ConstantRate(0)
+        options = dict(method='local_thinning', block_duration=1)
+        dn = DnQuaSSE(one, zero, 'size', 2, drift=2, diffusion=4, **options)
+        # First birth at .25; daughters' endpoints at 1.25 are 5 and 1. The
+        # terminating birth at .75 reveals both existing bridges with means 3 and 1.
+        with patch('numpy.random.normal', side_effect=[1., 0., 1., -1., 0., 0.]), \
+                patch('numpy.random.exponential', side_effect=[.25, .5, 2.]), \
+                patch('numpy.random.uniform', return_value=0):
+            tree = dn.simulate()
+        self.assertEqual(tree.seed_age, .75)
+        self.assertEqual(tree.root_node.edge_length, .25)
+        self.assertEqual(tree.root_node.trait, 1.)
+        tips = list(tree.tree.leaf_node_iter())
+        self.assertEqual([nd.edge_length for nd in tips], [.5, .5])
+        self.assertEqual([nd.trait for nd in tips], [3., 1.])
+        with patch('numpy.random.exponential', return_value=.25), patch('numpy.random.uniform', return_value=0):
+            single = DnQuaSSE(one, zero, 'size', 1, drift=2, **options).simulate()
+            death = DnQuaSSE(zero, one, 'age', 1, drift=2, cond_surv=False, **options).generate()[0]
+        self.assertEqual((single.seed_age, single.brosc_node.trait), (.25, .5))
+        self.assertTrue(death.tree_died)
+        self.assertEqual(death.brosc_node.edge_length, .25)
+        self.assertEqual(death.brosc_node.trait, .5)
+        # Inflate a valid bound to force rejection. Three reveals must retain the original
+        # endpoint, and the last assignment must not draw another Gaussian.
+        dn = DnQuaSSE(one, zero, 'age', 1, drift=2, diffusion=4, **options)
+        with patch.object(one, 'bound_on_interval', return_value=2.), \
+                patch('numpy.random.exponential', side_effect=[.25, .25, 2.]), \
+                patch('numpy.random.uniform', return_value=1.5), \
+                patch('numpy.random.normal', side_effect=[1., 1., 0.]) as normal, \
+                patch.object(dn, '_advance_bridge', wraps=dn._advance_bridge) as advance:
+            result = dn.simulate()
+        self.assertEqual(normal.call_count, 3)
+        self.assertEqual(result.brosc_node.trait, 4.)
+        self.assertAlmostEqual(advance.call_args_list[0].args[0].end_trait, 4.)
+        # Directly isolate the conditional variance; event outcomes alone cannot check it.
+        interval = advance.call_args_list[0].args[0]
+        interval.time, interval.node.trait = 0., 0.
+        with patch('numpy.random.normal', return_value=1.):
+            dn._advance_bridge(interval, .25, 4)
+        self.assertAlmostEqual(interval.node.trait, 1 + np.sqrt(.75))
+        # A zero bound still renews at the endpoint; equality schedules an endpoint, not birth.
+        dn = DnQuaSSE(StepRate(0, 1, .75), zero, 'age', 1, drift=1,
+                     method='local_thinning', block_duration=.5)
+        with patch('numpy.random.exponential', return_value=.5), patch('numpy.random.uniform') as uniform:
+            tree = dn.simulate()
+        uniform.assert_not_called()
+        self.assertEqual(tree.brosc_node.trait, 1.)
+        # Two retained births within the initial block length; a tie at .5 is resolved
+        # chronologically without advancing either lineage past the other's event.
+        dn = DnQuaSSE(one, zero, 'age', 1, drift=1, **options)
+        with patch('numpy.random.exponential', side_effect=[.25, .25, .25, 2., 2., 2., 2.]), \
+                patch('numpy.random.uniform', return_value=0):
+            tree = dn.simulate()
+        self.assertEqual(tree.n_extant_terminal_nodes, 4)
+        self.assertEqual([nd.trait for nd in tree.tree.leaf_node_iter()], [1.] * 4)
+        self.assertEqual([nd.edge_length for nd in tree.tree.leaf_node_iter()], [.5] * 4)
+
+    # Whole-tree numerical retries must preserve work/error budgets and never consume the
+    # biological rejection count. Existing retry tests lack this separate numerical path.
+    def test_local_retries_and_limits(self):
+        one, zero = ConstantRate(1), ConstantRate(0)
+        dn = DnQuaSSE(one, zero, 'age', 1, method='local_thinning', block_duration=1, max_n_attempts=1)
+        with patch.object(one, 'bound_on_interval', side_effect=[.5, 1.]), \
+                patch('numpy.random.exponential', side_effect=[.25, 2.]), \
+                patch.object(dn, '_start_bridge_interval', wraps=dn._start_bridge_interval) as start, \
+                patch.object(dn, '_new_node', wraps=dn._new_node) as allocate:
+            result = dn.generate()[0]
+        self.assertEqual([c.args[-1] for c in start.call_args_list], [1, 2])
+        self.assertEqual(allocate.call_count, 4)
+        self.assertEqual(len(list(result.tree)), 2)
+        self.assertEqual(result.brosc_node.edge_length, 1.)
+        dn.max_steps = 1
+        with patch.object(one, 'bound_on_interval', side_effect=[.5, 1.]), \
+                patch('numpy.random.exponential', side_effect=[.25, 2.]):
+            with self.assertRaisesRegex(ec.GenerateFailError, 'max_steps'):
+                dn.generate()
+        dn.max_steps, dn.max_n_attempts = 100, 2
+        dn.n_sim, dn.n_repl = 1, 2
+        with patch.object(dn, 'simulate', return_value=result) as simulate, \
+                patch.object(dn, '_is_tree_accepted', side_effect=[False, True, True]):
+            self.assertEqual(len(dn.generate()), 2)
+        budgets = [c.kwargs['_block_indices'] for c in simulate.call_args_list]
+        self.assertTrue(all(b is budgets[0] for b in budgets))
+        with patch('numpy.random.exponential', return_value=2.), \
+                patch.object(dn, '_start_bridge_interval', wraps=dn._start_bridge_interval) as start:
+            dn.simulate()
+            dn.simulate()
+        self.assertEqual([c.args[-1] for c in start.call_args_list], [1, 1])
+        for kwargs, message in [({'max_nodes': 1}, 'max_nodes'), ({'max_nodes': 2}, 'max_nodes'),
+                                ({'max_alive': 1}, 'max_alive')]:
+            limited = DnQuaSSE(one, zero, 'age', 1, method='local_thinning', block_duration=1, **kwargs)
+            with patch('numpy.random.exponential', return_value=.25), \
+                    patch('numpy.random.uniform', return_value=0), \
+                    patch.object(limited, '_new_node', wraps=limited._new_node) as allocate:
+                with self.assertRaisesRegex(ec.GenerateFailError, message):
+                    limited.generate()
+                self.assertEqual(allocate.call_count, 0 if kwargs.get('max_nodes') == 1 else 2)
+        with self.assertRaises(ec.RunTimeLimit):
+            dn.simulate(deadline=0)
+        for wait in (0., np.nan):
+            with patch('numpy.random.exponential', return_value=wait):
+                with self.assertRaisesRegex(ec.GenerateFailError, 'candidate time'):
+                    dn.generate()
+        with patch.object(ConstantRate, '_evaluate', return_value=np.inf), \
+                patch('numpy.random.exponential', return_value=.25):
+            with self.assertRaises(ec.GenerateFailError):
+                dn.generate()
+        with self.assertRaisesRegex(ec.GenerateFailError, 'Zero rates'):
+            DnQuaSSE(zero, zero, 'size', 1, method='local_thinning', block_duration=1).generate()
+
     # Historical nodes consume memory even after death; max_alive cannot protect that bound.
     # Retire if simulation no longer retains dead nodes or uses a shared allocation limiter.
     def test_max_nodes(self):
@@ -256,6 +369,13 @@ class TestQuaSSE(unittest.TestCase):
                        {'sampling_prob': 2}, {'min_rec_taxa': 3, 'max_rec_taxa': 2},
                        {'drift': [0, 1]}, {'dt_max': 0}, {'dt_max': np.inf},
                        {'max_nodes': 0}, {'max_nodes': 2.5}]:
+            with self.assertRaises(ValueError):
+                DnQuaSSE(one, zero, 'age', 1, **kwargs)
+        for kwargs in ({'block_duration': 1}, {'bridge_error': .1}, {'method': 'local_thinning'},
+                       *({'method': 'local_thinning', 'block_duration': value} for value in (0, -1, np.inf)),
+                       *({'method': 'local_thinning', 'block_duration': 1, **extra}
+                         for extra in ({'bridge_error': 0}, {'bridge_error': 1}, {'bridge_error': np.nan},
+                                       {'dt_max': .1}, {'k': 1}))):
             with self.assertRaises(ValueError):
                 DnQuaSSE(one, zero, 'age', 1, **kwargs)
         for kwargs in [{'sampling_prob': .5}, {'min_rec_taxa': 0}]:
