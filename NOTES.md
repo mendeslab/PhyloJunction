@@ -316,24 +316,22 @@ PhyloJunction has two functional GUIs:
 The GUI built with PySimpleGUI was coded entirely by hand, and is out-of-date at this point.
 
 The GUI built with PySide6 had its main structure coded by hand (`pysidegui/content_main_window.py`), but then individual pages built with Qt Creator / Qt Designer (an app for automating PySide6 GUI development).
-These individual pages are saved as a single `.ui` file (pjguipages/pjgui_pages.ui) that can be translated to a `.py` file with Qt Creator / Qt Designer (Form > View Python Code) or a command line tool:
+These pages are saved in `pjguipages/pjgui_pages.ui`. From the repository root, regenerate
+its Python module using the installed PySide6 tool (no PyQt import conversion is needed):
 
-```
-pyuic6 -x created_file.ui -o created_file.py
-```
-
-or pyuic5 depending on what's available for your OS
-
-```
-pyuic5 -x src/phylojunction/interface/pysidegui/pjguipages/pjgui_pages.ui -o src/phylojunction/interface/pysidegui/pjguipages/gui_pages.py
+```sh
+.venv/bin/pyside6-uic src/phylojunction/interface/pysidegui/pjguipages/pjgui_pages.ui -o src/phylojunction/interface/pysidegui/pjguipages/gui_pages.py
 ```
 
-Then, after `gui_pages.py` is updated, at the top, replace PyQt with `PySide6`.
-You also need to point `gui_pages.py` to PJ's matplotlib widget
+After generation, retain the resource registration import alongside the custom widget imports:
 
+```python
+from phylojunction.interface.pysidegui.images.icons import resources
 ```
-from PySide6 import QtCore, QtGui, QtWidgets
-```
+
+Check that the draw and clear icons use `:/draw.svg` and `:/icon_clear.svg`, respectively.
+The UI file supplies the custom widget module paths. Review generated changes separately from
+layout changes when switching generator versions.
 
 ### Qt Creator / Qt Designer
 
@@ -396,17 +394,9 @@ clear_dag_pressed = QIcon(QPixmap(":/icon_clear_pressed.svg"))
 The above code specifies the path to the icon for clearing the DAG.
 The `:/` syntax makes use of the resource file.
 
-Then we must edit the `gui_pages.py` file produced by QtCreator:
-
-```
-from phylojunction.interface.pysidegui.images.icons import resources # at the top with the imports
-
-# replace the corresponding lines
-icon.addPixmap(QtGui.QPixmap(":/draw.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-icon1.addPixmap(QtGui.QPixmap(":/icon_clear.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-```
-
-The above code allows the icons for those buttons to appear wherever the GUI is called from.
+The Designer file uses the resource URLs `:/draw.svg` and `:/icon_clear.svg` for these icons.
+After regenerating the Python module, register the resources with the import described above.
+This keeps the icons independent of the working directory used to launch the GUI.
 
 ## Documentation
 

@@ -236,6 +236,7 @@ class ContentGUIMainWindow(object):
         # 'from PySide6 import' everywhere
 
         self.pages = QStackedWidget()
+        self.pages.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.pages.setStyleSheet("font-size: 14pt; color: black")
 
         self.ui_pages = Ui_PJGUIPages()
@@ -276,7 +277,7 @@ class ContentGUIMainWindow(object):
         self.left_menu_layout.addWidget(self.left_menu_version_label)
 
         self.content_layout.addWidget(self.top_bar)
-        self.content_layout.addWidget(self.pages, alignment=Qt.AlignCenter)
+        self.content_layout.addWidget(self.pages, stretch=1)
         self.content_layout.addWidget(self.bottom_bar)
 
         ###################

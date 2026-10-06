@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt # type: ignore
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout
-from PySide6.QtCore import QSize
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QSizePolicy
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure # type: ignore
 
@@ -19,8 +18,9 @@ class MatplotlibWidget(QWidget):
         self.canvas = FigureCanvasQTAgg(self.fig)  # widget
         self.canvas.setParent(self)
 
-        # self.canvas.setMinimumSize(self.parent().size())
-        self.canvas.setMinimumSize(QSize(954, 451))
+        # The containing page determines canvas size; a shared canvas must not impose
+        # a page-specific minimum that can exceed its available space.
+        self.canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         fig_layout = QVBoxLayout()
         fig_layout.addWidget(self.canvas)
