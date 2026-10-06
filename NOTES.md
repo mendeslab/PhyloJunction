@@ -337,6 +337,9 @@ The `plot_controls` Designer placeholder is arranged after `setupUi` using
 `superqt.QFlowLayout` in `content_main_window.py`. Designer does not preview its wrapping.
 Keep the control objects in the UI file and their layout setup in that method.
 
+The model page redraws when node selection or display controls change, including keyboard
+navigation and the Reconstructed checkbox. These actions display existing samples.
+
 ### Qt Creator / Qt Designer
 
 This can be a finnicky program, so here are a few notes.

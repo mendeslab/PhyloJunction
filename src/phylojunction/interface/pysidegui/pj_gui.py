@@ -10,7 +10,7 @@ from tabulate import tabulate  # type: ignore
 from PySide6.QtWidgets import \
     QApplication, QMainWindow, QPushButton, QFileDialog
 from PySide6.QtGui import QAction
-from PySide6.QtCore import QPropertyAnimation, QEasingCurve, QTimer
+from PySide6.QtCore import QPropertyAnimation, QEasingCurve, QTimer, QSignalBlocker
 
 # pj imports #
 from phylojunction.interface.pysidegui.content_main_window \
@@ -192,14 +192,11 @@ class GUIMainWindow(QMainWindow):
         self.ui.ui_pages.cmd_prompt.returnPressed.connect(
             self.parse_cmd_update_gui)
 
-        # node list #
-        # need to use lambda b/c otherwise 'self'
-        # is passed as argument for 'spin_buttons_clicked'
-        # which makes it so spin buttons are not properly
-        # initialized
-        self.ui.ui_pages.node_list.itemClicked.connect(
-            lambda do_node: self.do_selected_node_dag_page(
-                spin_buttons_clicked=False))
+        # Selection changes include keyboard navigation as well as mouse clicks.
+        self.ui.ui_pages.node_list.currentItemChanged.connect(
+            lambda current, previous: self.do_selected_node_dag_page())
+        self.ui.ui_pages.reconstructed_tree_check.toggled.connect(
+            self.refresh_selected_node_display_plot_spin)
 
         # radio button update #
         self.ui.ui_pages.one_sample_radio.clicked.connect(
@@ -525,23 +522,16 @@ class GUIMainWindow(QMainWindow):
             node_dag, sample_size, repl_size = \
                 self.selected_node_read(selected_node_name)
 
-            # spin boxes must be up-to-date #
-            self.ui.ui_pages.repl_idx_spin.setMaximum(repl_size)
-            if sample_size == 0:
-                self.ui.ui_pages.sample_idx_spin.setMaximum(0)
-
-            else:
+            # Range and mode initialization must not trigger intermediate plots.
+            with QSignalBlocker(self.ui.ui_pages.sample_idx_spin), \
+                    QSignalBlocker(self.ui.ui_pages.repl_idx_spin):
+                self.ui.ui_pages.repl_idx_spin.setMaximum(repl_size)
                 self.ui.ui_pages.sample_idx_spin.setMaximum(sample_size)
+                if not spin_buttons_clicked:
+                    self.init_and_refresh_radio_spin(node_dag, sample_size, repl_size)
 
-            # grab pgm_page's figure and axes #
             fig_obj = self.ui.ui_pages.pgm_page_matplotlib_widget.fig
             fig_axes = self.ui.ui_pages.pgm_page_matplotlib_widget.axes
-
-            # activate radio buttons and spin elements #
-            # if spin buttons were clicked, no need
-            # to updated radio and spin buttons
-            if not spin_buttons_clicked:
-                self.init_and_refresh_radio_spin(node_dag, sample_size, repl_size)
 
             do_all_samples = \
                 self.ui.ui_pages.all_samples_radio.isChecked()
@@ -578,7 +568,6 @@ class GUIMainWindow(QMainWindow):
 
         # no nodes to do
         else:
-            print("If there are no nodes in PJ model, nothing to do")
             pass
 
     def do_selected_node_compare_page(self):
@@ -1237,8 +1226,8 @@ class GUIMainWindow(QMainWindow):
         # necessary to avoid infinite recursion
         # otherwise GUI calls spin button actions
         # as their values are adjusted below
-        self.ui.ui_pages.sample_idx_spin.blockSignals(True)
-        self.ui.ui_pages.repl_idx_spin.blockSignals(True)
+        sample_signals_blocked = self.ui.ui_pages.sample_idx_spin.blockSignals(True)
+        repl_signals_blocked = self.ui.ui_pages.repl_idx_spin.blockSignals(True)
 
         # can we even circulate through something
         # (basically: non-deterministic nodes)
@@ -1303,8 +1292,8 @@ class GUIMainWindow(QMainWindow):
             _nothing_to_spin_through()
 
         # need to unblock signals from here on
-        self.ui.ui_pages.sample_idx_spin.blockSignals(False)
-        self.ui.ui_pages.repl_idx_spin.blockSignals(False)
+        self.ui.ui_pages.sample_idx_spin.blockSignals(sample_signals_blocked)
+        self.ui.ui_pages.repl_idx_spin.blockSignals(repl_signals_blocked)
 
     def refresh_node_lists(self):
         # pgm page node list #
@@ -1434,9 +1423,10 @@ class GUIMainWindow(QMainWindow):
 
         # if we look at all samples, it does not make sense
         # to be able to look at each sample individually
-        self.ui.ui_pages.sample_idx_spin.setMinimum(0)
-        self.ui.ui_pages.sample_idx_spin.setValue(0)
-        self.ui.ui_pages.sample_idx_spin.setDisabled(True)
+        with QSignalBlocker(self.ui.ui_pages.sample_idx_spin):
+            self.ui.ui_pages.sample_idx_spin.setMinimum(0)
+            self.ui.ui_pages.sample_idx_spin.setValue(0)
+            self.ui.ui_pages.sample_idx_spin.setDisabled(True)
 
         self.refresh_selected_node_display_plot_radio()
 
