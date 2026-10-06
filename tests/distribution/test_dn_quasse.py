@@ -506,3 +506,52 @@ class TestQuaSSE(unittest.TestCase):
             with self.assertRaises(NotImplementedError):
                 dag_obj_to_rev_inference_spec(dag, directory)
             self.assertEqual(list(Path(directory).iterdir()), [])
+
+    # Fossils are observations even with extinct/unsampled descendants; discrete tests cannot
+    # check continuous colors or zero-time continuation ordering. Retire if shared coverage replaces this.
+    def test_fossil_reconstruction_and_plotting(self):
+        import dendropy as dp
+        from matplotlib import pyplot as plt
+        from phylojunction.data.tree import AnnotatedTree, plot_ann_tree
+        for spacing in (0., .5):
+            for observed in (0, 1, 2):
+                data = ('(brosc:2)origin:0;', '((brosc:1.5,sa1:0)dummy1:.5)origin:0;',
+                        f'(((brosc:1,sa2:0)dummy2:{spacing},sa1:0)dummy1:.5)origin:0;')[observed]
+                raw = dp.Tree.get(data=data,
+                                  schema='newick', suppress_internal_node_taxa=False)
+                for nd in raw:
+                    nd.label = nd.taxon.label if nd.taxon else nd.label
+                    nd.is_sa = nd.label.startswith('sa')
+                    nd.is_sa_dummy_parent = nd.label.startswith('dummy')
+                    nd.is_sa_lineage = False
+                    nd.alive = nd.label == 'brosc'
+                    nd.sampled = nd.is_sa
+                    nd.trait = nd.distance_from_root()
+                tree = AnnotatedTree(raw, ContinuousTrait(), start_at_origin=True, max_age=2.,
+                                     tree_died=False, tree_invalid=False)
+                self.assertEqual(tree.n_sa_nodes, observed)
+                self.assertEqual(tree.n_extinct_terminal_nodes, 0)
+                self.assertEqual(tree.n_extant_sampled_terminal_nodes, 0)
+                rec = tree.extract_reconstructed_tree()
+                if not observed:
+                    self.assertIsNone(tree.rec_tr_root_node)
+                    continue
+                self.assertEqual(len(rec.leaf_nodes()), observed)
+                self.assertAlmostEqual(tree.rec_tr_node_ages_dict['sa1'], 1.5)
+                if observed == 1:
+                    self.assertEqual(tree.rec_tr_root_age, 2.)
+                for along in (False, True):
+                    for age in (False, True):
+                        fig, ax = plt.subplots()
+                        try:
+                            x, y = plot_ann_tree(tree, ax, draw_reconstructed=True,
+                                                 sa_along_branches=along, use_age=age)
+                            fig.canvas.draw()
+                            self.assertEqual(len(ax.collections[-1].get_offsets()), observed)
+                            self.assertEqual(len(ax.texts), observed)
+                            if observed == 2:
+                                self.assertEqual(y['sa1'] == y['sa2'], along)
+                                self.assertAlmostEqual(x['sa2'] - x['sa1'], -spacing if age else spacing)
+                        finally:
+                            plt.close(fig)
+

@@ -789,7 +789,7 @@ class AnnotatedTree(dp.Tree):
         if isinstance(self.trait, ContinuousTrait):
             # Continuous simulations explicitly annotate terminal status, including zero-length
             # branches. Distance and branch-length heuristics would misclassify immediate events.
-            tips = list(self.tree.leaf_node_iter())
+            tips = [nd for nd in self.tree.leaf_node_iter() if not nd.is_sa]
             self.extant_terminal_nodes_labels = tuple(nd.label for nd in tips if nd.alive)
             self.extant_sampled_terminal_nodes_labels = tuple(
                 nd.label for nd in tips if nd.alive and nd.sampled)
@@ -907,6 +907,11 @@ class AnnotatedTree(dp.Tree):
             (i)   self.n_sa_nodes
             (ii)  self.sa_obs_nodes_labels_list
         """
+
+        if isinstance(self.trait, ContinuousTrait):
+            self.sa_obs_nodes_labels = tuple(nd.label for nd in self.tree.leaf_node_iter() if nd.is_sa)
+            self.n_sa_nodes = len(self.sa_obs_nodes_labels)
+            return
 
         sa_obs_nodes_labels_list: ty.List[str] = []
 
@@ -1460,11 +1465,11 @@ class AnnotatedTree(dp.Tree):
                             self.rec_tr_sa_lineage_dict = to_insert
 
     # Prune continuous trees using observation flags, preserving traits and true node ages.
-    # There are no sampled ancestors or discrete transition histories to remap.
+    # Fossils remain observations even when their continuing lineage is pruned; node flags carry their identity.
     def _extract_continuous_reconstructed_tree(self, require_obs_both_sides=None):
         require_both = (self.condition_on_obs_both_sides_root if require_obs_both_sides is None
                         else require_obs_both_sides)
-        observed = self.n_extant_sampled_terminal_nodes
+        observed = self.n_extant_sampled_terminal_nodes + self.n_sa_nodes
         if require_both and (self.root_node is None or not all(
                 any(nd.alive and nd.sampled for nd in child.leaf_iter())
                 for child in self.root_node.child_node_iter())):
@@ -1478,7 +1483,7 @@ class AnnotatedTree(dp.Tree):
             self.rec_tr_root_age = 0.0
             return self.tree_reconstructed
         rec = copy.deepcopy(self.tree)
-        rec.filter_leaf_nodes(lambda nd: nd.alive and nd.sampled, suppress_unifurcations=True)
+        rec.filter_leaf_nodes(lambda nd: nd.is_sa or (nd.alive and nd.sampled), suppress_unifurcations=True)
         if observed == 1:
             # Keep the origin-to-tip edge for a singleton; a lone tip would lose its duration.
             tip = rec.seed_node
@@ -2198,13 +2203,22 @@ def get_y_coord_from_n_obs_nodes(ann_tr: AnnotatedTree,
             Defaults to 'False'.
     """
 
+    continuous = isinstance(ann_tr.trait, ContinuousTrait)
+
     # we define an inner recursive function
     # for obtaining y-coords at internal nodes
     def recursively_calculate_height(nd: dp.Node) -> None:
 
         # list children of node so we can find its y-coordinate
         children: ty.List[dp.Node] = list()
-        if sa_along_branches:
+        # QuaSSE retains continuation first and its own fossil second, even after pruning.
+        # Edge lengths cannot identify the continuation when successive fossils share a time.
+        if continuous:
+            children = nd.child_nodes()
+            if sa_along_branches and nd.is_sa_dummy_parent:
+                assert len(children) == 2 and children[1].is_sa and children[1].is_leaf()
+                children = children[:1]
+        elif sa_along_branches:
             if not draw_reconstructed:
                 children = [ch for ch in nd.child_nodes() if not ch.is_sa]
 
@@ -2265,7 +2279,11 @@ def get_y_coord_from_n_obs_nodes(ann_tr: AnnotatedTree,
             # (effectively an origin)
             # OR
             # dummy nodes if user wants to place SA nodes along branches,
-            if (start_at_origin and \
+            if continuous:
+                y_coords[get_node_name(nd)] = sum(y_coords[get_node_name(ch)] for ch in children) / n_children
+                if sa_along_branches and nd.is_sa_dummy_parent:
+                    y_coords[get_node_name(nd.child_nodes()[1])] = y_coords[get_node_name(nd)]
+            elif (start_at_origin and \
                     (nd == ann_tr.origin_node or \
                      (draw_reconstructed and \
                       ann_tr.rec_tr_root_node.num_child_nodes() == 1))) \
@@ -2330,6 +2348,13 @@ def get_y_coord_from_n_obs_nodes(ann_tr: AnnotatedTree,
 
     # now grab all relevant terminal node names (some SAs and extant)
     for nd in tr2look.leaf_node_iter():
+        if continuous:
+            parent = nd.parent_node
+            attached = (parent is not None and parent.is_sa_dummy_parent
+                        and parent.child_nodes()[1] is nd)
+            if not (sa_along_branches and attached):
+                leaf_names.append(get_node_name(nd))
+            continue
         if sa_along_branches and nd.is_sa:
             # we do care about SAs if the lineage
             # descending from them dies off,
@@ -2364,6 +2389,9 @@ def get_y_coord_from_n_obs_nodes(ann_tr: AnnotatedTree,
             continue
 
         leaf_names.append(get_node_name(nd))
+
+    if continuous:
+        maxheight = len(leaf_names)
 
     # initialize the y-coords with the values for terminal nodes
     y_coords: ty.Dict[str, float] = \
@@ -2705,10 +2733,17 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
         # Add node/taxon labels #
         #########################
         if nd.is_leaf():
-            axes.text(x_heres[-1],
-                      y_here,
-                      f" {nd_name}",
-                      verticalalignment="center")
+            parent = nd.parent_node
+            attached = (continuous_attr is not None and sa_along_branches and parent is not None
+                        and parent.is_sa_dummy_parent and parent.child_nodes()[1] is nd)
+            if attached:
+                axes.text(x_heres[-1], y_here - .05, f" {nd_name}", rotation=45,
+                          horizontalalignment="center", fontsize=10)
+            else:
+                axes.text(x_heres[-1],
+                          y_here,
+                          f" {nd_name}",
+                          verticalalignment="center")
 
         #################################
         # Draw sampled ancestors if any #
@@ -2717,7 +2752,7 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
         # SA nodes are plotted along the branches subtending nodes
         # where '.is_sa_lineage' == True, which cannot also be
         # dummy nodes
-        if sa_along_branches and \
+        if continuous_attr is None and sa_along_branches and \
                 (not nd.is_sa_dummy_parent and nd.is_sa_lineage):
 
             sas: ty.List[pjsa.SampledAncestor] = []
@@ -2816,7 +2851,7 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
 
             for child_nd in children:
                 # if user wants to place SA nodes along branches
-                if sa_along_branches and child_nd.is_sa:
+                if continuous_attr is None and sa_along_branches and child_nd.is_sa:
                     # if drawing complete tree, all SA nodes must be ignored
                     # because they will always be along branches
                     if not draw_reconstructed:
