@@ -287,6 +287,10 @@ stored. Black branches and colored terminal markers show traits using a continuo
 Ancestral fossils appear as trait-colored markers along their continuing branches; terminal
 fossils have their own rows. ``sa_along_branches=False`` gives every fossil its own row.
 The complete tree's terminal range, including fossils, determines colors in both views.
+In complete-tree plots, paths from retained observations back to the full-tree root are drawn
+normally; other edges are lighter (25% opacity) and thinner (65% linewidth). This includes any
+displayed ancestral stem above the reconstructed root. Fossil markers, tip colors and labels
+remain unchanged, and reconstructed plots retain their usual styling.
 Plotting uses no randomness. An empty reconstructed tree displays ``No sampled tips``.
 
 Data output includes complete/reconstructed Newick tables, annotated variants, generic tree

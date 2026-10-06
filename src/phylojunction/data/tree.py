@@ -1933,6 +1933,8 @@ class AnnotatedTree(dp.Tree):
                   **kwargs) -> None:
         """Draw tree on provided Axes instance.
 
+        Complete-tree edges outside retained observation ancestry are faded and thinner.
+
         This method is required whenever the user asks for a DAG node
         to be drawn.
 
@@ -2424,6 +2426,24 @@ def clear_trait_colorbar(axes: plt.Axes) -> None:
         axes._pj_trait_position = None
 
 
+# Match observations across the reconstruction's deep copy, then mark incoming edges in
+# the complete tree. Stopping at an already marked node visits each ancestral edge once.
+def _retained_observation_ancestry(ann_tr: AnnotatedTree) -> ty.Set[dp.Node]:
+    reconstructed = ann_tr.extract_reconstructed_tree()
+    complete_nodes = {nd.label: nd for nd in ann_tr.tree.preorder_node_iter()}
+    retained = set()
+    for leaf in reconstructed.leaf_node_iter():
+        nd = complete_nodes.get(leaf.label)
+        if nd is None or not (nd.is_sa or (nd.is_leaf() and nd.alive and nd.sampled)):
+            continue
+        # Include suppressed nodes and the stem above the reconstructed root. The
+        # complete-tree seed is included, but no additional edge is created for it.
+        while nd is not None and nd not in retained:
+            retained.add(nd)
+            nd = nd.parent_node
+    return retained
+
+
 def plot_ann_tree(ann_tr: AnnotatedTree,
                   axes: plt.Axes,
                   use_age: bool = False,
@@ -2433,7 +2453,9 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
                   draw_reconstructed: bool = False) -> ty.Tuple[ty.Dict[str, float]]:
     """Plot instance of AnnotatedTree on provided Axes instance.
 
-    Plotting is a side-effect.
+    Plotting is a side-effect. Complete plots fade edges outside the ancestry of
+    reconstructed observations, traced to the complete-tree seed (including displayed
+    stems above the reconstructed root). Reconstructed plots retain their usual style.
 
     Args:
         ann_tr (AnnotatedTree): Instance of AnnotatedTree that we
@@ -2459,6 +2481,10 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
         testing purposes only. Keys are node names, values are either x-
         or y-coordinates.
     """
+
+    retained = None if draw_reconstructed else _retained_observation_ancestry(ann_tr)
+    excluded_alpha = 0.25
+    excluded_width_scale = 0.65
 
     # A colorbar belongs to the axes, not to an individual tree; remove it before redrawing.
     clear_trait_colorbar(axes)
@@ -2550,39 +2576,45 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
                           y_bot: int = 0,
                           y_top: int = 0,
                           color: str = "black",
-                          lw: float = ".1") -> None:
+                          lw: float = ".1",
+                          alpha: float = 1.0) -> None:
         """Draw a hor. or vert. line or add it to collection.
 
         Graphical formatting of the lines representing clades in the plot can be
         customized by altering this function.
         """
 
+        # Keep normal branches above faint ones without covering tip markers.
+        zorder = 2 if alpha == 1.0 else 1
         if not use_linecollection:
             if orientation == "horizontal":
-                axes.hlines(y_here, x_start, x_here, color=color, lw=lw)
+                axes.hlines(y_here, x_start, x_here, color=color, lw=lw, alpha=alpha, zorder=zorder)
             
             elif orientation == "vertical":
-                axes.vlines(x_here, y_bot, y_top, color=color)
+                axes.vlines(x_here, y_bot, y_top, color=color, lw=lw, alpha=alpha, zorder=zorder)
 
         elif use_linecollection:
             if orientation == "horizontal":
                 if not x_end:
                     horizontal_linecollections.append(
                         mpcollections.LineCollection(
-                            [[(x_start, y_here), (x_here, y_here)]], color=color, lw=lw
+                            [[(x_start, y_here), (x_here, y_here)]],
+                            color=color, lw=lw, alpha=alpha, zorder=zorder
                         )
                     )
                 else:
                     horizontal_linecollections.append(
                         mpcollections.LineCollection(
-                            [[(x_end, y_here), (x_here, y_here)]], color=color, lw=lw
+                            [[(x_end, y_here), (x_here, y_here)]],
+                            color=color, lw=lw, alpha=alpha, zorder=zorder
                         )
                     )
 
             elif use_linecollection and orientation == "vertical":
                 vertical_linecollections.append(
                     mpcollections.LineCollection(
-                        [[(x_here, y_bot), (x_here, y_top)]], color=color, lw=lw
+                        [[(x_here, y_bot), (x_here, y_top)]],
+                            color=color, lw=lw, alpha=alpha, zorder=zorder
                     )
                 )
 
@@ -2731,7 +2763,8 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
                 x_start=x_starts[idx],
                 x_here=x_heres[idx],
                 color=segment_colors[idx],
-                lw=lw
+                lw=lw if retained is None or nd in retained else lw * excluded_width_scale,
+                alpha=1.0 if retained is None or nd in retained else excluded_alpha
             )
 
         #########################
@@ -2836,19 +2869,25 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
                     # debugging
                     # print("drawing vertical line for node", nd_name, "w/ color", segment_colors)
 
-                    # last color in segment_colors will
-                    # match the state of the node whose
-                    # subtending branch we are drawing
-                    _draw_clade_lines(
-                        use_linecollection=True,
-                        orientation="vertical",
-                        x_here=x_here_int_nodes,
-                        y_bot=y_bot,
-                        y_top=y_top,
-                        # color=segment_colors[0],
-                        color=segment_colors[-1],
-                        lw=lw,
-                    )
+                    # Each fork arm belongs to its child's incoming edge. Split only
+                    # mixed forks; the two arms cover the original connector exactly.
+                    child_kept = [retained is None or child in retained for child in children]
+                    arms = [(y_top, y_bot, child_kept[0])]
+                    if child_kept[0] != child_kept[1]:
+                        arms = [(y_top, y_here, child_kept[0]),
+                                (y_here, y_bot, child_kept[1])]
+                    for arm_top, arm_bottom, kept in arms:
+                        _draw_clade_lines(
+                            use_linecollection=True,
+                            orientation="vertical",
+                            x_here=x_here_int_nodes,
+                            y_bot=arm_bottom,
+                            y_top=arm_top,
+                            # The last segment color is the state at the parent node.
+                            color=segment_colors[-1],
+                            lw=lw if kept else lw * excluded_width_scale,
+                            alpha=1.0 if kept else excluded_alpha,
+                        )
 
             ####################
             # Draw descendents #

@@ -1643,3 +1643,99 @@ class TestColorbarLayout(unittest.TestCase):
                             self.assertGreater(ax.get_position().width, .8)
                         else:
                             np.testing.assert_allclose(ax.get_position().bounds, original)
+
+
+class TestRetainedAncestry(unittest.TestCase):
+    # Construct labeled observations deterministically, so ancestry expectations do not
+    # depend on simulator randomness or on the rendering implementation.
+    def make_tree(self, newick, sampled=(), fossils=(), alive=(), require_both=False):
+        from phylojunction.data.trait import ContinuousTrait
+        raw = Tree.get(data=newick, schema='newick', suppress_internal_node_taxa=False)
+        for nd in raw:
+            nd.label = nd.taxon.label if nd.taxon else nd.label
+            nd.alive = nd.label in alive
+            nd.sampled = nd.label in sampled or nd.label in fossils
+            nd.is_sa = nd.label in fossils
+            nd.is_sa_dummy_parent = nd.label.startswith('dummy')
+            nd.is_sa_lineage = False
+            nd.trait = nd.distance_from_root()
+        return pjtr.AnnotatedTree(raw, ContinuousTrait(), start_at_origin=raw.seed_node.label == 'origin',
+                                 max_age=3., condition_on_obs_both_sides_root=require_both)
+
+    # Collapsed ancestors, rejected/empty reconstructions and fossil-only observations
+    # must mark full-tree paths, not merely nodes that survive reconstruction.
+    def test_membership(self):
+        newick = '(((a:1,b:1)n:1,c:1)root:1)origin:0;'
+        for sampled, expected in [(('a',), {'a', 'n', 'root', 'origin'}),
+                                  (('a', 'b'), {'a', 'b', 'n', 'root', 'origin'}),
+                                  ((), set()),
+                                  (('a', 'b', 'c'), {'a', 'b', 'c', 'n', 'root', 'origin'})]:
+            tree = self.make_tree(newick, sampled=sampled, alive=('a', 'b', 'c'))
+            self.assertEqual({n.label for n in pjtr._retained_observation_ancestry(tree)}, expected)
+        tree = self.make_tree(newick, sampled=('a',), alive=('a', 'b'), require_both=True)
+        self.assertFalse(pjtr._retained_observation_ancestry(tree))
+        fossil = self.make_tree('((brosc:2,sa1:0)dummy1:1)origin:0;', fossils=('sa1',), alive=('brosc',))
+        self.assertEqual({n.label for n in pjtr._retained_observation_ancestry(fossil)},
+                         {'origin', 'dummy1', 'sa1'})
+
+    # Collection geometry checks protect mixed-fork styling and prevent width scaling
+    # from compounding with tree depth; reconstructed views and tree data stay unchanged.
+    def test_branch_styles(self):
+        import numpy as np
+        from matplotlib.figure import Figure
+        from matplotlib.collections import LineCollection
+        tree = self.make_tree('(((a:1,b:1)n:1,c:1)root:1)origin:0;', sampled=('a',), alive=('a', 'b'))
+        before = [(id(n), n.edge_length, n.alive, n.sampled) for n in tree.tree]
+        fig = Figure()
+        ax = fig.add_subplot(111)
+        x, y = pjtr.plot_ann_tree(tree, ax, start_at_origin=True)
+        lines = [c for c in ax.collections if isinstance(c, LineCollection)]
+        for label, alpha in [('a', 1.), ('b', .25), ('c', .25), ('n', 1.)]:
+            node = tree.tree.find_node_with_label(label)
+            expected = [[x[node.parent_node.label], y[label]], [x[label], y[label]]]
+            matches = [c for c in lines if np.allclose(c.get_segments()[0], expected)]
+            self.assertEqual(len(matches), 1)
+            self.assertEqual(matches[0].get_alpha(), alpha)
+            self.assertAlmostEqual(matches[0].get_linewidths()[0],
+                                   matplotlib.rcParams['lines.linewidth'] * (1 if alpha == 1 else .65))
+        for child, alpha in [('a', 1.), ('b', .25)]:
+            expected = sorted([y['n'], y[child]])
+            matches = [c for c in lines if np.allclose(c.get_segments()[0][:, 0], x['n'])
+                       and np.allclose(sorted(c.get_segments()[0][:, 1]), expected)]
+            self.assertEqual(len(matches), 1)
+            self.assertEqual(matches[0].get_alpha(), alpha)
+        tree.plot_node(ax, draw_reconstructed=True)
+        self.assertTrue(all(c.get_alpha() == 1. for c in ax.collections if isinstance(c, LineCollection)))
+        self.assertEqual(pjtr.plot_ann_tree(tree, ax, start_at_origin=True), (x, y))
+        self.assertEqual(before, [(id(n), n.edge_length, n.alive, n.sampled) for n in tree.tree])
+
+    # Fossil continuations and multi-color branches need the same edge classification;
+    # membership-only checks cannot detect lost opacity on an emitted state segment.
+    def test_fossil_and_segmented_edges(self):
+        from matplotlib.figure import Figure
+        from matplotlib.collections import LineCollection
+        fossil = self.make_tree('((brosc:2,sa1:0)dummy1:1)origin:0;', fossils=('sa1',), alive=('brosc',))
+        for along in (False, True):
+            ax = Figure().add_subplot(111)
+            x, y = pjtr.plot_ann_tree(fossil, ax, sa_along_branches=along)
+            continuation = [c for c in ax.collections if isinstance(c, LineCollection)
+                            and all(v[1] == y['brosc'] for v in c.get_segments()[0])
+                            and abs(c.get_segments()[0][1, 0] - c.get_segments()[0][0, 0]) > 1.5]
+            self.assertEqual(len(continuation), 1)
+            self.assertEqual(continuation[0].get_alpha(), .25)
+        raw = Tree.get(data='(a:3,b:3)root:0;', schema='newick', suppress_internal_node_taxa=False)
+        for nd in raw:
+            nd.label = nd.taxon.label if nd.taxon else nd.label
+            nd.alive = nd.is_leaf()
+            nd.sampled = nd.label == 'a'
+            nd.is_sa = nd.is_sa_dummy_parent = nd.is_sa_lineage = False
+            nd.state = int(nd.label == 'b')
+        transition = pjat.AttributeTransition('state', 'b', 1., 0, 1, age=2.)
+        tree = pjtr.AnnotatedTree(raw, DiscreteTrait(states=2), at_dict={'b': [transition]})
+        ax = Figure().add_subplot(111)
+        x, y = pjtr.plot_ann_tree(tree, ax, use_age=True)
+        segments = [c for c in ax.collections if isinstance(c, LineCollection)
+                    and all(v[1] == y['b'] for v in c.get_segments()[0])]
+        self.assertEqual(len(segments), 2)
+        self.assertTrue(all(c.get_alpha() == .25 for c in segments))
+        self.assertFalse((segments[0].get_colors() == segments[1].get_colors()).all())
