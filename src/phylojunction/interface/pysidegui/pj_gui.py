@@ -1,4 +1,5 @@
 import sys
+from contextlib import ExitStack
 import os
 import re
 import typing as ty
@@ -8,9 +9,9 @@ import arviz as az  # type: ignore
 from natsort import natsorted  # type: ignore
 from tabulate import tabulate  # type: ignore
 from PySide6.QtWidgets import \
-    QApplication, QMainWindow, QPushButton, QFileDialog
+    QApplication, QMainWindow, QPushButton, QFileDialog, QMessageBox, QStyle
 from PySide6.QtGui import QAction
-from PySide6.QtCore import QPropertyAnimation, QEasingCurve, QTimer, QSignalBlocker
+from PySide6.QtCore import QPropertyAnimation, QEasingCurve, QTimer, QSignalBlocker, Qt
 
 # pj imports #
 from phylojunction.interface.pysidegui.content_main_window \
@@ -38,6 +39,8 @@ class GUIModeling():
     def __init__(self):
         self.dag_obj = DirectedAcyclicGraph()
         self.cmd_log_list = []
+        # None marks an incomplete or unverified source; history also contains reset notes.
+        self.active_script_lines: ty.Optional[ty.List[str]] = []
 
     def update_dag_random_seed(self, a_random_seed: int):
         self.dag_obj.random_seed = a_random_seed
@@ -54,30 +57,34 @@ class GUIModeling():
         if clear_cmd_log_list:
             self.cmd_log_list = []
 
-        valid_cmd_line = None
         print("\nReading following command lines:")
+        execution_failed = False
 
         for line in cmd_line_list:
+            valid_cmd_line = None
             # removing whitespaces from left and right
             line = line.strip()
             print("  " + line)
 
-            # will set random seed once if DAG does not already have one
-            if not isinstance(self.dag_obj.random_seed, int):
-                a_random_seed: str = \
-                    gui_main_window_obj.ui.ui_pages. \
-                        random_seed_prefix_textbox.toPlainText()
-                
-                # random seed is not None and not empty string
-                if a_random_seed:
-                    random_seed: int = int(a_random_seed)
-                    self.dag_obj.random_seed = random_seed
-
-            # side-effect in cmdline2dag
+            # Parse only after setting an explicitly requested initial seed.
             try:
+                # will set random seed once if DAG does not already have one
+                if not isinstance(self.dag_obj.random_seed, int):
+                    a_random_seed: str = \
+                        gui_main_window_obj.ui.ui_pages. \
+                            random_seed_prefix_textbox.toPlainText().strip()
+                
+                    # random seed is not None and not empty string
+                    if a_random_seed:
+                        random_seed: int = int(a_random_seed)
+                        self.dag_obj.random_seed = random_seed
+
+                # cmdline2dag updates the current DAG in place.
                 valid_cmd_line = cmdp.cmdline2dag(self.dag_obj, line)
 
             except Exception as e:
+                execution_failed = True
+                self.active_script_lines = None
                 gui_main_window_obj.ui.bottom_label_left.setText("Warning produced")
 
                 # if not event == "Simulate":
@@ -103,12 +110,19 @@ class GUIModeling():
                 #     pass
 
                 self.cmd_log_list.append(valid_cmd_line)
+                if self.active_script_lines is not None:
+                    self.active_script_lines.append(valid_cmd_line)
+
+        gui_main_window_obj.refresh_resample_button(
+            "Execution failed. Clear the model and enter commands, or load a script, to enable resampling."
+            if execution_failed else None)
 
     def cmd_log(self):
         return "\n".join(self.cmd_log_list) + "\n\n"
 
     def clear(self):
         self.dag_obj = DirectedAcyclicGraph()
+        self.active_script_lines = []
 
 
 class GUIMainWindow(QMainWindow):
@@ -218,10 +232,11 @@ class GUIMainWindow(QMainWindow):
             )
         )
 
-        # redraw selected node button #
-        self.ui.ui_pages.redraw_node.clicked.connect(
-            lambda clear_model:
-            self.redraw_selected_node())
+        # Replay the specification to generate a new model, then display it.
+        self.ui.ui_pages.resample_model.clicked.connect(self.resample_current_script)
+        self.ui.ui_pages.resample_model.setIcon(
+            self.style().standardIcon(QStyle.StandardPixmap.SP_BrowserReload))
+        self.refresh_resample_button()
 
         # clear model button #
         self.ui.ui_pages.clear_model.clicked.connect(
@@ -727,7 +742,7 @@ class GUIMainWindow(QMainWindow):
             self.clean_disable_everything()
 
             # set seed
-            a_random_seed = self.ui.ui_pages.random_seed_prefix_textbox.toPlainText()
+            a_random_seed = self.ui.ui_pages.random_seed_prefix_textbox.toPlainText().strip()
             # is not None and is not an empty string
             if a_random_seed:
                 random_seed: int = int(a_random_seed)
@@ -762,6 +777,95 @@ class GUIMainWindow(QMainWindow):
                  self.gui_modeling.dag_obj.get_sorted_node_dag_list() if
                  not nd.is_deterministic]
             )
+
+    # Availability depends on executable source, not on the seed: a seeded click explains
+    # why it cannot resample. Preserve a more specific unavailable reason when supplied.
+    def refresh_resample_button(self, unavailable_reason=None):
+        button = self.ui.ui_pages.resample_model
+        lines = self.gui_modeling.active_script_lines
+        button.setEnabled(bool(lines))
+        if lines:
+            button.setToolTip("Rerun the current script to generate new samples.")
+        elif lines is not None:
+            button.setToolTip("Load a script or enter commands to enable resampling.")
+        elif unavailable_reason:
+            button.setToolTip(unavailable_reason)
+
+    # Evaluate into a separate DAG before replacing the displayed model. Retain source and
+    # view preferences across the existing cleanup routine, which resets GUIModeling.
+    def resample_current_script(self):
+        u = self.ui.ui_pages
+        if u.random_seed_prefix_textbox.toPlainText().strip():
+            QMessageBox.warning(self, "Resampling disabled",
+                                "Resampling is disabled while a random seed is specified. "
+                                "Clear the Random seed field in Settings to generate new samples.")
+            return
+        if not self.gui_modeling.active_script_lines or not u.resample_model.isEnabled():
+            return
+
+        lines = list(self.gui_modeling.active_script_lines)
+        history = list(self.gui_modeling.cmd_log_list)
+        item = u.node_list.currentItem()
+        selected_name = item.text() if item else None
+        sample, replicate = u.sample_idx_spin.value(), u.repl_idx_spin.value()
+        all_samples = u.all_samples_radio.isChecked()
+        reconstructed = u.reconstructed_tree_check.isChecked()
+        u.resample_model.setEnabled(False)
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            try:
+                candidate = cmdp.script2dag("\n".join(lines), in_pj_file=False, random_seed=None)
+            except Exception as error:
+                self.ui.bottom_label_left.setText("Resampling failed; previous results retained")
+                u.warnings_textbox.setText(str(error))
+                return
+
+            # No callbacks may draw an intermediate selection or out-of-range sample.
+            with ExitStack() as blocked:
+                for widget in (u.node_list, u.sample_idx_spin, u.repl_idx_spin,
+                               u.one_sample_radio, u.all_samples_radio, u.reconstructed_tree_check):
+                    blocked.enter_context(QSignalBlocker(widget))
+                self.clean_disable_everything()
+                u.resample_model.setEnabled(False)
+                self.gui_modeling.dag_obj = candidate
+                self.gui_modeling.active_script_lines = lines
+                self.gui_modeling.cmd_log_list = history
+                self.refresh_cmd_history()
+                self.refresh_node_lists()
+                matches = u.node_list.findItems(selected_name, Qt.MatchFlag.MatchExactly) if selected_name else []
+                if matches:
+                    u.node_list.setCurrentItem(matches[0])
+                elif u.node_list.count():
+                    u.node_list.setCurrentRow(0)
+                if u.node_list.currentItem():
+                    node, sample_size, repl_size = self.selected_node_read(u.node_list.currentItem().text())
+                    u.sample_idx_spin.setMaximum(sample_size)
+                    u.repl_idx_spin.setMaximum(repl_size)
+                    self.init_and_refresh_radio_spin(node, sample_size, repl_size)
+                    if u.all_samples_radio.isEnabled():
+                        if all_samples or not u.one_sample_radio.isEnabled():
+                            u.all_samples_radio.setChecked(True)
+                            u.sample_idx_spin.setMinimum(0)
+                            u.sample_idx_spin.setValue(0)
+                            u.sample_idx_spin.setEnabled(False)
+                        else:
+                            u.one_sample_radio.setChecked(True)
+                            u.sample_idx_spin.setMinimum(1)
+                            u.sample_idx_spin.setEnabled(True)
+                    if u.sample_idx_spin.isEnabled():
+                        u.sample_idx_spin.setValue(sample)
+                    if u.repl_idx_spin.isEnabled():
+                        u.repl_idx_spin.setValue(replicate)
+                    u.reconstructed_tree_check.setChecked(reconstructed)
+            try:
+                self.do_selected_node_dag_page(spin_buttons_clicked=True)
+                self.ui.bottom_label_left.setText("Resampled")
+            except Exception as error:
+                self.ui.bottom_label_left.setText("Resampled, but displaying the new model failed")
+                u.warnings_textbox.setText(str(error))
+        finally:
+            QApplication.restoreOverrideCursor()
+            self.refresh_resample_button()
 
     def read_compare_csv(self):
 
@@ -899,6 +1003,8 @@ class GUIMainWindow(QMainWindow):
             self.ui.ui_pages.cmd_log_textbox.clear()
             self.gui_modeling.dag_obj, self.gui_modeling.cmd_log_list = \
                 pjread.read_serialized_pgm(model_fp)
+            self.gui_modeling.active_script_lines = None
+            self.refresh_resample_button("This saved model has no verified script. Load its script to resample.")
             self.refresh_node_lists()
             self.ui.ui_pages.cmd_log_textbox.setText(self.gui_modeling.cmd_log())
 
@@ -1336,10 +1442,6 @@ class GUIMainWindow(QMainWindow):
         cmd_hist_str = self.gui_modeling.cmd_log().lstrip()
         self.ui.ui_pages.cmd_log_textbox.setText(cmd_hist_str)
 
-    def redraw_selected_node(self):
-        if self.ui.ui_pages.node_list.currentItem() is not None:
-            self.do_selected_node_dag_page(spin_buttons_clicked=True)
-
     def clean_disable_everything(self, user_reset=False):
         if user_reset:
             cmd_hist_str: str = ""
@@ -1366,6 +1468,7 @@ class GUIMainWindow(QMainWindow):
 
         # pgm-related objects are reset
         self.gui_modeling.clear()
+        self.refresh_resample_button()
 
         # remove all node names from list
         self.ui.ui_pages.node_list.clear()

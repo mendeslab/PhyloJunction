@@ -223,36 +223,3 @@ class PJClearDAGQPushButton(PJWhiteBackgroundQPushButton):
     def mouseReleaseEvent(self, event):
         # need to handle the original event
         super().mouseReleaseEvent(event)
-
-
-class PJReDrawQPushButton(PJWhiteBackgroundQPushButton):
-    clear_redraw_normal: QIcon
-    clear_redraw_over: QIcon
-    clear_redraw_pressed: QIcon
-
-    def __init__(self, *a, **kw):
-        self.icon_dir_path = \
-            os.path.join(my_dir_path.parent.parent, "images/icons/")
-        redraw_normal = QIcon(QPixmap(":/draw.svg"))
-        redraw_over = QIcon(QPixmap(":/draw_over.svg"))
-        redraw_pressed = QIcon(QPixmap(":/draw_pressed"))
-
-        super().__init__(
-            icon_normal=redraw_normal,
-            icon_over=redraw_over,
-            icon_pressed=redraw_pressed
-        )
-
-    def enterEvent(self, event):
-        super().enterEvent(event)
-
-    def leaveEvent(self, event):
-        super().leaveEvent(event)
-
-    def mousePressEvent(self, event):
-        # need to handle the original event
-        super().mousePressEvent(event)
-
-    def mouseReleaseEvent(self, event):
-        # need to handle the original event
-        super().mouseReleaseEvent(event)

@@ -23,7 +23,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QFrame, QGridLayout,
 
 from phylojunction.interface.pysidegui.images.icons import resources
 from phylojunction.interface.pysidegui.pjguiwidgets.matplotlibwidget import MatplotlibWidget
-from phylojunction.interface.pysidegui.pjguiwidgets.pj_buttons import (PJClearDAGQPushButton, PJReDrawQPushButton)
+from phylojunction.interface.pysidegui.pjguiwidgets.pj_buttons import PJClearDAGQPushButton
 
 class Ui_PJGUIPages(object):
     def setupUi(self, PJGUIPages):
@@ -300,15 +300,12 @@ class Ui_PJGUIPages(object):
 
         self.node_list_vert_layout.addWidget(self.node_list)
 
-        self.redraw_node = PJReDrawQPushButton(self.pgm_page_frame)
-        self.redraw_node.setObjectName(u"redraw_node")
-        self.redraw_node.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        self.redraw_node.setMouseTracking(True)
-        icon = QIcon()
-        icon.addFile(u":/draw.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.redraw_node.setIcon(icon)
+        self.resample_model = QPushButton(self.pgm_page_frame)
+        self.resample_model.setObjectName(u"resample_model")
+        self.resample_model.setEnabled(False)
+        self.resample_model.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
-        self.node_list_vert_layout.addWidget(self.redraw_node)
+        self.node_list_vert_layout.addWidget(self.resample_model)
 
         self.clear_model = PJClearDAGQPushButton(self.pgm_page_frame)
         self.clear_model.setObjectName(u"clear_model")
@@ -317,9 +314,9 @@ class Ui_PJGUIPages(object):
         self.clear_model.setStyleSheet(u"QPushButton:hover {\n"
 "    color: #ec4a8a;\n"
 "}")
-        icon1 = QIcon()
-        icon1.addFile(u":/icon_clear.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.clear_model.setIcon(icon1)
+        icon = QIcon()
+        icon.addFile(u":/icon_clear.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.clear_model.setIcon(icon)
         self.clear_model.setIconSize(QSize(20, 20))
 
         self.node_list_vert_layout.addWidget(self.clear_model)
@@ -822,7 +819,10 @@ class Ui_PJGUIPages(object):
         self.repl_idx_spin.setPrefix(QCoreApplication.translate("PJGUIPages", u"Replicate #", None))
         self.save_pgm_node_plot.setText(QCoreApplication.translate("PJGUIPages", u"Save plot as", None))
         self.model_label.setText(QCoreApplication.translate("PJGUIPages", u"Model nodes", None))
-        self.redraw_node.setText(QCoreApplication.translate("PJGUIPages", u"Redraw", None))
+        self.resample_model.setText(QCoreApplication.translate("PJGUIPages", u"Resample", None))
+#if QT_CONFIG(tooltip)
+        self.resample_model.setToolTip(QCoreApplication.translate("PJGUIPages", u"Load a script or enter commands to enable resampling.", None))
+#endif // QT_CONFIG(tooltip)
         self.clear_model.setText(QCoreApplication.translate("PJGUIPages", u" Clear model", None))
         self.cmd_prompt_label.setText(QCoreApplication.translate("PJGUIPages", u"Command prompt", None))
 #if QT_CONFIG(tooltip)

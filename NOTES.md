@@ -329,7 +329,7 @@ After generation, retain the resource registration import alongside the custom w
 from phylojunction.interface.pysidegui.images.icons import resources
 ```
 
-Check that the draw and clear icons use `:/draw.svg` and `:/icon_clear.svg`, respectively.
+The clear icon uses `:/icon_clear.svg`; Resample uses Qt's standard browser-reload icon.
 The UI file supplies the custom widget module paths. Review generated changes separately from
 layout changes when switching generator versions.
 
@@ -339,6 +339,14 @@ Keep the control objects in the UI file and their layout setup in that method.
 
 The model page redraws when node selection or display controls change, including keyboard
 navigation and the Reconstructed checkbox. These actions display existing samples.
+
+Resample reruns the stored script and subsequent successful commands entered at the prompt,
+then restores the selected node and display settings. It does not reread the original script
+file. A nonblank random seed in Settings produces a warning without running anything; clear
+that field to continue drawing from the current random-number sequence. Resampling is
+synchronous, so a long simulation can temporarily block the window. Execution failures leave
+existing results displayed. Clear or load a script after a command error to enable replay;
+serialized models alone do not provide a verified replay source.
 
 ### Qt Creator / Qt Designer
 

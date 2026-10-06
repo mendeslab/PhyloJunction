@@ -547,19 +547,18 @@ QListWidget::item:selected{
             </widget>
            </item>
            <item>
-            <widget class="PJReDrawQPushButton" name="redraw_node">
+            <widget class="QPushButton" name="resample_model">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
              <property name="cursor">
               <cursorShape>PointingHandCursor</cursorShape>
              </property>
-             <property name="mouseTracking">
-              <bool>true</bool>
-             </property>
              <property name="text">
-              <string>Redraw</string>
+              <string>Resample</string>
              </property>
-             <property name="icon">
-              <iconset>
-               <normaloff>:/draw.svg</normaloff>:/draw.svg</iconset>
+             <property name="toolTip">
+              <string>Load a script or enter commands to enable resampling.</string>
              </property>
             </widget>
            </item>
@@ -1529,11 +1528,6 @@ color: red;</string>
    <extends>QWidget</extends>
    <header>phylojunction.interface.pysidegui.pjguiwidgets.matplotlibwidget</header>
    <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>PJReDrawQPushButton</class>
-   <extends>QPushButton</extends>
-   <header>phylojunction.interface.pysidegui.pjguiwidgets.pj_buttons</header>
   </customwidget>
   <customwidget>
    <class>PJClearDAGQPushButton</class>
