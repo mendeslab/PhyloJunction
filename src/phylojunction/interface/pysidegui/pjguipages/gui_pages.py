@@ -158,8 +158,10 @@ class Ui_PJGUIPages(object):
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.pgm_page_frame = QFrame(self.pgm_page)
         self.pgm_page_frame.setObjectName(u"pgm_page_frame")
-        self.pgm_page_frame.setStyleSheet(u"background-color: white;\n"
-"border: 0;")
+        self.pgm_page_frame.setStyleSheet(u"QFrame#pgm_page_frame {\n"
+"background-color: white;\n"
+"border: 0;\n"
+"}")
         self.pgm_page_frame.setFrameShape(QFrame.StyledPanel)
         self.pgm_page_frame.setFrameShadow(QFrame.Raised)
         self.model_frame_layout = QVBoxLayout(self.pgm_page_frame)

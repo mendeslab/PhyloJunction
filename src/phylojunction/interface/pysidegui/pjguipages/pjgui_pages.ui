@@ -293,8 +293,10 @@
     <item>
      <widget class="QFrame" name="pgm_page_frame">
       <property name="styleSheet">
-       <string notr="true">background-color: white;
-border: 0;</string>
+       <string notr="true">QFrame#pgm_page_frame {
+background-color: white;
+border: 0;
+}</string>
       </property>
       <property name="frameShape">
        <enum>QFrame::StyledPanel</enum>
