@@ -23,16 +23,7 @@
    <number>1</number>
   </property>
   <widget class="QWidget" name="settings_page">
-   <widget class="QWidget" name="gridLayoutWidget_4">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>10</y>
-      <width>961</width>
-      <height>681</height>
-     </rect>
-    </property>
-    <layout class="QGridLayout" name="settings_page_grid_layout">
+   <layout class="QGridLayout" name="settings_page_grid_layout" columnstretch="0,1">
      <item row="7" column="0">
       <spacer name="settings_vert_spacer">
        <property name="orientation">
@@ -48,18 +39,6 @@
      </item>
      <item row="3" column="0">
       <widget class="QLabel" name="filename_prefix_label">
-       <property name="minimumSize">
-        <size>
-         <width>110</width>
-         <height>24</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>110</width>
-         <height>24</height>
-        </size>
-       </property>
        <property name="text">
         <string>File name prefix:</string>
        </property>
@@ -96,18 +75,6 @@
      </item>
      <item row="1" column="0">
       <widget class="QLabel" name="random_seed_prefix_label">
-       <property name="minimumSize">
-        <size>
-         <width>110</width>
-         <height>24</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>110</width>
-         <height>24</height>
-        </size>
-       </property>
        <property name="text">
         <string>Random seed:</string>
        </property>
@@ -115,18 +82,6 @@
      </item>
      <item row="4" column="0">
       <widget class="QLabel" name="stoch_map_label">
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>24</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>16777215</width>
-         <height>24</height>
-        </size>
-       </property>
        <property name="font">
         <font>
          <bold>true</bold>
@@ -139,18 +94,6 @@
      </item>
      <item row="2" column="0">
       <widget class="QLabel" name="settings_label">
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>24</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>16777215</width>
-         <height>24</height>
-        </size>
-       </property>
        <property name="font">
         <font>
          <bold>true</bold>
@@ -206,12 +149,6 @@
      </item>
      <item row="0" column="0">
       <widget class="QLabel" name="sim_config_label">
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>24</height>
-        </size>
-       </property>
        <property name="font">
         <font>
          <bold>true</bold>
@@ -224,18 +161,6 @@
      </item>
      <item row="6" column="0">
       <widget class="QLabel" name="attr_name_label">
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>24</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>16777215</width>
-         <height>24</height>
-        </size>
-       </property>
        <property name="text">
         <string>Attribute name</string>
        </property>
@@ -285,8 +210,7 @@
        </property>
       </widget>
      </item>
-    </layout>
-   </widget>
+   </layout>
   </widget>
   <widget class="QWidget" name="pgm_page">
    <layout class="QVBoxLayout" name="verticalLayout">

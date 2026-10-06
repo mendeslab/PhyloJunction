@@ -33,24 +33,18 @@ class Ui_PJGUIPages(object):
         PJGUIPages.setMinimumSize(QSize(960, 650))
         self.settings_page = QWidget()
         self.settings_page.setObjectName(u"settings_page")
-        self.gridLayoutWidget_4 = QWidget(self.settings_page)
-        self.gridLayoutWidget_4.setObjectName(u"gridLayoutWidget_4")
-        self.gridLayoutWidget_4.setGeometry(QRect(10, 10, 961, 681))
-        self.settings_page_grid_layout = QGridLayout(self.gridLayoutWidget_4)
+        self.settings_page_grid_layout = QGridLayout(self.settings_page)
         self.settings_page_grid_layout.setObjectName(u"settings_page_grid_layout")
-        self.settings_page_grid_layout.setContentsMargins(0, 0, 0, 0)
         self.settings_vert_spacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.settings_page_grid_layout.addItem(self.settings_vert_spacer, 7, 0, 1, 1)
 
-        self.filename_prefix_label = QLabel(self.gridLayoutWidget_4)
+        self.filename_prefix_label = QLabel(self.settings_page)
         self.filename_prefix_label.setObjectName(u"filename_prefix_label")
-        self.filename_prefix_label.setMinimumSize(QSize(110, 24))
-        self.filename_prefix_label.setMaximumSize(QSize(110, 24))
 
         self.settings_page_grid_layout.addWidget(self.filename_prefix_label, 3, 0, 1, 1)
 
-        self.filename_prefix_textbox = QTextEdit(self.gridLayoutWidget_4)
+        self.filename_prefix_textbox = QTextEdit(self.settings_page)
         self.filename_prefix_textbox.setObjectName(u"filename_prefix_textbox")
         self.filename_prefix_textbox.setMinimumSize(QSize(0, 24))
         self.filename_prefix_textbox.setMaximumSize(QSize(16777215, 24))
@@ -59,37 +53,31 @@ class Ui_PJGUIPages(object):
 
         self.settings_page_grid_layout.addWidget(self.filename_prefix_textbox, 3, 1, 1, 1)
 
-        self.tree_dag_node_label = QLabel(self.gridLayoutWidget_4)
+        self.tree_dag_node_label = QLabel(self.settings_page)
         self.tree_dag_node_label.setObjectName(u"tree_dag_node_label")
 
         self.settings_page_grid_layout.addWidget(self.tree_dag_node_label, 5, 0, 1, 1)
 
-        self.random_seed_prefix_label = QLabel(self.gridLayoutWidget_4)
+        self.random_seed_prefix_label = QLabel(self.settings_page)
         self.random_seed_prefix_label.setObjectName(u"random_seed_prefix_label")
-        self.random_seed_prefix_label.setMinimumSize(QSize(110, 24))
-        self.random_seed_prefix_label.setMaximumSize(QSize(110, 24))
 
         self.settings_page_grid_layout.addWidget(self.random_seed_prefix_label, 1, 0, 1, 1)
 
-        self.stoch_map_label = QLabel(self.gridLayoutWidget_4)
+        self.stoch_map_label = QLabel(self.settings_page)
         self.stoch_map_label.setObjectName(u"stoch_map_label")
-        self.stoch_map_label.setMinimumSize(QSize(0, 24))
-        self.stoch_map_label.setMaximumSize(QSize(16777215, 24))
         font = QFont()
         font.setBold(True)
         self.stoch_map_label.setFont(font)
 
         self.settings_page_grid_layout.addWidget(self.stoch_map_label, 4, 0, 1, 1)
 
-        self.settings_label = QLabel(self.gridLayoutWidget_4)
+        self.settings_label = QLabel(self.settings_page)
         self.settings_label.setObjectName(u"settings_label")
-        self.settings_label.setMinimumSize(QSize(0, 24))
-        self.settings_label.setMaximumSize(QSize(16777215, 24))
         self.settings_label.setFont(font)
 
         self.settings_page_grid_layout.addWidget(self.settings_label, 2, 0, 1, 1)
 
-        self.random_seed_prefix_textbox = QTextEdit(self.gridLayoutWidget_4)
+        self.random_seed_prefix_textbox = QTextEdit(self.settings_page)
         self.random_seed_prefix_textbox.setObjectName(u"random_seed_prefix_textbox")
         self.random_seed_prefix_textbox.setMinimumSize(QSize(0, 24))
         self.random_seed_prefix_textbox.setMaximumSize(QSize(16777215, 24))
@@ -98,42 +86,39 @@ class Ui_PJGUIPages(object):
 
         self.settings_page_grid_layout.addWidget(self.random_seed_prefix_textbox, 1, 1, 1, 1)
 
-        self.line1 = QFrame(self.gridLayoutWidget_4)
+        self.line1 = QFrame(self.settings_page)
         self.line1.setObjectName(u"line1")
         self.line1.setFrameShape(QFrame.Shape.HLine)
         self.line1.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.settings_page_grid_layout.addWidget(self.line1, 0, 1, 1, 1)
 
-        self.line2 = QFrame(self.gridLayoutWidget_4)
+        self.line2 = QFrame(self.settings_page)
         self.line2.setObjectName(u"line2")
         self.line2.setFrameShape(QFrame.Shape.HLine)
         self.line2.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.settings_page_grid_layout.addWidget(self.line2, 2, 1, 1, 1)
 
-        self.line3 = QFrame(self.gridLayoutWidget_4)
+        self.line3 = QFrame(self.settings_page)
         self.line3.setObjectName(u"line3")
         self.line3.setFrameShape(QFrame.Shape.HLine)
         self.line3.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.settings_page_grid_layout.addWidget(self.line3, 4, 1, 1, 1)
 
-        self.sim_config_label = QLabel(self.gridLayoutWidget_4)
+        self.sim_config_label = QLabel(self.settings_page)
         self.sim_config_label.setObjectName(u"sim_config_label")
-        self.sim_config_label.setMinimumSize(QSize(0, 24))
         self.sim_config_label.setFont(font)
 
         self.settings_page_grid_layout.addWidget(self.sim_config_label, 0, 0, 1, 1)
 
-        self.attr_name_label = QLabel(self.gridLayoutWidget_4)
+        self.attr_name_label = QLabel(self.settings_page)
         self.attr_name_label.setObjectName(u"attr_name_label")
-        self.attr_name_label.setMinimumSize(QSize(0, 24))
-        self.attr_name_label.setMaximumSize(QSize(16777215, 24))
 
         self.settings_page_grid_layout.addWidget(self.attr_name_label, 6, 0, 1, 1)
 
-        self.tr_dag_node_textbox = QTextEdit(self.gridLayoutWidget_4)
+        self.tr_dag_node_textbox = QTextEdit(self.settings_page)
         self.tr_dag_node_textbox.setObjectName(u"tr_dag_node_textbox")
         self.tr_dag_node_textbox.setMinimumSize(QSize(0, 24))
         self.tr_dag_node_textbox.setMaximumSize(QSize(16777215, 24))
@@ -142,7 +127,7 @@ class Ui_PJGUIPages(object):
 
         self.settings_page_grid_layout.addWidget(self.tr_dag_node_textbox, 5, 1, 1, 1)
 
-        self.attr_name_textbox = QTextEdit(self.gridLayoutWidget_4)
+        self.attr_name_textbox = QTextEdit(self.settings_page)
         self.attr_name_textbox.setObjectName(u"attr_name_textbox")
         self.attr_name_textbox.setMinimumSize(QSize(0, 24))
         self.attr_name_textbox.setMaximumSize(QSize(16777215, 24))
@@ -151,6 +136,7 @@ class Ui_PJGUIPages(object):
 
         self.settings_page_grid_layout.addWidget(self.attr_name_textbox, 6, 1, 1, 1)
 
+        self.settings_page_grid_layout.setColumnStretch(1, 1)
         PJGUIPages.addWidget(self.settings_page)
         self.pgm_page = QWidget()
         self.pgm_page.setObjectName(u"pgm_page")
