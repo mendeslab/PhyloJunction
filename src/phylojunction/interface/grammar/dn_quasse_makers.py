@@ -16,7 +16,7 @@ def make_quasse(spec):
         for name, raw in spec.items():
             if name == "clamp":
                 continue
-            if name in ("birth_rate", "death_rate"):
+            if name in ("birth_rate", "death_rate", "fossil_rate"):
                 values = []
                 for item in raw:
                     value = item.value if isinstance(item, pgm.NodeDAG) else item

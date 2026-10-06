@@ -898,10 +898,17 @@ def prep_data_df(
                     # The existing filename-to-text table also carries continuous trait TSVs.
                     # Keep one row per complete-tree node, including internal and extinct nodes.
                     rows = []
+                    fossil_rows = []
                     for idx, tree in enumerate(node_val):
                         for nd in tree.tree.preorder_node_iter():
                             rows.append((idx // n_repl + 1, idx % n_repl + 1, nd.label,
                                          getattr(nd, tree.trait.name), nd.alive, nd.sampled))
+                            if nd.is_sa:
+                                fossil_rows.append((idx // n_repl + 1, idx % n_repl + 1, nd.label,
+                                                    tree.node_heights_dict[nd.label], tree.node_ages_dict[nd.label],
+                                                    getattr(nd, tree.trait.name)))
+                    fossils = pd.DataFrame(fossil_rows, columns=["sample", "replicate", "node", "time", "age", "trait"])
+                    tree_living_nd_states_str_dict[rv_name + "_fossils.tsv"] = fossils.to_csv(sep="\t", index=False)
                     traits = pd.DataFrame(rows, columns=["sample", "replicate", "node", "trait",
                                                         "alive", "sampled"])
                     tree_living_nd_states_str_dict[rv_name + "_traits.tsv"] = traits.to_csv(sep="\t", index=False)

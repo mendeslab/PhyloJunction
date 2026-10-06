@@ -499,7 +499,30 @@ class TestQuaSSE(unittest.TestCase):
         self.assertEqual(list(traits.columns), ['sample', 'replicate', 'node', 'trait', 'alive', 'sampled'])
         self.assertEqual(len(traits), 8)
         np.testing.assert_array_equal(traits['trait'], [1, 1, 1, 1, 3, 3, 3, 3])
+        fossils = pd.read_csv(io.StringIO(output['t_fossils.tsv']), sep='\t')
+        self.assertEqual(list(fossils.columns), ['sample', 'replicate', 'node', 'time', 'age', 'trait'])
+        self.assertTrue(fossils.empty)
         self.assertEqual(output['t_stats.csv'].iloc[0]['origin_age'], 0)
+        # Fossils use the same renamed trait and sample/replicate indices as existing outputs.
+        cmdline2dag(dag, 'psi := quasse_constant(rate=[1,2])')
+        with patch('numpy.random.exponential', side_effect=[.25, 2.] * 4), \
+                patch('numpy.random.uniform', return_value=.5):
+            cmdline2dag(dag, 'f ~ quasse(n=2,nr=2,birth_rate=b,death_rate=b,fossil_rate=psi,'
+                        'stop="age",stop_value=1,sampling_prob=0,drift=2,'
+                        'method="local_thinning",block_duration=1)')
+        self.assertIn(dag.name_node_dict['psi'], dag.name_node_dict['f'].parent_nd_list)
+        for tree in dag.name_node_dict['f'].value:
+            tree.trait = ContinuousTrait(name='body_size')
+            for nd in tree.tree:
+                nd.body_size = nd.trait
+                nd.annotations.drop(name="trait")
+                nd.annotations.add_bound_attribute("body_size")
+                del nd.trait
+        names, contents = prep_data_filepaths_dfs(*prep_data_df(dag))
+        fossils = pd.read_csv(io.StringIO(dict(zip(names, contents))['f_fossils.tsv']), sep='\t')
+        np.testing.assert_array_equal(fossils['sample'], [1, 1, 2, 2])
+        np.testing.assert_array_equal(fossils['replicate'], [1, 2, 1, 2])
+        np.testing.assert_allclose(fossils[['time', 'age', 'trait']], [[.25, .75, .5]] * 4)
         for tree in dag.name_node_dict['t'].value:
             self.assertFalse(tree.state_count_dict)
         with tempfile.TemporaryDirectory() as directory:
