@@ -291,6 +291,10 @@ In complete-tree plots, paths from retained observations back to the full-tree r
 normally; other edges are lighter (25% opacity) and thinner (65% linewidth). This includes any
 displayed ancestral stem above the reconstructed root. Fossil markers, tip colors and labels
 remain unchanged, and reconstructed plots retain their usual styling.
+
+A light dotted vertical line marks the present, behind the branches and node labels. It uses
+the simulation's observation horizon, so fossil-only or extinct trees can end before the
+line. The same reference appears in complete and reconstructed views and in saved plots.
 Plotting uses no randomness. An empty reconstructed tree displays ``No sampled tips``.
 
 Data output includes complete/reconstructed Newick tables, annotated variants, generic tree

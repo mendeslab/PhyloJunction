@@ -1662,6 +1662,50 @@ class TestRetainedAncestry(unittest.TestCase):
         return pjtr.AnnotatedTree(raw, ContinuousTrait(), start_at_origin=raw.seed_node.label == 'origin',
                                  max_age=3., condition_on_obs_both_sides_root=require_both)
 
+    # Protect horizon placement when tips disappear or reconstruction shifts the origin;
+    # existing geometry tests do not check this background reference or its redraw lifecycle.
+    def test_present_reference(self):
+        from matplotlib.figure import Figure
+        living = self.make_tree('((a:2,b:2)root:1)origin:0;',
+                                sampled=('a', 'b'), alive=('a', 'b'))
+        fossil = self.make_tree('((brosc:1,sa1:0)dummy1:1)origin:0;', fossils=('sa1',))
+        extinct = self.make_tree('(a:2,b:2)root:0;')
+        raw = Tree.get(data='(a:2,b:2)root:0;', schema='newick', suppress_internal_node_taxa=False)
+        for node in raw:
+            node.label = node.taxon.label if node.taxon else node.label
+            node.alive = node.sampled = node.is_sa = False
+            node.is_sa_dummy_parent = node.is_sa_lineage = False
+            node.state = 0
+        other_raw = raw.clone(depth=2)
+        legacy = pjtr.AnnotatedTree(raw, DiscreteTrait(states=1), max_age=3., tree_died=True)
+        no_horizon = pjtr.AnnotatedTree(other_raw, DiscreteTrait(states=1), tree_died=True)
+        cases = [(living, False, 3., 0.), (living, True, 2., 0.),
+                 (fossil, False, 3., 0.), (fossil, True, 3., 0.),
+                 (extinct, False, 3., 0.), (legacy, False, 3., -1.),
+                 (no_horizon, False, 2., 0.)]
+        ax = Figure().add_subplot(111)
+        for tree, reconstructed, time_x, age_x in cases:
+            for use_age, expected in ((False, time_x), (True, age_x)):
+                with self.subTest(tree=tree, reconstructed=reconstructed, age=use_age):
+                    before = [(n.label, n.edge_length) for n in tree.tree]
+                    for repeat in range(2):
+                        pjtr.plot_ann_tree(tree, ax, draw_reconstructed=reconstructed, use_age=use_age)
+                        lines = [line for line in ax.lines if line.get_gid() == 'present-reference']
+                        self.assertEqual(len(lines), 1)
+                        line = lines[0]
+                        self.assertEqual(list(line.get_xdata()), [expected, expected])
+                        self.assertTrue(line.is_dashed())
+                        self.assertEqual(line.get_dash_capstyle(), 'round')
+                        self.assertEqual(line.get_zorder(), 0)
+                        self.assertLess(line.get_alpha(), .5)
+                        lower, upper = sorted(ax.get_xlim())
+                        self.assertLess(lower, expected)
+                        self.assertGreater(upper, expected)
+                    self.assertEqual(before, [(n.label, n.edge_length) for n in tree.tree])
+        pjtr.plot_ann_tree(extinct, ax, draw_reconstructed=True)
+        self.assertFalse(any(line.get_gid() == 'present-reference' for line in ax.lines))
+        self.assertIn('No sampled tips', [text.get_text() for text in ax.texts])
+
     # Collapsed ancestors, rejected/empty reconstructions and fossil-only observations
     # must mark full-tree paths, not merely nodes that survive reconstruction.
     def test_membership(self):

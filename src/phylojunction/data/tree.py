@@ -2456,6 +2456,9 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
     Plotting is a side-effect. Complete plots fade edges outside the ancestry of
     reconstructed observations, traced to the complete-tree seed (including displayed
     stems above the reconstructed root). Reconstructed plots retain their usual style.
+    A dotted reference marks max_age, or the seed-age convention if no horizon is recorded.
+    Legacy discrete trees may measure ages from their last extinction rather than max_age;
+    their present reference can therefore lie beyond age zero without moving the branches.
 
     Args:
         ann_tr (AnnotatedTree): Instance of AnnotatedTree that we
@@ -3036,6 +3039,17 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
 
     _draw_time_slices(ann_tr, axes, use_age)
 
+    # Heights equal the displayed root age minus stored node age. The horizon's stored
+    # age is seed_age - horizon, including legacy trees whose ages end at extinction.
+    horizon = ann_tr.max_age if ann_tr.max_age is not None else ann_tr.seed_age
+    present_age = ann_tr.seed_age - horizon
+    root_age = ann_tr.rec_tr_root_age if draw_reconstructed else ann_tr.seed_age
+    present_x = present_age if use_age else root_age - present_age
+    # A tiny nonzero stroke keeps round dots visible in Agg/PNG as well as PDF.
+    axes.axvline(present_x, color="0.5", alpha=0.45, linewidth=0.8,
+                 linestyle=(0, (0.1, 3)), dash_capstyle="round", zorder=0,
+                 gid="present-reference", label="_nolegend_")
+
     # draw lines
     for i in horizontal_linecollections:
         axes.add_collection(i)
@@ -3060,7 +3074,10 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
     xmax = max(x_coords.values())
     if continuous_attr is not None:
         xmax = max(xmax, ann_tr.rec_tr_root_age if draw_reconstructed else ann_tr.seed_age, 1e-6)
-    axes.set_xlim(-0.05 * xmax, 1.05 * xmax)
+    # Keep any unobserved interval before the present visible, in either axis convention.
+    left, right = min(0, present_x), max(xmax, present_x)
+    padding = 0.05 * max(right - left, 1e-6)
+    axes.set_xlim(left - padding, right + padding)
 
     # also invert the y-axis (origin at the top)
     # add a small vertical margin, but avoid including 0 and N+1 on the y axis
