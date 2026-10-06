@@ -390,7 +390,7 @@ class TestQuaSSE(unittest.TestCase):
                                        {'dt_max': .1}, {'k': 1}))):
             with self.assertRaises(ValueError):
                 DnQuaSSE(one, zero, 'age', 1, **kwargs)
-        for kwargs in [{'sampling_prob': .5}, {'min_rec_taxa': 0}]:
+        for kwargs in [{'sampling_prob': 0}, {'min_rec_taxa': 0}]:
             with self.assertRaises(ValueError):
                 DnQuaSSE(one, zero, 'size', 2, **kwargs)
         with self.assertRaises(ec.GenerateFailError):
@@ -555,3 +555,150 @@ class TestQuaSSE(unittest.TestCase):
                         finally:
                             plt.close(fig)
 
+    # Fossil events must preserve bridges/marks and freeze traits without acting as births.
+    # Existing birth/death tests cannot protect this node replacement; retire with a shared event engine.
+    def test_fossil_events_and_retries(self):
+        zero, one = ConstantRate(0), ConstantRate(1)
+        dn = DnQuaSSE(zero, zero, 'age', 1, fossil_rate=one, sampling_prob=0,
+                     diffusion=1, method='local_thinning', block_duration=1, max_alive=1)
+        with patch('numpy.random.exponential', side_effect=[.25, .25, 2.]), \
+                patch('numpy.random.uniform', return_value=.5), \
+                patch('numpy.random.normal', side_effect=[2., 0., 0.]), \
+                patch.object(dn, '_start_bridge_interval', wraps=dn._start_bridge_interval) as start:
+            tree = dn.simulate()
+        self.assertEqual(start.call_count, 1)
+        self.assertIsNone(tree.root_node)
+        self.assertEqual((tree.n_sa_nodes, tree.n_extinct_terminal_nodes), (2, 0))
+        self.assertEqual(tree.brosc_node.trait, 2.)
+        self.assertFalse(tree.brosc_node.sampled)
+        self.assertEqual([tree.tree.find_node_with_label(f'sa{i}').trait for i in (1, 2)], [.5, 1.])
+        self.assertEqual(len(tree.extract_reconstructed_tree().leaf_nodes()), 2)
+        self.assertIn('is_sa=True', tree.tree.as_string(schema='newick', suppress_annotations=False))
+        dn.cond_spn = True
+        self.assertFalse(dn._is_tree_accepted(tree))
+        dn.cond_spn, dn.min_rec_taxa = False, 1
+        self.assertFalse(dn._is_tree_accepted(tree))
+        # One fossil survives in the failed attempt, but the next block violates its bound.
+        dn.min_rec_taxa, dn.diffusion = 0, [0.]
+        dn.stop_value = [2.]
+        with patch.object(one, 'bound_on_interval', side_effect=[1., .5, 1., 1.]), \
+                patch('numpy.random.exponential', side_effect=[.25, 2., .25, 2., 2.]), \
+                patch('numpy.random.uniform', return_value=.5), \
+                patch.object(dn, '_start_bridge_interval', wraps=dn._start_bridge_interval) as start:
+            tree = dn.simulate()
+        self.assertEqual(tree.n_sa_nodes, 0)
+        self.assertEqual([call.args[-1] for call in start.call_args_list], [1, 2, 3, 4])
+        for method in ('diversitree', 'local_thinning'):
+            opts = dict(method=method, block_duration=1) if method == 'local_thinning' else dict(k=1)
+            dn = DnQuaSSE(zero, zero, 'age', 1, drift=2, fossil_rate=one, max_alive=1, **opts)
+            with patch('numpy.random.exponential', side_effect=[.25, 2.]), \
+                    patch('numpy.random.uniform', return_value=.5), \
+                    patch('numpy.random.random', return_value=0), patch('numpy.random.choice', return_value=0):
+                tree = dn.simulate()
+            self.assertEqual(tree.n_sa_nodes, 1)
+            self.assertEqual(tree.brosc_node.trait, 2.)
+            self.assertEqual(tree.tree.find_node_with_label('sa1').trait, .5 if method == 'local_thinning' else 0.)
+            extinct = DnQuaSSE(zero, one, 'age', 1, fossil_rate=one, **opts)
+            with patch('numpy.random.exponential', side_effect=[.25, .25]), \
+                    patch('numpy.random.uniform', side_effect=[1.5, .5]), \
+                    patch('numpy.random.random', side_effect=[0., .9, 0., .1]), \
+                    patch('numpy.random.choice', return_value=0):
+                dead_tree = extinct.simulate()
+            self.assertTrue(dead_tree.tree_died)
+            self.assertEqual((dead_tree.n_sa_nodes, dead_tree.n_extinct_terminal_nodes), (1, 1))
+            self.assertEqual(len(dead_tree.extract_reconstructed_tree().leaf_nodes()), 1)
+            self.assertFalse(extinct._is_tree_accepted(dead_tree))
+            extinct.cond_surv = False
+            self.assertTrue(extinct._is_tree_accepted(dead_tree))
+            dn.max_nodes = 2
+            with patch('numpy.random.exponential', return_value=.25), \
+                    patch('numpy.random.uniform', return_value=.5), \
+                    patch('numpy.random.random', return_value=0), patch('numpy.random.choice', return_value=0), \
+                    patch.object(dn, '_record_fossil', wraps=dn._record_fossil) as record:
+                with self.assertRaisesRegex(ec.GenerateFailError, 'max_nodes'):
+                    dn.simulate()
+                record.assert_not_called()
+            with self.assertRaises(ec.GenerateFailError):
+                DnQuaSSE(zero, zero, 'size', 1, fossil_rate=one, **opts).simulate()
+
+    # Size stopping is a marked process: reaching N is not termination, and unsampled tips
+    # still evolve and consume resources. Retire if a shared stopping implementation covers both methods.
+    def test_inherited_flags_and_sampled_size(self):
+        one, zero = ConstantRate(1), ConstantRate(0)
+        dn = DnQuaSSE(one, zero, 'size', 1)
+        for parent, draws, expected in ((False, [.1, .1], (False, True)),
+                                       (False, [.1, .9], (True, False)),
+                                       (True, [.9, .1], (True, False)),
+                                       (True, [.9, .9], (False, True)),
+                                       (False, [.9], (False, False)), (True, [.1], (True, True))):
+            with patch('numpy.random.random', side_effect=draws) as random:
+                self.assertEqual(dn._birth_sampling_flags(parent, .5), expected)
+                self.assertEqual(random.call_count, len(draws))
+        with patch('numpy.random.random') as random:
+            self.assertEqual(dn._birth_sampling_flags(True, 1), (True, True))
+            random.assert_not_called()
+        for method in ('diversitree', 'local_thinning'):
+            opts = dict(method=method, block_duration=10) if method == 'local_thinning' else dict(k=1)
+            for target in (1, 2):
+                # Initial mark false; N successful births, a zero-increment birth at N,
+                # then a terminating birth. No extra draws during final observation sampling.
+                flags = [True] * target + [False, True]
+                fresh_flags = iter(flags)
+                dn = DnQuaSSE(one, zero, 'size', target, sampling_prob=.5, drift=1, **opts)
+                with patch('numpy.random.random', side_effect=[.9] + [0.] * (2 * len(flags))), \
+                        patch('numpy.random.choice', return_value=0), \
+                        patch('numpy.random.exponential', return_value=.25), \
+                        patch('numpy.random.uniform', return_value=0), \
+                        patch.object(dn, '_birth_sampling_flags',
+                                     side_effect=lambda parent, rho: (parent, next(fresh_flags))) as proposals:
+                    tree = dn.simulate()
+                self.assertEqual(proposals.call_count, target + 2)
+                self.assertEqual(tree.n_extant_sampled_terminal_nodes, target)
+                self.assertEqual(tree.n_extant_terminal_nodes, target + 2)
+                for nd in tree.tree.leaf_node_iter():
+                    self.assertAlmostEqual(nd.trait, tree.seed_age)
+                dn.max_alive = 1
+                with patch('numpy.random.random', return_value=.9), \
+                        patch('numpy.random.choice', return_value=0), \
+                        patch('numpy.random.exponential', return_value=.25), \
+                        patch('numpy.random.uniform', return_value=0), \
+                        patch.object(dn, '_birth_sampling_flags', return_value=(False, False)):
+                    with self.assertRaisesRegex(ec.GenerateFailError, 'max_alive'):
+                        dn.simulate()
+            DnQuaSSE(one, zero, 'size', 1, sampling_prob=[.5, 1], n=2, **opts)
+            with self.assertRaises(ValueError):
+                DnQuaSSE(one, zero, 'size', 1, sampling_prob=0, **opts)
+            for bad in (1, [one, one, one]):
+                with self.assertRaises(ValueError):
+                    DnQuaSSE(one, zero, 'age', 1, fossil_rate=bad, **opts)
+
+    # A fossil cannot change the live mark, and sampled deaths must lower the stopping count.
+    # This event sequence covers recovery at K=0, absent from pure-birth and age-stopping tests.
+    def test_marked_fossil_death_and_recovery(self):
+        one = ConstantRate(1)
+        for method in ('diversitree', 'local_thinning'):
+            opts = dict(method=method, block_duration=10) if method == 'local_thinning' else dict(k=1)
+            dn = DnQuaSSE(one, one, 'size', 1, fossil_rate=one, sampling_prob=.5, drift=1, **opts)
+            with patch('numpy.random.random', side_effect=[.1, 0., .9, 0., .1, 0., .5, 0., .1, 0., .1]), \
+                    patch('numpy.random.choice', return_value=0), \
+                    patch('numpy.random.exponential', side_effect=[.1, .1, .1, .2, .1, .5]), \
+                    patch('numpy.random.uniform', side_effect=[2.5, .5, 1.5, .5, .5]), \
+                    patch.object(dn, '_birth_sampling_flags',
+                                 side_effect=[(True, False), (False, True), (False, True)]):
+                tree = dn.simulate()
+            self.assertEqual((tree.n_sa_nodes, tree.n_extant_sampled_terminal_nodes,
+                              tree.n_extant_terminal_nodes, tree.n_extinct_terminal_nodes), (1, 1, 2, 1))
+            self.assertEqual(len(list(tree.tree)), 8)
+            self.assertTrue(tree.tree.find_node_with_label('sa1').sampled)
+            for nd in tree.tree.leaf_node_iter():
+                if nd.alive:
+                    self.assertAlmostEqual(nd.trait, tree.seed_age)
+            # Directly check that recording a fossil on an unsampled lineage preserves False.
+            import dendropy as dp
+            raw = dp.Tree()
+            node = dn._new_node(raw, 'brosc', 2.)
+            node.sampled = False
+            continuation = dn._record_fossil(raw, node, 1)
+            self.assertFalse(continuation.sampled)
+            self.assertTrue(node.child_nodes()[1].sampled)
+            self.assertIs(node.child_nodes()[0], continuation)

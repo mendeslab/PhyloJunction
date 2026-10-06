@@ -14,7 +14,7 @@ from itertools import count
 import numpy as np
 import dendropy as dp
 
-from phylojunction.calculation.continuous_sse import RateFunction
+from phylojunction.calculation.continuous_sse import RateFunction, ConstantRate
 from phylojunction.data.tree import AnnotatedTree
 from phylojunction.pgm.pgm import DistrForSampling
 from phylojunction.utility import exception_classes as ec
@@ -51,7 +51,7 @@ class DnQuaSSE(DistrForSampling):
                  runtime_limit=300, max_steps=1000000, max_alive=100000, rng_seed=None,
                  sampling_prob=1.0, cond_surv=True, cond_spn=False, cond_obs_both_sides=False,
                  min_rec_taxa=None, max_rec_taxa=None, max_n_attempts=200, dt_max=None, max_nodes=None,
-                 block_duration=None, bridge_error=None):
+                 block_duration=None, bridge_error=None, fossil_rate=None):
         self.n_sim = _integer(n, "n")
         self.n_repl = _integer(nr, "nr")
         self.method = method
@@ -84,6 +84,7 @@ class DnQuaSSE(DistrForSampling):
         if stop not in ("age", "size"):
             raise ValueError('stop must be "age" or "size".')
         self.birth_rate, self.death_rate = birth_rate, death_rate
+        self.fossil_rate = ConstantRate(0) if fossil_rate is None else fossil_rate
         self.start_trait, self.drift, self.diffusion = start_trait, drift, diffusion
         self.stop_value = stop_value
         self.sampling_prob = sampling_prob
@@ -105,12 +106,13 @@ class DnQuaSSE(DistrForSampling):
 
     # A sample has one parameter set, shared by its independent replicates and retries.
     def init_check_vectorize_sample_size(self, param_list=None):
-        for name in ("birth_rate", "death_rate", "start_trait", "drift", "diffusion", "stop_value", "sampling_prob"):
+        for name in ("birth_rate", "death_rate", "fossil_rate", "start_trait", "drift", "diffusion",
+                     "stop_value", "sampling_prob"):
             raw = getattr(self, name)
             values = list(raw) if isinstance(raw, (list, tuple, np.ndarray)) else [raw]
             if len(values) not in (1, self.n_sim):
                 raise ValueError(f"{name} must have length 1 or n={self.n_sim}.")
-            if name in ("birth_rate", "death_rate"):
+            if name in ("birth_rate", "death_rate", "fossil_rate"):
                 if not all(isinstance(v, RateFunction) for v in values):
                     raise ValueError(f"{name} requires QuaSSE rate objects.")
             else:
@@ -122,8 +124,8 @@ class DnQuaSSE(DistrForSampling):
                 if name == "sampling_prob":
                     if min(values) < 0 or max(values) > 1:
                         raise ValueError("sampling_prob must be between zero and one.")
-                    if self.stop == "size" and any(v != 1 for v in values):
-                        raise ValueError("Size stopping requires complete sampling.")
+                    if self.stop == "size" and any(v == 0 for v in values):
+                        raise ValueError("Size stopping requires positive sampling_prob.")
                 if name == "stop_value" and self.stop == "size":
                     values = [_integer(v, name) for v in values]
                     if max(values) > self.max_alive:
@@ -142,6 +144,30 @@ class DnQuaSSE(DistrForSampling):
             parent.add_child(node)
         return node
 
+    # Preserve the continuing lineage's identity/mark; the second child records the observation.
+    # Child order distinguishes continuation from fossil even after pruning zero-length edges.
+    def _record_fossil(self, tree, node, fossil_index):
+        label, sampled = node.label, node.sampled
+        node.label = f"dummy{fossil_index}"
+        node.taxon = tree.taxon_namespace.require_taxon(label=node.label)
+        node.alive = node.sampled = node.is_sa = node.is_sa_lineage = False
+        node.is_sa_dummy_parent = True
+        continuation = self._new_node(tree, label, node.trait, node)
+        continuation.sampled, continuation.is_sa_lineage = sampled, True
+        fossil = self._new_node(tree, f"sa{fossil_index}", node.trait, node)
+        fossil.alive, fossil.is_sa = False, True
+        return continuation
+
+    # One daughter inherits and the other gets a fresh Bernoulli mark, so K increases by at most one.
+    # Randomize orientation only for unequal marks; complete sampling must preserve old RNG order.
+    def _birth_sampling_flags(self, parent_sampled, rho):
+        if rho == 1:
+            return True, True
+        fresh = bool(np.random.random() < rho)
+        if fresh == parent_sampled or np.random.random() < .5:
+            return parent_sampled, fresh
+        return fresh, parent_sampled
+
     # Enforce a common deadline inside attempts, so a single large tree cannot bypass it.
     def _check_runtime(self, deadline):
         if time.monotonic() >= deadline:
@@ -155,6 +181,9 @@ class DnQuaSSE(DistrForSampling):
         birth, death = self.birth_rate[sample_idx], self.death_rate[sample_idx]
         drift, variance = self.drift[sample_idx], self.diffusion[sample_idx]
         target = self.stop_value[sample_idx]
+        fossil = self.fossil_rate[sample_idx]
+        fossils_enabled = not fossil.is_identically_zero
+        rho = self.sampling_prob[sample_idx]
         if self.max_nodes is not None and self.max_nodes < 2:
             raise ec.GenerateFailError(self.DN_NAME, "Resource limit max_nodes cannot hold origin and initial lineage.")
         tree = dp.Tree(is_rooted=True)
@@ -162,12 +191,16 @@ class DnQuaSSE(DistrForSampling):
         origin.alive = origin.sampled = False
         tree.seed_node = origin
         living = [self._new_node(tree, "brosc", origin.trait, origin)]
+        if self.stop == "size":
+            living[0].sampled = rho == 1 or bool(np.random.random() < rho)
+        sampled_count = int(living[0].sampled)
         elapsed = 0.0
-        node_count = 0
+        node_count = fossil_count = 0
         steps = 0
         zero_rates = birth.is_identically_zero and death.is_identically_zero
         if self.stop == "size" and zero_rates:
             raise ec.GenerateFailError(self.DN_NAME, "Zero rates cannot reach the size-stopping birth.")
+        zero_rates = zero_rates and not fossils_enabled
         while living and (self.stop == "size" or elapsed < target):
             self._check_runtime(deadline)
             if steps >= self.max_steps:
@@ -178,6 +211,9 @@ class DnQuaSSE(DistrForSampling):
             with np.errstate(over="ignore"):
                 birth_sum, death_sum = float(np.sum(lx)), float(np.sum(mx))
                 total = birth_sum + death_sum
+                if fossils_enabled:
+                    fx = fossil(traits)
+                    total += float(np.sum(fx))
             if not np.isfinite(total):
                 raise ec.GenerateFailError(self.DN_NAME, "Nonfinite total event rate.")
             if total == 0 and not zero_rates and self.dt_max is None:
@@ -194,25 +230,46 @@ class DnQuaSSE(DistrForSampling):
             probability = 1.0 / self.k if dt == full_step else total * dt
             final_step = self.stop == "age" and dt == remaining
             if total and np.random.random() < probability:
-                is_birth = np.random.random() < birth_sum / total
-                weights = lx if is_birth else mx
+                if fossils_enabled:
+                    mark = np.random.random()
+                    is_birth = mark < birth_sum / total
+                    is_fossil = mark >= (birth_sum + death_sum) / total
+                    weights = fx if is_fossil else (lx if is_birth else mx)
+                else:
+                    is_birth = np.random.random() < birth_sum / total
+                    is_fossil = False
+                    weights = lx if is_birth else mx
                 chosen = int(np.random.choice(len(living), p=weights / np.sum(weights)))
-                if is_birth and self.stop == "size" and len(living) == target:
-                    break
+                node = living[chosen]
+                flags = (True, True)
+                if is_birth and self.stop == "size":
+                    flags = self._birth_sampling_flags(node.sampled, rho)
+                    next_count = sampled_count - int(node.sampled) + sum(flags)
+                    if next_count > target:
+                        break
+                    sampled_count = next_count
                 if is_birth and len(living) >= self.max_alive:
                     raise ec.GenerateFailError(self.DN_NAME, "Exceeded max_alive.")
-                # node_count counts all daughters ever allocated, including extinct lineages;
-                # origin and brosc add two more. Check before allocating either new daughter.
-                if is_birth and self.max_nodes is not None and node_count + 4 > self.max_nodes:
+                # Each birth/fossil adds two nodes, in addition to origin and initial lineage.
+                if ((is_birth or is_fossil) and self.max_nodes is not None
+                    and node_count + 2 * fossil_count + 4 > self.max_nodes):
                     raise ec.GenerateFailError(self.DN_NAME, "Exceeded resource limit max_nodes.")
-                node = living.pop(chosen)
-                node.alive = node.sampled = False
-                if is_birth:
-                    if node.label == "brosc":
-                        node.label = node.taxon.label = "root"
-                    for _ in range(2):
-                        node_count += 1
-                        living.append(self._new_node(tree, f"nd{node_count}", node.trait, node))
+                if is_fossil:
+                    fossil_count += 1
+                    living[chosen] = self._record_fossil(tree, node, fossil_count)
+                else:
+                    living.pop(chosen)
+                    if not is_birth:
+                        sampled_count -= int(node.sampled)
+                    node.alive = node.sampled = False
+                    if is_birth:
+                        if node.label == "brosc":
+                            node.label = node.taxon.label = "root"
+                        for flag in flags:
+                            node_count += 1
+                            daughter = self._new_node(tree, f"nd{node_count}", node.trait, node)
+                            daughter.sampled = flag
+                            living.append(daughter)
             if not living:
                 break
             # Brownian variance is variance-per-time multiplied by elapsed duration.
@@ -255,7 +312,7 @@ class DnQuaSSE(DistrForSampling):
     # Allocate epsilon_j=delta/[j(j+1)] before sampling an unconditional endpoint.
     # A bridge's two-sided deviation exceeds r with probability <=2*exp(-2*r*r/(v*h)).
     # Enlarging the endpoint range by r therefore gives a likely region, not a hard barrier.
-    def _start_bridge_interval(self, node, time, end_time, birth, death, drift, variance, block_index):
+    def _start_bridge_interval(self, node, time, end_time, birth, death, drift, variance, block_index, fossil_rate=None):
         if not math.isfinite(end_time) or end_time <= time:
             raise ec.GenerateFailError(self.DN_NAME, "Cannot advance Brownian block time.")
         duration = end_time - time
@@ -271,6 +328,8 @@ class DnQuaSSE(DistrForSampling):
         if not all(math.isfinite(x) for x in (endpoint, left, right)):
             raise ec.GenerateFailError(self.DN_NAME, "Nonfinite Brownian endpoint or region.")
         bound = birth.bound_on_interval(left, right) + death.bound_on_interval(left, right)
+        if fossil_rate is not None:
+            bound += fossil_rate.bound_on_interval(left, right)
         if not math.isfinite(bound):
             raise ec.GenerateFailError(self.DN_NAME, "Nonfinite total proposal bound.")
         return _LineageInterval(node, time, end_time, float(endpoint), bound)
@@ -284,6 +343,9 @@ class DnQuaSSE(DistrForSampling):
         birth, death = self.birth_rate[sample_idx], self.death_rate[sample_idx]
         drift, variance = self.drift[sample_idx], self.diffusion[sample_idx]
         target = self.stop_value[sample_idx]
+        fossil = self.fossil_rate[sample_idx]
+        fossils_enabled = not fossil.is_identically_zero
+        rho = self.sampling_prob[sample_idx]
         self._check_runtime(deadline)
         if self.max_nodes is not None and self.max_nodes < 2:
             raise ec.GenerateFailError(self.DN_NAME, "Resource limit max_nodes cannot hold origin and initial lineage.")
@@ -292,11 +354,15 @@ class DnQuaSSE(DistrForSampling):
         origin.alive = origin.sampled = False
         tree.seed_node = origin
         initial = self._new_node(tree, "brosc", origin.trait, origin)
+        if self.stop == "size":
+            initial.sampled = rho == 1 or bool(np.random.random() < rho)
+        sampled_count = int(initial.sampled)
         if self.stop == "age" and target == 0:
             return tree, 0.0
-        if birth.is_identically_zero and death.is_identically_zero:
-            if self.stop == "size":
-                raise ec.GenerateFailError(self.DN_NAME, "Zero rates cannot reach the size-stopping birth.")
+        zero_biological = birth.is_identically_zero and death.is_identically_zero
+        if zero_biological and self.stop == "size":
+            raise ec.GenerateFailError(self.DN_NAME, "Zero rates cannot reach the size-stopping birth.")
+        if zero_biological and not fossils_enabled:
             trait = initial.trait + drift * target
             if variance:
                 trait += math.sqrt(variance * target) * np.random.normal()
@@ -331,13 +397,14 @@ class DnQuaSSE(DistrForSampling):
             end_time = time + self.block_duration
             if self.stop == "age":
                 end_time = min(end_time, target)
+            fossil_args = {"fossil_rate": fossil} if fossils_enabled else {}
             interval = self._start_bridge_interval(node, time, end_time, birth, death,
-                                                   drift, variance, next(block_indices))
+                                                   drift, variance, next(block_indices), **fossil_args)
             living[node] = interval
             schedule(interval)
 
         start(initial, 0.0)
-        node_count = 0
+        node_count = fossil_count = 0
         elapsed = 0.0
         while queue:
             self._check_runtime(deadline)
@@ -351,8 +418,9 @@ class DnQuaSSE(DistrForSampling):
                     start(node, elapsed)
                 continue
             lx, mx = float(birth(node.trait)), float(death(node.trait))
-            total = lx + mx
-            if not all(math.isfinite(x) and x >= 0 for x in (lx, mx, total)):
+            fx = float(fossil(node.trait)) if fossils_enabled else 0.0
+            total = lx + mx + fx if fossils_enabled else lx + mx
+            if not all(math.isfinite(x) and x >= 0 for x in (lx, mx, fx, total)):
                 raise ec.GenerateFailError(self.DN_NAME, "Nonfinite or negative event rate.")
             if total > interval.rate_bound:
                 raise _LocalBoundExceeded(f"At time {elapsed}, trait {node.trait}: rate {total} "
@@ -362,7 +430,12 @@ class DnQuaSSE(DistrForSampling):
                 schedule(interval)
                 continue
             is_birth = mark < lx
-            if is_birth and self.stop == "size" and len(living) == target:
+            flags = (True, True)
+            next_count = sampled_count
+            if is_birth and self.stop == "size":
+                flags = self._birth_sampling_flags(node.sampled, rho)
+                next_count = sampled_count - int(node.sampled) + sum(flags)
+            if is_birth and self.stop == "size" and next_count > target:
                 # Other nodes have revealed no events after this time. Conditional on their
                 # endpoints/past traits, advance each existing bridge to the stopping birth.
                 for pending in living.values():
@@ -371,16 +444,29 @@ class DnQuaSSE(DistrForSampling):
                 return tree, elapsed
             if is_birth and len(living) >= self.max_alive:
                 raise ec.GenerateFailError(self.DN_NAME, "Exceeded max_alive.")
-            if is_birth and self.max_nodes is not None and node_count + 4 > self.max_nodes:
+            is_fossil = mark >= lx + mx
+            if ((is_birth or is_fossil) and self.max_nodes is not None
+                    and node_count + 2 * fossil_count + 4 > self.max_nodes):
                 raise ec.GenerateFailError(self.DN_NAME, "Exceeded resource limit max_nodes.")
             del living[node]
+            if is_fossil:
+                fossil_count += 1
+                continuation = self._record_fossil(tree, node, fossil_count)
+                # Sampling reveals the existing bridge; its endpoint, bound and budget remain valid.
+                interval.node = continuation
+                living[continuation] = interval
+                schedule(interval)
+                continue
+            sampled_count = next_count if is_birth else sampled_count - int(node.sampled)
             node.alive = node.sampled = False
             if is_birth:
                 if node.label == "brosc":
                     node.label = node.taxon.label = "root"
-                for _ in range(2):
+                for flag in flags:
                     node_count += 1
-                    start(self._new_node(tree, f"nd{node_count}", node.trait, node), elapsed)
+                    daughter = self._new_node(tree, f"nd{node_count}", node.trait, node)
+                    daughter.sampled = flag
+                    start(daughter, elapsed)
         return tree, float(target if self.stop == "age" else elapsed)
 
     # Dispatch without changing downstream tree/observation contracts or default RNG order.
@@ -402,9 +488,17 @@ class DnQuaSSE(DistrForSampling):
                     # budget. Restarting is approximate recovery, not exact rejection sampling.
                     continue
         probability = self.sampling_prob[sample_idx]
+        has_fossils = False
         for node in tree.leaf_node_iter():
-            node.sampled = node.alive and (probability == 1 or
-                                          (probability > 0 and np.random.random() < probability))
+            if node.is_sa:
+                has_fossils = True
+            elif self.stop == "age":
+                node.sampled = node.alive and (probability == 1 or
+                                              (probability > 0 and np.random.random() < probability))
+        if has_fossils:
+            for node in tree:
+                node.annotations.add_bound_attribute("is_sa")
+                node.annotations.add_bound_attribute("is_sa_dummy_parent")
         return AnnotatedTree(tree, ContinuousTrait(), start_at_origin=True, max_age=horizon,
                              condition_on_obs_both_sides_root=self.cond_obs_both_sides,
                              tree_died=not any(nd.alive for nd in tree.leaf_node_iter()),
