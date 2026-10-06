@@ -19,7 +19,8 @@ Requirements and dependencies
 For the most part, |pj| has been developed and tested on an M1-chip Apple machine (running macOS Sonoma), though it is periodically tested on Linux (Ubuntu).
 There is no support for Microsoft Windows.
 
-|pj| currently runs under Python 3.11 and has various Python library dependencies.
+|pj| requires Python 3.10 or newer and has various Python library dependencies.
+The graphical interface uses PySide6 and superqt, which supplies its wrapping control layout.
 Fortunately those are automatically handled by the `pip <https://pip.pypa.io/en/stable/getting-started/>`_ installer, as shown below.
 
 -------------------------

@@ -393,119 +393,88 @@ font: 11pt "Courier";</string>
         </widget>
        </item>
        <item>
-        <layout class="QVBoxLayout" name="plot_controls_layout">
-         <item>
-          <layout class="QHBoxLayout" name="sample_mode_layout">
-           <item>
-            <widget class="QRadioButton" name="one_sample_radio">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: black;
+        <widget class="QWidget" name="plot_controls">
+         <widget class="QRadioButton" name="one_sample_radio">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">color: black;
 </string>
-             </property>
-             <property name="text">
-              <string>One sample</string>
-             </property>
-             <property name="checkable">
-              <bool>false</bool>
-             </property>
-             <property name="checked">
-              <bool>false</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QRadioButton" name="all_samples_radio">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: black;</string>
-             </property>
-             <property name="text">
-              <string>All samples</string>
-             </property>
-             <property name="checkable">
-              <bool>false</bool>
-             </property>
-             <property name="autoExclusive">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QCheckBox" name="reconstructed_tree_check">
-             <property name="text">
-              <string>Reconstructed</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <spacer name="mode_stretch">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-            </spacer>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <layout class="QHBoxLayout" name="sample_selection_layout">
-           <item>
-            <widget class="QSpinBox" name="sample_idx_spin">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: black;</string>
-             </property>
-             <property name="accelerated">
-              <bool>true</bool>
-             </property>
-             <property name="prefix">
-              <string>Sample #</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QSpinBox" name="repl_idx_spin">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">color: black;
+          </property>
+          <property name="text">
+           <string>One sample</string>
+          </property>
+          <property name="checkable">
+           <bool>false</bool>
+          </property>
+          <property name="checked">
+           <bool>false</bool>
+          </property>
+         </widget>
+         <widget class="QRadioButton" name="all_samples_radio">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">color: black;</string>
+          </property>
+          <property name="text">
+           <string>All samples</string>
+          </property>
+          <property name="checkable">
+           <bool>false</bool>
+          </property>
+          <property name="autoExclusive">
+           <bool>true</bool>
+          </property>
+         </widget>
+         <widget class="QCheckBox" name="reconstructed_tree_check">
+          <property name="text">
+           <string>Reconstructed</string>
+          </property>
+         </widget>
+         <widget class="QSpinBox" name="sample_idx_spin">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">color: black;</string>
+          </property>
+          <property name="accelerated">
+           <bool>true</bool>
+          </property>
+          <property name="prefix">
+           <string>Sample #</string>
+          </property>
+         </widget>
+         <widget class="QSpinBox" name="repl_idx_spin">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">color: black;
 </string>
-             </property>
-             <property name="readOnly">
-              <bool>false</bool>
-             </property>
-             <property name="accelerated">
-              <bool>true</bool>
-             </property>
-             <property name="prefix">
-              <string>Replicate #</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <spacer name="selection_stretch">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-            </spacer>
-           </item>
-           <item>
-            <widget class="QPushButton" name="save_pgm_node_plot">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="cursor">
-              <cursorShape>PointingHandCursor</cursorShape>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">QPushButton{
+          </property>
+          <property name="readOnly">
+           <bool>false</bool>
+          </property>
+          <property name="accelerated">
+           <bool>true</bool>
+          </property>
+          <property name="prefix">
+           <string>Replicate #</string>
+          </property>
+         </widget>
+         <widget class="QPushButton" name="save_pgm_node_plot">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
+          <property name="cursor">
+           <cursorShape>PointingHandCursor</cursorShape>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">QPushButton{
     background-color: lightgray;
     border-radius: 2px;
 }
@@ -515,15 +484,12 @@ QPushButton:hover{
 QPushButton:pressed{
     background-color: #ffffff;
 }</string>
-             </property>
-             <property name="text">
-              <string>Save plot as</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-        </layout>
+          </property>
+          <property name="text">
+           <string>Save plot as</string>
+          </property>
+         </widget>
+        </widget>
        </item>
        <item>
         <layout class="QHBoxLayout" name="plot_and_nodes_layout" stretch="1,0">

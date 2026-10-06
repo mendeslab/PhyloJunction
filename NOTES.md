@@ -333,6 +333,10 @@ Check that the draw and clear icons use `:/draw.svg` and `:/icon_clear.svg`, res
 The UI file supplies the custom widget module paths. Review generated changes separately from
 layout changes when switching generator versions.
 
+The `plot_controls` Designer placeholder is arranged after `setupUi` using
+`superqt.QFlowLayout` in `content_main_window.py`. Designer does not preview its wrapping.
+Keep the control objects in the UI file and their layout setup in that method.
+
 ### Qt Creator / Qt Designer
 
 This can be a finnicky program, so here are a few notes.

@@ -12,6 +12,8 @@ from PySide6.QtWidgets import QSpacerItem  # type: ignore
 from PySide6.QtWidgets import QSizePolicy  # type: ignore
 from PySide6.QtWidgets import QMessageBox  # type: ignore
 
+from superqt import QFlowLayout
+
 # pj imports #
 from phylojunction.interface.pysidegui.pjguipages.gui_pages \
     import Ui_PJGUIPages  # type: ignore
@@ -241,6 +243,19 @@ class ContentGUIMainWindow(object):
 
         self.ui_pages = Ui_PJGUIPages()
         self.ui_pages.setupUi(self.pages)  # self.pages is the parent
+
+        # Install the wrapping layout after Designer has created the existing controls.
+        # Height-for-width lets the parent reserve only the rows currently needed.
+        controls = self.ui_pages
+        flow = QFlowLayout(controls.plot_controls)
+        flow.setContentsMargins(0, 0, 0, 0)
+        flow.setHorizontalSpacing(6)
+        flow.setVerticalSpacing(6)
+        for widget in (controls.one_sample_radio, controls.all_samples_radio,
+                       controls.reconstructed_tree_check, controls.sample_idx_spin,
+                       controls.repl_idx_spin, controls.save_pgm_node_plot):
+            flow.addWidget(widget)
+
         self.ui_pages.sample_idx_spin.setDisabled(True)
         self.ui_pages.repl_idx_spin.setDisabled(True)
 

@@ -211,66 +211,36 @@ class Ui_PJGUIPages(object):
 
         self.model_frame_layout.addWidget(self.node_content_tabs)
 
-        self.plot_controls_layout = QVBoxLayout()
-        self.plot_controls_layout.setObjectName(u"plot_controls_layout")
-        self.sample_mode_layout = QHBoxLayout()
-        self.sample_mode_layout.setObjectName(u"sample_mode_layout")
-        self.one_sample_radio = QRadioButton(self.pgm_page_frame)
+        self.plot_controls = QWidget(self.pgm_page_frame)
+        self.plot_controls.setObjectName(u"plot_controls")
+        self.one_sample_radio = QRadioButton(self.plot_controls)
         self.one_sample_radio.setObjectName(u"one_sample_radio")
         self.one_sample_radio.setEnabled(False)
         self.one_sample_radio.setStyleSheet(u"color: black;\n"
 "")
         self.one_sample_radio.setCheckable(False)
         self.one_sample_radio.setChecked(False)
-
-        self.sample_mode_layout.addWidget(self.one_sample_radio)
-
-        self.all_samples_radio = QRadioButton(self.pgm_page_frame)
+        self.all_samples_radio = QRadioButton(self.plot_controls)
         self.all_samples_radio.setObjectName(u"all_samples_radio")
         self.all_samples_radio.setEnabled(False)
         self.all_samples_radio.setStyleSheet(u"color: black;")
         self.all_samples_radio.setCheckable(False)
         self.all_samples_radio.setAutoExclusive(True)
-
-        self.sample_mode_layout.addWidget(self.all_samples_radio)
-
-        self.reconstructed_tree_check = QCheckBox(self.pgm_page_frame)
+        self.reconstructed_tree_check = QCheckBox(self.plot_controls)
         self.reconstructed_tree_check.setObjectName(u"reconstructed_tree_check")
-
-        self.sample_mode_layout.addWidget(self.reconstructed_tree_check)
-
-        self.mode_stretch = QSpacerItem(0, 0, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-
-        self.sample_mode_layout.addItem(self.mode_stretch)
-
-
-        self.plot_controls_layout.addLayout(self.sample_mode_layout)
-
-        self.sample_selection_layout = QHBoxLayout()
-        self.sample_selection_layout.setObjectName(u"sample_selection_layout")
-        self.sample_idx_spin = QSpinBox(self.pgm_page_frame)
+        self.sample_idx_spin = QSpinBox(self.plot_controls)
         self.sample_idx_spin.setObjectName(u"sample_idx_spin")
         self.sample_idx_spin.setEnabled(False)
         self.sample_idx_spin.setStyleSheet(u"color: black;")
         self.sample_idx_spin.setAccelerated(True)
-
-        self.sample_selection_layout.addWidget(self.sample_idx_spin)
-
-        self.repl_idx_spin = QSpinBox(self.pgm_page_frame)
+        self.repl_idx_spin = QSpinBox(self.plot_controls)
         self.repl_idx_spin.setObjectName(u"repl_idx_spin")
         self.repl_idx_spin.setEnabled(False)
         self.repl_idx_spin.setStyleSheet(u"color: black;\n"
 "")
         self.repl_idx_spin.setReadOnly(False)
         self.repl_idx_spin.setAccelerated(True)
-
-        self.sample_selection_layout.addWidget(self.repl_idx_spin)
-
-        self.selection_stretch = QSpacerItem(0, 0, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-
-        self.sample_selection_layout.addItem(self.selection_stretch)
-
-        self.save_pgm_node_plot = QPushButton(self.pgm_page_frame)
+        self.save_pgm_node_plot = QPushButton(self.plot_controls)
         self.save_pgm_node_plot.setObjectName(u"save_pgm_node_plot")
         self.save_pgm_node_plot.setEnabled(True)
         self.save_pgm_node_plot.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
@@ -285,13 +255,7 @@ class Ui_PJGUIPages(object):
 "    background-color: #ffffff;\n"
 "}")
 
-        self.sample_selection_layout.addWidget(self.save_pgm_node_plot)
-
-
-        self.plot_controls_layout.addLayout(self.sample_selection_layout)
-
-
-        self.model_frame_layout.addLayout(self.plot_controls_layout)
+        self.model_frame_layout.addWidget(self.plot_controls)
 
         self.plot_and_nodes_layout = QHBoxLayout()
         self.plot_and_nodes_layout.setObjectName(u"plot_and_nodes_layout")
