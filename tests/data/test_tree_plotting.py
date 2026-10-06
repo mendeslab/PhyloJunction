@@ -1610,3 +1610,36 @@ if __name__ == "__main__":
     # $ python3.11 -m unittest tests.data.test_tree_plotting.TestReconstructedTreePrint.test_one_lineage_left_rec_tr_plot
 
     unittest.main()
+
+class TestColorbarLayout(unittest.TestCase):
+    # Colorbar cleanup must preserve automatic layout without changing manual CLI positions.
+    # Existing tree images do not cover repeated resizing or axes participation in layout.
+    def test_colorbar_cleanup_preserves_layout(self):
+        from matplotlib.figure import Figure
+        from matplotlib.backends.backend_agg import FigureCanvasAgg
+        import numpy as np
+
+        for managed in (False, True):
+            with self.subTest(managed=managed):
+                fig = Figure(figsize=(8, 5), constrained_layout=managed)
+                FigureCanvasAgg(fig)
+                ax = fig.add_subplot(111) if managed else fig.add_axes([.075, .25, .6, .7])
+                fig.canvas.draw()
+                original = ax.get_position().bounds
+                for width in (8, 12, 8):
+                    fig.set_size_inches(width, 5)
+                    for _ in range(3):
+                        marker = ax.scatter([0, 1], [0, 1], c=[0, 1])
+                        ax._pj_trait_position = ax.get_position(original=True).frozen()
+                        ax._pj_trait_colorbar = fig.colorbar(marker, ax=ax, label='trait')
+                        fig.canvas.draw()
+                        self.assertEqual(len(fig.axes), 2)
+                        pjtr.clear_trait_colorbar(ax)
+                        marker.remove()
+                        fig.canvas.draw()
+                        self.assertEqual(len(fig.axes), 1)
+                        if managed:
+                            self.assertTrue(ax.get_in_layout())
+                            self.assertGreater(ax.get_position().width, .8)
+                        else:
+                            np.testing.assert_allclose(ax.get_position().bounds, original)

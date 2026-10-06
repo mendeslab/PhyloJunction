@@ -2409,12 +2409,17 @@ def get_y_coord_from_n_obs_nodes(ann_tr: AnnotatedTree,
 
 
 # Remove the trait colorbar and undo the space it took from the plotting axes.
-# Manually positioned CLI/GUI axes are not restored by Colorbar.remove() itself.
+# Manually positioned axes need explicit restoration; managed subplots must stay in layout.
 def clear_trait_colorbar(axes: plt.Axes) -> None:
     colorbar = getattr(axes, "_pj_trait_colorbar", None)
     if colorbar is not None:
         colorbar.remove()
-        axes.set_position(axes._pj_trait_position, which="both")
+        # set_position opts an axes out of constrained layout. Only restore a fixed
+        # rectangle for unmanaged axes, including the CLI's manually positioned plots.
+        managed = (axes.figure.get_constrained_layout() and
+                   getattr(axes, "get_subplotspec", lambda: None)() is not None)
+        if not managed:
+            axes.set_position(axes._pj_trait_position, which="both")
         axes._pj_trait_colorbar = None
         axes._pj_trait_position = None
 

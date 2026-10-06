@@ -9,11 +9,11 @@ class MatplotlibWidget(QWidget):
     def __init__(self, parent=None):
         QWidget.__init__(self, parent)
 
-        self.fig = Figure(figsize=(11,4.5))
+        self.fig = Figure(figsize=(11,4.5), constrained_layout=True)
         # self.fig = Figure(figsize=(15,6))
         
         # populate self.axes
-        self.initialize_axes(self.fig)
+        self.initialize_axes()
         
         self.canvas = FigureCanvasQTAgg(self.fig)  # widget
         self.canvas.setParent(self)
@@ -32,11 +32,12 @@ class MatplotlibWidget(QWidget):
             self,
             disabled_yticks: bool = True,
             disabled_xticks: bool = True) -> None:
-        # horiz coord of lower-left corner
-        # vertical coord of lower-left corner
-        # subplott width
-        # subplot height        
-        ax = self.fig.add_axes([0.075, 0.25, 0.6, 0.7])
+        # Some pages initialize twice while preparing a plot. Reset the figure here
+        # so each initialization owns one axes and leaves no old axes or colorbars.
+        self.fig.clear()
+        # Let Matplotlib allocate room for labels and colorbars as the canvas resizes.
+        # Subplots participate in constrained layout; fixed add_axes rectangles do not.
+        ax = self.fig.add_subplot(111)
         ax.patch.set_alpha(0.0)
 
         if disabled_xticks:
