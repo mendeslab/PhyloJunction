@@ -214,12 +214,15 @@ The parameters of this function are:</p>
 <section id="quasse">
 <h1>QuaSSE<a class="headerlink" href="#quasse" title="Link to this heading"></a></h1>
 <p>QuaSSE couples a real-valued Brownian trait to trait-dependent speciation and extinction.
-Simulation uses an approximate method based on <code class="docutils literal notranslate"><span class="pre">diversitree</span></code>.</p>
+Two simulation methods are available: the default <code class="docutils literal notranslate"><span class="pre">diversitree</span></code> approximation and
+<code class="docutils literal notranslate"><span class="pre">local_thinning</span></code>, which evaluates rates at Brownian-bridge candidate traits and has an
+explicit probability-error budget under the assumptions below.</p>
 <p>With PhyloJunction installed, run these commands from the repository root (where
 <code class="docutils literal notranslate"><span class="pre">examples/</span></code> is located):</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pjcli<span class="w"> </span>examples/quasse.pj<span class="w"> </span>-d<span class="w"> </span>-f<span class="w"> </span><span class="s1">'trees;1-2'</span><span class="w"> </span>-r<span class="w"> </span><span class="m">42</span><span class="w"> </span>-o<span class="w"> </span>/tmp/quasse-output
 pjcli<span class="w"> </span>examples/quasse_size.pj<span class="w"> </span>-d<span class="w"> </span>-r<span class="w"> </span><span class="m">42</span><span class="w"> </span>-o<span class="w"> </span>/tmp/quasse-size
 pjcli<span class="w"> </span>examples/quasse_conditioned.pj<span class="w"> </span>-d<span class="w"> </span>-r<span class="w"> </span><span class="m">42</span><span class="w"> </span>-o<span class="w"> </span>/tmp/quasse-conditioned
+pjcli<span class="w"> </span>examples/quasse_local_thinning.pj<span class="w"> </span>-d<span class="w"> </span>-r<span class="w"> </span><span class="m">42</span><span class="w"> </span>-o<span class="w"> </span>/tmp/quasse-local
 </pre></div>
 </div>
 <p>Each <code class="docutils literal notranslate"><span class="pre">.pj</span></code> statement must occupy one line. <code class="docutils literal notranslate"><span class="pre">-d</span></code> writes data; <code class="docutils literal notranslate"><span class="pre">-f</span></code> selects figures.
@@ -324,13 +327,54 @@ required. If survival conditioning is disabled, extinct outcomes can also be ret
 </ul>
 <p>The method is approximate. Increasing <code class="docutils literal notranslate"><span class="pre">k</span></code> generally improves resolution at greater cost;
 <code class="docutils literal notranslate"><span class="pre">k</span></code> does not specify an absolute time-step tolerance. It defaults to 500 and must be an integer
-at least one. The default and currently only method is <code class="docutils literal notranslate"><span class="pre">&quot;diversitree&quot;</span></code>.</p>
+at least one. The default method is <code class="docutils literal notranslate"><span class="pre">&quot;diversitree&quot;</span></code>.</p>
 <p>Optional <code class="docutils literal notranslate"><span class="pre">dt_max</span></code> is a positive finite duration. When supplied, each interval is at most
 min(1/(kR), dt_max, remaining age), with event probability R times that interval. This can
 resolve trait changes where present rates are small, but is not an error tolerance or an exact
 simulation method. Step discontinuities and rapidly varying or unbounded rates require
 resolution checks using smaller <code class="docutils literal notranslate"><span class="pre">dt_max</span></code> and larger <code class="docutils literal notranslate"><span class="pre">k</span></code>. Omitting it preserves the original
 step selection for positive total rates.</p>
+</section>
+<section id="brownian-bridge-local-thinning">
+<h2>Brownian bridge local thinning<a class="headerlink" href="#brownian-bridge-local-thinning" title="Link to this heading"></a></h2>
+<p>Select <code class="docutils literal notranslate"><span class="pre">method=&quot;local_thinning&quot;</span></code> and supply a positive finite <code class="docutils literal notranslate"><span class="pre">block_duration</span></code> in the
+model’s time units. Each living lineage samples a Brownian endpoint up to that duration away.
+The endpoints and a Brownian-bridge tail bound define a likely containing trait interval.
+The maximum birth and death rates over that interval bound a Poisson proposal process.
+At each candidate time the simulator samples the actual intermediate trait from the stored
+bridge and accepts a birth or death using its actual rate. Rejected candidates retain the
+same endpoint. At birth the parent ends at that time and its daughters evolve independently.
+There is no one-event-per-step restriction and no requirement that rates change slowly.</p>
+<p>Longer blocks save endpoint work but can enlarge proposal bounds and increase rejected
+candidates. Thus <code class="docutils literal notranslate"><span class="pre">block_duration</span></code> primarily controls cost. It need not be extremely small
+for accuracy. Local thinning does not use <code class="docutils literal notranslate"><span class="pre">dt_max</span></code> or <code class="docutils literal notranslate"><span class="pre">k</span></code>: a supplied <code class="docutils literal notranslate"><span class="pre">dt_max</span></code> or
+nondefault <code class="docutils literal notranslate"><span class="pre">k</span></code> is rejected; the inherited default <code class="docutils literal notranslate"><span class="pre">k=500</span></code> is ignored.</p>
+<p><code class="docutils literal notranslate"><span class="pre">bridge_error</span></code> defaults to <code class="docutils literal notranslate"><span class="pre">1e-8</span></code> and must be finite and strictly between zero and one.
+It budgets excursions outside the likely trait regions across a complete <code class="docutils literal notranslate"><span class="pre">generate()</span></code>
+call, including every sample, replicate, biological rejection and numerical restart.
+Block j receives probability allowance δ/[j(j+1)], whose infinite sum is δ.
+A direct <code class="docutils literal notranslate"><span class="pre">simulate()</span></code> call gets its own budget. Separate calls start new budgets.
+All existing rate families are supported, including uncapped linear, quadratic and
+absolute-value functions: a finite local bound suffices, without a global rate cap.</p>
+<p>A finite evaluated total rate exceeding its proposal bound automatically restarts the
+current tree with the same model parameters. RNG progression, error budget, deadline and
+remaining work allowance persist. Completed earlier trees are retained. This does not
+consume a biological rejection attempt. A loose valid bound merely wastes candidate work;
+an invalid bound can miss events, so restarting does not make this an exact sampler.</p>
+<p>With exact arithmetic and sampling, valid interval bounds, and a terminating, nonexplosive
+reference process, the total variation distance from the exact complete output law is at
+most <code class="docutils literal notranslate"><span class="pre">bridge_error</span></code>. The coupling agrees until the first region excursion, which also
+covers detected violations and their restarts. This is an absolute probability bound,
+not a relative bound on population means or other unbounded statistics. It is not a claim
+of second-order convergence in block duration. Floating-point error and computational
+interruptions are outside this guarantee. Biological rejection-limit failure is included
+as an output; discarding failures and conditioning on success needs a separate bound
+(at most 2δ/p, capped at one, where p is exact success probability and both are positive).</p>
+<p>Age stopping ends living branches exactly at the requested age. Size stopping retains the
+same N-to-N+1 convention as diversitree, but uses the continuous candidate birth time and
+advances every unfinished bridge to that time. The stored future endpoints are retained
+when sampling final traits. Sampling and biological conditions are shared by both methods.</p>
+<p>The derivation and assumptions are in <code class="docutils literal notranslate"><span class="pre">TODO/simulator.tex</span></code> in the source repository.</p>
 </section>
 <section id="observation-and-conditions">
 <h2>Observation and conditions<a class="headerlink" href="#observation-and-conditions" title="Link to this heading"></a></h2>
@@ -403,7 +447,7 @@ impossible conditions can exhaust the rejection budget. Limits are:</p>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">max_steps</span></code></p></td>
 <td><p>1,000,000</p></td>
-<td><p>Iterations per attempt</p></td>
+<td><p>Diversitree steps or local queue actions per attempt, shared across numerical restarts</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">max_alive</span></code></p></td>
 <td><p>100,000</p></td>
@@ -416,15 +460,17 @@ impossible conditions can exhaust the rejection budget. Limits are:</p>
 </tbody>
 </table>
 <p>All limits are positive; count limits are integers. Reaching the rejection budget raises an
-error. Numerical failures and exceeded resource limits also raise errors, without rejection
-and retry. In particular, transiently exceeding <code class="docutils literal notranslate"><span class="pre">max_rec_taxa</span></code> does not reject an attempt.</p>
+error. Except for the finite local bound-exceedance recovery described above, numerical
+failures and exceeded resource limits raise errors without retry. In particular, transiently
+exceeding <code class="docutils literal notranslate"><span class="pre">max_rec_taxa</span></code> does not reject an attempt.</p>
 <p><code class="docutils literal notranslate"><span class="pre">max_nodes</span></code> is checked before creating the initial two nodes or either daughter at a birth.
 The omitted size-stopping birth does not consume nodes. This is a memory safeguard, not an
 infinite-population detector; hitting it raises an error without returning a truncated tree.</p>
 <p>When both rate functions are identically zero, age stopping uses a direct Brownian transition,
 even with <code class="docutils literal notranslate"><span class="pre">dt_max</span></code> set. Size stopping then fails because its terminating birth is unreachable.
-If the total rate is zero only at the current traits (including numerical underflow), supply
-<code class="docutils literal notranslate"><span class="pre">dt_max</span></code> so traits can advance and rates be reevaluated; without it, simulation raises an error.</p>
+For diversitree, if the total rate is zero only at the current traits (including underflow), supply
+<code class="docutils literal notranslate"><span class="pre">dt_max</span></code> so traits can advance and rates be reevaluated; without it, simulation raises an error.
+Local thinning instead renews Brownian blocks even when a local proposal bound is zero.</p>
 </section>
 <section id="trees-plots-and-output">
 <h2>Trees, plots, and output<a class="headerlink" href="#trees-plots-and-output" title="Link to this heading"></a></h2>
@@ -462,7 +508,10 @@ independent random generators.</p>
 <code class="docutils literal notranslate"><span class="pre">phylojunction.calculation.continuous_sse</span></code>. They accept the same named arguments as the
 script constructors and evaluate NumPy arrays or scalars. Their shared <code class="docutils literal notranslate"><span class="pre">RateFunction</span></code>
 interface exposes <code class="docutils literal notranslate"><span class="pre">is_identically_zero</span></code> and <code class="docutils literal notranslate"><span class="pre">upper_bound</span></code> (a conservative finite bound,
-or <code class="docutils literal notranslate"><span class="pre">None</span></code> when unavailable). A zero rate at one trait is not an identically zero function.</p>
+or <code class="docutils literal notranslate"><span class="pre">None</span></code> when unavailable). A zero rate at one trait is not an identically zero function.
+<code class="docutils literal notranslate"><span class="pre">bound_on_interval(left,</span> <span class="pre">right)</span></code> returns a finite conservative bound on a closed finite
+interval, including zero-width intervals, or raises <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> if unavailable.
+Positive bounds have an outward floating-point guard; this is not certified interval arithmetic.</p>
 </section>
 <section id="additional-scripts">
 <h2>Additional scripts<a class="headerlink" href="#additional-scripts" title="Link to this heading"></a></h2>
@@ -489,6 +538,14 @@ unbounded := quasse_quadratic(baseline=0.1, strength=0.05, center=0)
 death := quasse_constant(rate=0.02)
 bounded_trees ~ quasse(birth_rate=bounded, death_rate=death, diffusion=0.1, stop="age", stop_value=2, dt_max=0.01, max_nodes=10000)
 unbounded_trees ~ quasse(birth_rate=unbounded, death_rate=death, diffusion=0.1, stop="age", stop_value=2, dt_max=0.01, max_nodes=10000)
+</pre></div>
+</div>
+<p>Local thinning with uncapped quadratic speciation
+(<a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/quasse_local_thinning.pj" rel="noreferrer" target="_blank">quasse_local_thinning.pj</a>):</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span># Uncapped quadratic speciation with Brownian bridge local thinning.
+b := quasse_quadratic(baseline=0.6,strength=0.05,center=0)
+d := quasse_constant(rate=0.2)
+trees ~ quasse(n=2,nr=2,birth_rate=b,death_rate=d,stop="age",stop_value=2,start_trait=0,drift=0,diffusion=1,method="local_thinning",block_duration=0.5,bridge_error=0.00000001,cond_surv="false",max_nodes=10000)
 </pre></div>
 </div>
 </section>
