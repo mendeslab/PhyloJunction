@@ -213,7 +213,7 @@ The parameters of this function are:</p>
 </section>
 <section id="quasse">
 <h1>QuaSSE<a class="headerlink" href="#quasse" title="Link to this heading"></a></h1>
-<p>QuaSSE couples a real-valued Brownian trait to trait-dependent speciation and extinction.
+<p>QuaSSE couples a real-valued Brownian trait to trait-dependent speciation, extinction and optional fossil sampling.
 Two simulation methods are available: the default <code class="docutils literal notranslate"><span class="pre">diversitree</span></code> approximation and
 <code class="docutils literal notranslate"><span class="pre">local_thinning</span></code>, which evaluates rates at Brownian-bridge candidate traits and has an
 explicit probability-error budget under the assumptions below.</p>
@@ -243,7 +243,7 @@ trees ~ quasse(n=2, nr=2, birth_rate=birth, death_rate=death, start_trait=0.0, d
 <p>The plateau values are finite and nonnegative. The midpoint and slope are finite. Either
 slope sign and either plateau ordering are supported. Equal plateaus produce a rate independent
 of the trait. Rate functions have no explicit time dependence; rates change as traits evolve.</p>
-<p>Other rate families are available for either speciation or extinction:</p>
+<p>Other rate families are available for speciation, extinction or fossil sampling:</p>
 <table class="docutils align-default">
 <colgroup>
 <col style="width: 45.0%" />
@@ -299,7 +299,11 @@ these runtime checks.</p>
 independent of the trait and constant through time within each simulation.
 Zero diffusion is supported.
 Each tree starts with one lineage at the origin. Daughters inherit the parent’s trait and
-then evolve independently. There are no fossil samples or sampled ancestors.</p>
+then evolve independently. Optional <code class="docutils literal notranslate"><span class="pre">fossil_rate</span></code> supplies a rate object for non-destructive
+sampling along each lineage, in observations per lineage per unit time. It defaults to zero
+(<code class="docutils literal notranslate"><span class="pre">None</span></code> in Python), accepts every rate family, and broadcasts at length one or <code class="docutils literal notranslate"><span class="pre">n</span></code>.
+Fossils record the exact trait at sampling; they do not remove the lineage or reset its trait.
+Sampling at death, removal probabilities and measurement error are not supported.</p>
 <p>Rate-constructor parameters broadcast to a common vector length. Distribution model
 parameters, rate objects, <code class="docutils literal notranslate"><span class="pre">stop_value</span></code>, and <code class="docutils literal notranslate"><span class="pre">sampling_prob</span></code> have length one or <code class="docutils literal notranslate"><span class="pre">n</span></code>.
 Each of the <code class="docutils literal notranslate"><span class="pre">n</span></code> samples has <code class="docutils literal notranslate"><span class="pre">nr</span></code> independent replicates using the same parameter values;
@@ -307,17 +311,29 @@ output ordering is sample first, then replicate. Rejected trees do not resample 
 </section>
 <section id="diversitree-method-and-stopping">
 <h2>Diversitree method and stopping<a class="headerlink" href="#diversitree-method-and-stopping" title="Link to this heading"></a></h2>
-<p>At the current living traits, compute total birth–death rate R. A full step has duration
+<p>At the current living traits, compute total birth–death–sampling rate R. A full step has duration
 1/(kR), and one event occurs with probability 1/k. Choose the event type and lineage using
 the current rates. Apply the event first, then extend and evolve the resulting living
-lineages. A newborn daughter therefore evolves during that step, while a dead lineage does not.</p>
+lineages. A newborn daughter therefore evolves during that step, while a dead lineage does not.
+A fossil records the start-of-step trait and its continuing lineage evolves for the whole step.</p>
 <p>For <code class="docutils literal notranslate"><span class="pre">stop=&quot;age&quot;</span></code>, shorten the final interval to the remaining duration δ and use event
 probability Rδ. Surviving branches end exactly at the observation age. Completely extinct
 trees retain the actual extinction times, with node ages measured relative to observation.</p>
-<p>For <code class="docutils literal notranslate"><span class="pre">stop=&quot;size&quot;</span></code>, stop immediately before the birth that would increase the living count
-from N to N+1. Omit that birth and its following trait update. The count can fall below N
-before reaching this terminating birth. The stopping age is random. Complete sampling is
-required. If survival conditioning is disabled, extinct outcomes can also be returned.</p>
+<p>For <code class="docutils literal notranslate"><span class="pre">stop=&quot;size&quot;</span></code>, N counts <strong>sampled living tips</strong>. The initial lineage receives a
+Bernoulli(<code class="docutils literal notranslate"><span class="pre">sampling_prob</span></code>) mark. At birth, one randomly chosen daughter inherits its parent’s
+mark and the other receives an independent fresh mark. Thus a birth adds zero or one to
+the sampled count. A sampled death subtracts one; fossils preserve the continuing mark.</p>
+<p>Stop immediately before a proposed birth would increase that count from N to N+1, omitting
+that birth and its following trait update. Merely reaching N does not stop the simulation:
+zero-increment births can occur at N and sampled deaths can lower the count again. Do not
+resample marks at the end. <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">&lt;</span> <span class="pre">sampling_prob</span> <span class="pre">&lt;=</span> <span class="pre">1</span></code> is required for size stopping; zero
+is permitted for age stopping. All living lineages, including unsampled ones, evolve and
+count toward <code class="docutils literal notranslate"><span class="pre">max_alive</span></code>. Zero sampled tips with living lineages is not extinction.
+If survival conditioning is disabled, extinct outcomes can also be returned.</p>
+<p>On a fixed biological tree independent of the marks, these leaf marks are independent
+Bernoulli draws. The flag-dependent stopping time conditions their distribution; the
+returned size-stopped tree is defined by this marked process, not independent post-sampling
+of a tree stopped by its total living count. At complete sampling the old behavior is preserved.</p>
 <p>The interior algorithm follows <code class="docutils literal notranslate"><span class="pre">diversitree/R/simulate-quasse.R</span></code>. Intentional differences are:</p>
 <ul class="simple">
 <li><p>The final age-limited interval and event probability are shortened, preventing overshoot.</p></li>
@@ -340,10 +356,12 @@ step selection for positive total rates.</p>
 <p>Select <code class="docutils literal notranslate"><span class="pre">method=&quot;local_thinning&quot;</span></code> and supply a positive finite <code class="docutils literal notranslate"><span class="pre">block_duration</span></code> in the
 model’s time units. Each living lineage samples a Brownian endpoint up to that duration away.
 The endpoints and a Brownian-bridge tail bound define a likely containing trait interval.
-The maximum birth and death rates over that interval bound a Poisson proposal process.
+The sum of bounds on birth, death and fossil rates over that interval bounds a Poisson proposal process.
 At each candidate time the simulator samples the actual intermediate trait from the stored
-bridge and accepts a birth or death using its actual rate. Rejected candidates retain the
-same endpoint. At birth the parent ends at that time and its daughters evolve independently.
+bridge and selects birth, death, fossil sampling or rejection using actual rates.
+Rejected candidates and fossil events retain the same endpoint and proposal bound. Sampling
+only replaces the living node by its continuing child; it does not allocate another bridge
+or error allowance. At birth the parent ends at that time and its daughters evolve independently.
 There is no one-event-per-step restriction and no requirement that rates change slowly.</p>
 <p>Longer blocks save endpoint work but can enlarge proposal bounds and increase rejected
 candidates. Thus <code class="docutils literal notranslate"><span class="pre">block_duration</span></code> primarily controls cost. It need not be extremely small
@@ -373,7 +391,10 @@ as an output; discarding failures and conditioning on success needs a separate b
 <p>Age stopping ends living branches exactly at the requested age. Size stopping retains the
 same N-to-N+1 convention as diversitree, but uses the continuous candidate birth time and
 advances every unfinished bridge to that time. The stored future endpoints are retained
-when sampling final traits. Sampling and biological conditions are shared by both methods.</p>
+when sampling final traits. Both methods use the same inherited marks for size stopping and
+independent end-of-simulation sampling for age stopping. The probability bound includes the
+marked stopping law: before a region excursion, shared mark draws give identical stopping
+decisions. Adding fossil intensity to the same region’s bound needs no extra error allowance.</p>
 <p>The derivation and assumptions are in <code class="docutils literal notranslate"><span class="pre">TODO/simulator.tex</span></code> in the source repository.</p>
 </section>
 <section id="observation-and-conditions">
@@ -393,7 +414,7 @@ when sampling final traits. Sampling and biological conditions are shared by bot
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">sampling_prob</span></code></p></td>
 <td><p>1</p></td>
-<td><p>Independent sampling probability for each living terminal</p></td>
+<td><p>Independent terminal sampling for age stopping; inherited Bernoulli marks for size stopping</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">cond_surv</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">&quot;true&quot;</span></code></p></td>
@@ -418,10 +439,11 @@ when sampling final traits. Sampling and biological conditions are shared by bot
 </tbody>
 </table>
 <p>Equal count bounds request an exact observed count. Sampling precedes these checks.
-Survival does not imply observation: with <code class="docutils literal notranslate"><span class="pre">sampling_prob=0</span></code>, a surviving tree has no observed
-terminals. Root-side checks use the original root, before pruning can replace it.
+Survival does not imply observation: with <code class="docutils literal notranslate"><span class="pre">sampling_prob=0</span></code>, a surviving tree has no sampled living
+tips, but may retain fossil observations. Root-side checks use the original root, before pruning can replace it.
 For unconditional age-based simulation set <code class="docutils literal notranslate"><span class="pre">cond_surv=&quot;false&quot;</span></code> and leave other conditions unset.
-Explicit count bounds with size stopping, or incomplete sampling with size stopping, are errors.</p>
+Explicit reconstructed-taxon count bounds with size stopping are errors. Fossils do not
+satisfy living-tip count, root-side or survival conditions; sampling alone is not speciation.</p>
 <p>Rejected attempts use fresh simulation randomness with unchanged model parameters. Rare or
 impossible conditions can exhaust the rejection budget. Limits are:</p>
 <table class="docutils align-default">
@@ -455,7 +477,7 @@ impossible conditions can exhaust the rejection budget. Limits are:</p>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">max_nodes</span></code></p></td>
 <td><p>unset</p></td>
-<td><p>All nodes per attempt, including extinct nodes, origin and initial lineage</p></td>
+<td><p>All nodes per attempt, including extinct nodes, fossils, sampling dummy nodes, origin and initial lineage</p></td>
 </tr>
 </tbody>
 </table>
@@ -463,27 +485,38 @@ impossible conditions can exhaust the rejection budget. Limits are:</p>
 error. Except for the finite local bound-exceedance recovery described above, numerical
 failures and exceeded resource limits raise errors without retry. In particular, transiently
 exceeding <code class="docutils literal notranslate"><span class="pre">max_rec_taxa</span></code> does not reject an attempt.</p>
-<p><code class="docutils literal notranslate"><span class="pre">max_nodes</span></code> is checked before creating the initial two nodes or either daughter at a birth.
+<p><code class="docutils literal notranslate"><span class="pre">max_nodes</span></code> is checked before creating the initial two nodes or the two new nodes at a birth or fossil event.
 The omitted size-stopping birth does not consume nodes. This is a memory safeguard, not an
 infinite-population detector; hitting it raises an error without returning a truncated tree.</p>
-<p>When both rate functions are identically zero, age stopping uses a direct Brownian transition,
-even with <code class="docutils literal notranslate"><span class="pre">dt_max</span></code> set. Size stopping then fails because its terminating birth is unreachable.
+<p>When all three rate functions are identically zero, age stopping uses a direct Brownian
+transition, even with <code class="docutils literal notranslate"><span class="pre">dt_max</span></code> set. Identically zero birth and death rates make size stopping
+unreachable even if fossil sampling is positive.
 For diversitree, if the total rate is zero only at the current traits (including underflow), supply
 <code class="docutils literal notranslate"><span class="pre">dt_max</span></code> so traits can advance and rates be reevaluated; without it, simulation raises an error.
 Local thinning instead renews Brownian blocks even when a local proposal bound is zero.</p>
 </section>
 <section id="trees-plots-and-output">
 <h2>Trees, plots, and output<a class="headerlink" href="#trees-plots-and-output" title="Link to this heading"></a></h2>
-<p>Complete trees retain extinct and unsampled tips. Reconstructed trees retain living sampled
-paths. All complete-tree nodes carry the trait at that node’s time; no full trait trajectory is
+<p>Complete trees retain extinct and unsampled tips. Reconstructed trees retain paths to sampled
+living tips and fossils, including fossils with extinct or unobserved descendants and trees
+with fossils alone. A lone fossil retains its original age and origin-to-observation stem. All complete-tree nodes carry the trait at that node’s time; no full trait trajectory is
 stored. Black branches and colored terminal markers show traits using a continuous colorbar.
-The complete tree’s terminal range determines colors in both complete and reconstructed views.
+Ancestral fossils appear as trait-colored markers along their continuing branches; terminal
+fossils have their own rows. <code class="docutils literal notranslate"><span class="pre">sa_along_branches=False</span></code> gives every fossil its own row.
+The complete tree’s terminal range, including fossils, determines colors in both views.
 Plotting uses no randomness. An empty reconstructed tree displays <code class="docutils literal notranslate"><span class="pre">No</span> <span class="pre">sampled</span> <span class="pre">tips</span></code>.</p>
 <p>Data output includes complete/reconstructed Newick tables, annotated variants, generic tree
 summaries, and <code class="docutils literal notranslate"><span class="pre">&lt;node&gt;_traits.tsv</span></code>. The trait table has columns <code class="docutils literal notranslate"><span class="pre">sample</span></code>, <code class="docutils literal notranslate"><span class="pre">replicate</span></code>, <code class="docutils literal notranslate"><span class="pre">node</span></code>,
 <code class="docutils literal notranslate"><span class="pre">trait</span></code>, <code class="docutils literal notranslate"><span class="pre">alive</span></code>, and <code class="docutils literal notranslate"><span class="pre">sampled</span></code>; sample and replicate indices start at one. It includes internal
 nodes and the origin as well as living and extinct tips. Discrete state tables and discrete
 NEXUS character matrices are not generated for these trees.</p>
+<p><code class="docutils literal notranslate"><span class="pre">&lt;node&gt;_fossils.tsv</span></code> contains <code class="docutils literal notranslate"><span class="pre">sample</span></code>, <code class="docutils literal notranslate"><span class="pre">replicate</span></code>, <code class="docutils literal notranslate"><span class="pre">node</span></code>, <code class="docutils literal notranslate"><span class="pre">time</span></code>, <code class="docutils literal notranslate"><span class="pre">age</span></code>, <code class="docutils literal notranslate"><span class="pre">trait</span></code>.
+Indices are one-based, <code class="docutils literal notranslate"><span class="pre">time</span></code> is forward from the origin, and <code class="docutils literal notranslate"><span class="pre">age</span></code> is relative to the
+simulation horizon. There is one row per fossil in the complete tree, or a header-only table
+when none occur. Annotated Newick identifies fossils with <code class="docutils literal notranslate"><span class="pre">is_sa</span></code> and sampling nodes with
+<code class="docutils literal notranslate"><span class="pre">is_sa_dummy_parent</span></code>. The generic <code class="docutils literal notranslate"><span class="pre">Direct</span> <span class="pre">ancestor</span> <span class="pre">count</span></code> counts all fossil observations,
+including those made terminal by reconstruction. <code class="docutils literal notranslate"><span class="pre">Total</span> <span class="pre">taxon</span> <span class="pre">count</span></code> retains its existing
+biological-terminal meaning.</p>
 <p>QuaSSE RevBayes inference export is not supported and fails before script generation.</p>
 </section>
 <section id="python-interface">
@@ -548,6 +581,19 @@ d := quasse_constant(rate=0.2)
 trees ~ quasse(n=2,nr=2,birth_rate=b,death_rate=d,stop="age",stop_value=2,start_trait=0,drift=0,diffusion=1,method="local_thinning",block_duration=0.5,bridge_error=0.00000001,cond_surv="false",max_nodes=10000)
 </pre></div>
 </div>
+<p>Fossil sampling and incomplete size sampling
+(<a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/quasse_fossils.pj" rel="noreferrer" target="_blank">quasse_fossils.pj</a>):</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>birth := quasse_constant(rate=.5)
+death := quasse_constant(rate=.2)
+fossil := quasse_constant(rate=1)
+mixed ~ quasse(n=2,nr=2,birth_rate=birth,death_rate=death,fossil_rate=fossil,stop="age",stop_value=2,diffusion=.5,sampling_prob=.5,cond_surv="false",method="local_thinning",block_duration=.5,max_nodes=10000)
+fossil_only ~ quasse(n=2,nr=2,birth_rate=birth,death_rate=death,fossil_rate=fossil,stop="age",stop_value=2,diffusion=.5,sampling_prob=0,cond_surv="false",method="local_thinning",block_duration=.5,max_nodes=10000)
+sampled_size ~ quasse(n=2,nr=2,birth_rate=birth,death_rate=death,fossil_rate=fossil,stop="size",stop_value=5,diffusion=.5,sampling_prob=.5,method="local_thinning",block_duration=.5,max_nodes=10000)
+</pre></div>
+</div>
+<p>The three calls produce mixed observations, fossil-only observations, and size-stopped trees
+with exactly five sampled living tips. The last call can retain additional unsampled living
+tips and any number of fossils; neither contributes to its target count.</p>
 </section>
 </section>
 
