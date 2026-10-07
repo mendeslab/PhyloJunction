@@ -51,6 +51,15 @@ class GUIModeling():
             gui_main_window_obj,
             clear_cmd_log_list: bool = False):
         
+        if self.dag_obj.random_seed is None:
+            try:
+                seed = gui_main_window_obj._read_seed()
+            except ValueError as error:
+                QMessageBox.warning(gui_main_window_obj, "Invalid seed", str(error))
+                return False
+            if seed is not None:
+                self.update_dag_random_seed(seed)
+
         # in case we read two scripts
         # consecutively, we want to clear
         # the comand line history list
@@ -66,19 +75,7 @@ class GUIModeling():
             line = line.strip()
             print("  " + line)
 
-            # Parse only after setting an explicitly requested initial seed.
             try:
-                # will set random seed once if DAG does not already have one
-                if not isinstance(self.dag_obj.random_seed, int):
-                    a_random_seed: str = \
-                        gui_main_window_obj.ui.ui_pages. \
-                            random_seed_prefix_textbox.toPlainText().strip()
-                
-                    # random seed is not None and not empty string
-                    if a_random_seed:
-                        random_seed: int = int(a_random_seed)
-                        self.dag_obj.random_seed = random_seed
-
                 # cmdline2dag updates the current DAG in place.
                 valid_cmd_line = cmdp.cmdline2dag(self.dag_obj, line)
 
@@ -114,8 +111,9 @@ class GUIModeling():
                     self.active_script_lines.append(valid_cmd_line)
 
         gui_main_window_obj.refresh_resample_button(
-            "Execution failed. Clear the model and enter commands, or load a script, to enable resampling."
+            "Execution failed. Clear the model and enter commands, or load a script, to enable rerunning."
             if execution_failed else None)
+        return True
 
     def cmd_log(self):
         return "\n".join(self.cmd_log_list) + "\n\n"
@@ -202,13 +200,15 @@ class GUIMainWindow(QMainWindow):
         # PGM page #
         ############
 
+        self.ui.ui_pages.random_seed_prefix_textbox.returnPressed.connect(self._seed_entered)
+
         # cmd line enter #
         self.ui.ui_pages.cmd_prompt.returnPressed.connect(
             self.parse_cmd_update_gui)
 
         # Selection changes include keyboard navigation as well as mouse clicks.
         self.ui.ui_pages.node_list.currentItemChanged.connect(
-            lambda current, previous: self.do_selected_node_dag_page())
+            lambda current, previous: self._display_selected_node())
         self.ui.ui_pages.reconstructed_tree_check.toggled.connect(
             self.refresh_selected_node_display_plot_spin)
 
@@ -391,7 +391,8 @@ class GUIMainWindow(QMainWindow):
 
         # read commands
         # (side-effect: gui_modeling stores cmd hist)
-        self.gui_modeling.parse_cmd_update_pgm(cmd_line_list, self)
+        if not self.gui_modeling.parse_cmd_update_pgm(cmd_line_list, self):
+            return
 
         # update GUI cmd history
         self.refresh_cmd_history()
@@ -727,67 +728,99 @@ class GUIMainWindow(QMainWindow):
     # loading events #
     ##################
 
+    # Read configuration without changing RNG state. NumPy's existing seed API accepts uint32.
+    def _read_seed(self):
+        text = self.ui.ui_pages.random_seed_prefix_textbox.text().strip()
+        if not text:
+            return None
+        if text.isascii() and text.isdecimal():
+            value = int(text)
+            if value <= 4294967295:
+                return value
+        raise ValueError("Enter a whole number from 0 to 4294967295, or leave the seed blank.")
+
+    # Return checks the field but does not execute or apply a seed; Rerun reads it directly.
+    def _seed_entered(self):
+        try:
+            seed = self._read_seed()
+        except ValueError as error:
+            QMessageBox.warning(self, "Invalid seed", str(error))
+            return
+        if seed is None:
+            message = "No fixed seed; the next run will continue the random sequence."
+        elif self.gui_modeling.active_script_lines:
+            message = f"Seed {seed} is ready; click Rerun to apply it."
+        else:
+            message = f"Seed {seed} is ready; read a script or enter commands."
+        self.ui.bottom_label_left.setText(message)
+
+    # Describe every completed run without guessing whether external inputs or results changed.
+    def _run_completed(self, seed):
+        message = ("Completed without resetting the random seed." if seed is None else
+                   f"Completed with seed {seed}. Same seed + inputs reproduce the same samples.")
+        self.ui.bottom_label_left.setText(message)
+
+    # Qt selection callbacks cannot propagate exceptions to their caller. Report display failures
+    # here, after any execution-status message, without rerunning the model.
+    def _display_selected_node(self):
+        try:
+            self.do_selected_node_dag_page()
+        except Exception as error:
+            self.ui.bottom_label_left.setText("Displaying the selected node failed; see Warnings")
+            self.ui.ui_pages.warnings_textbox.setText(str(error))
+
+    # Read and validate before cleanup; a cancelled chooser or bad input preserves current results.
     def read_execute_script(self):
+        script_fp, _ = QFileDialog.getOpenFileName(
+            parent=self, caption="Read script", dir=".", filter="*.pj")
+        if not script_fp:
+            return
+        u = self.ui.ui_pages
+        item = u.node_list.currentItem()
+        selected_name = item.text() if item else None
+        try:
+            seed = self._read_seed()
+            commands = pjread.read_text_file(script_fp)
+        except (ValueError, OSError) as error:
+            QMessageBox.warning(self, "Cannot read script", str(error))
+            return
 
-        # read file path #
-        script_fp, filter = \
-            QFileDialog.getOpenFileName(
-                parent=self,
-                caption="Read script",
-                dir=".",
-                filter="*.pj")
+        self.clean_disable_everything()
+        if seed is not None:
+            self.gui_modeling.update_dag_random_seed(seed)
+        self.gui_modeling.parse_cmd_update_pgm(commands, self, clear_cmd_log_list=True)
+        self.refresh_cmd_history(user_reset=True)
+        with QSignalBlocker(u.node_list):
+            self.refresh_node_lists()
+        self.show_pgm_page()
 
-        if script_fp:
-            # reset everything #
-            self.clean_disable_everything()
+        nodes = list(self.gui_modeling.dag_obj.name_node_dict.values())
+        chosen = next((n for n in nodes if n.node_name == selected_name), None)
+        if chosen is None:
+            chosen = next((n for n in nodes if n.is_sampled and isinstance(n.value, list)
+                           and n.value and isinstance(n.value[0], pjdt.AnnotatedTree)), None)
+        if chosen is None:
+            chosen = next((n for n in nodes if n.is_sampled), nodes[0] if nodes else None)
+        if self.gui_modeling.active_script_lines is None:
+            self.ui.bottom_label_left.setText("Script reported errors; see Warnings")
+        elif not nodes:
+            self.ui.bottom_label_left.setText("Script completed; no model nodes.")
+        else:
+            self._run_completed(seed)
+        if chosen is not None:
+            matches = u.node_list.findItems(chosen.node_name, Qt.MatchFlag.MatchExactly)
+            u.node_list.setCurrentItem(matches[0])
 
-            # set seed
-            a_random_seed = self.ui.ui_pages.random_seed_prefix_textbox.toPlainText().strip()
-            # is not None and is not an empty string
-            if a_random_seed:
-                random_seed: int = int(a_random_seed)
-                self.gui_modeling.update_dag_random_seed(random_seed)
-
-            # read all command line strings
-            cmd_line_list = pjread.read_text_file(script_fp)
-
-            # (side-effect: gui_modeling stores cmd hist) #
-            self.gui_modeling.parse_cmd_update_pgm(cmd_line_list, self, clear_cmd_log_list=True)
-
-            # update GUI cmd history #
-            self.refresh_cmd_history(user_reset=True)
-
-            # add node names to...
-            # pgm page node list
-            self.ui.ui_pages.node_list.addItems(
-                [node_name for node_name in
-                 self.gui_modeling.dag_obj.name_node_dict]
-            )
-
-            # compare page node list
-            self.ui.ui_pages.compare_node_list.addItems(
-                [nd.node_name for nd in
-                 self.gui_modeling.dag_obj.get_sorted_node_dag_list() if
-                 nd.is_sampled]
-            )
-
-            # coverage page node list
-            self.ui.ui_pages.coverage_node_list.addItems(
-                [nd.node_name for nd in
-                 self.gui_modeling.dag_obj.get_sorted_node_dag_list() if
-                 not nd.is_deterministic]
-            )
-
-    # Availability depends on executable source, not on the seed: a seeded click explains
-    # why it cannot resample. Preserve a more specific unavailable reason when supplied.
+    # Availability depends on executable source, independently of seed configuration.
+    # Preserve a more specific unavailable reason when supplied.
     def refresh_resample_button(self, unavailable_reason=None):
         button = self.ui.ui_pages.resample_model
         lines = self.gui_modeling.active_script_lines
         button.setEnabled(bool(lines))
         if lines:
-            button.setToolTip("Rerun the current script to generate new samples.")
+            button.setToolTip("Rerun the current script and interactive additions using the seed in Settings.")
         elif lines is not None:
-            button.setToolTip("Load a script or enter commands to enable resampling.")
+            button.setToolTip("Load a script or enter commands to enable rerunning.")
         elif unavailable_reason:
             button.setToolTip(unavailable_reason)
 
@@ -795,12 +828,12 @@ class GUIMainWindow(QMainWindow):
     # view preferences across the existing cleanup routine, which resets GUIModeling.
     def resample_current_script(self):
         u = self.ui.ui_pages
-        if u.random_seed_prefix_textbox.toPlainText().strip():
-            QMessageBox.warning(self, "Resampling disabled",
-                                "Resampling is disabled while a random seed is specified. "
-                                "Clear the Random seed field in Settings to generate new samples.")
-            return
         if not self.gui_modeling.active_script_lines or not u.resample_model.isEnabled():
+            return
+        try:
+            seed = self._read_seed()
+        except ValueError as error:
+            QMessageBox.warning(self, "Invalid seed", str(error))
             return
 
         lines = list(self.gui_modeling.active_script_lines)
@@ -814,9 +847,9 @@ class GUIMainWindow(QMainWindow):
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
             try:
-                candidate = cmdp.script2dag("\n".join(lines), in_pj_file=False, random_seed=None)
+                candidate = cmdp.script2dag("\n".join(lines), in_pj_file=False, random_seed=seed)
             except Exception as error:
-                self.ui.bottom_label_left.setText("Resampling failed; previous results retained")
+                self.ui.bottom_label_left.setText("Rerun failed; previous results retained")
                 u.warnings_textbox.setText(str(error))
                 return
 
@@ -859,9 +892,9 @@ class GUIMainWindow(QMainWindow):
                     u.reconstructed_tree_check.setChecked(reconstructed)
             try:
                 self.do_selected_node_dag_page(spin_buttons_clicked=True)
-                self.ui.bottom_label_left.setText("Resampled")
+                self._run_completed(seed)
             except Exception as error:
-                self.ui.bottom_label_left.setText("Resampled, but displaying the new model failed")
+                self.ui.bottom_label_left.setText("Rerun completed, but displaying the new model failed")
                 u.warnings_textbox.setText(str(error))
         finally:
             QApplication.restoreOverrideCursor()
@@ -1004,7 +1037,7 @@ class GUIMainWindow(QMainWindow):
             self.gui_modeling.dag_obj, self.gui_modeling.cmd_log_list = \
                 pjread.read_serialized_pgm(model_fp)
             self.gui_modeling.active_script_lines = None
-            self.refresh_resample_button("This saved model has no verified script. Load its script to resample.")
+            self.refresh_resample_button("This saved model has no verified script. Load its script to rerun.")
             self.refresh_node_lists()
             self.ui.ui_pages.cmd_log_textbox.setText(self.gui_modeling.cmd_log())
 
@@ -1026,7 +1059,7 @@ class GUIMainWindow(QMainWindow):
                 QFileDialog.getSaveFileName(self, "Save file", "", ".png")
 
             head, tail = os.path.split(fig_fp)
-            prefix = self.ui.ui_pages.filename_prefix_textbox.toPlainText()
+            prefix = self.ui.ui_pages.filename_prefix_textbox.text()
 
             # should user cancel, then no error!
             if head and tail:
@@ -1047,7 +1080,7 @@ class GUIMainWindow(QMainWindow):
         pickle_fp, filter = QFileDialog.getSaveFileName(self, "Save file", "", "")
 
         if not prefix:
-            prefix = self.ui.ui_pages.filename_prefix_textbox.toPlainText()
+            prefix = self.ui.ui_pages.filename_prefix_textbox.text()
 
         # pickling and saving PGM
         pjwrite.dump_serialized_pgm(
@@ -1062,7 +1095,7 @@ class GUIMainWindow(QMainWindow):
             self, "Save in folder", "./", QFileDialog.ShowDirsOnly
         )
 
-        prefix = self.ui.ui_pages.filename_prefix_textbox.toPlainText()
+        prefix = self.ui.ui_pages.filename_prefix_textbox.text()
 
         pjwrite.dump_pgm_data(
             data_out_dir,
@@ -1075,11 +1108,11 @@ class GUIMainWindow(QMainWindow):
             self, "Save in folder", "./", QFileDialog.ShowDirsOnly
         )
 
-        prefix = self.ui.ui_pages.filename_prefix_textbox.toPlainText()
+        prefix = self.ui.ui_pages.filename_prefix_textbox.text()
         mapped_attr_name = \
-            self.ui.ui_pages.attr_name_textbox.toPlainText()
+            self.ui.ui_pages.attr_name_textbox.text()
         tr_dag_node_name_list = \
-            self.ui.ui_pages.tr_dag_node_textbox.toPlainText()
+            self.ui.ui_pages.tr_dag_node_textbox.text()
 
         pjwrite.dump_trees_rb_smap_dfs(
             data_out_dir,

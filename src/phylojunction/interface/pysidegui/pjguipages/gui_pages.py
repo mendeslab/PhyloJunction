@@ -44,12 +44,8 @@ class Ui_PJGUIPages(object):
 
         self.settings_page_grid_layout.addWidget(self.filename_prefix_label, 3, 0, 1, 1)
 
-        self.filename_prefix_textbox = QTextEdit(self.settings_page)
+        self.filename_prefix_textbox = QLineEdit(self.settings_page)
         self.filename_prefix_textbox.setObjectName(u"filename_prefix_textbox")
-        self.filename_prefix_textbox.setMinimumSize(QSize(0, 24))
-        self.filename_prefix_textbox.setMaximumSize(QSize(16777215, 24))
-        self.filename_prefix_textbox.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.filename_prefix_textbox.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         self.settings_page_grid_layout.addWidget(self.filename_prefix_textbox, 3, 1, 1, 1)
 
@@ -77,12 +73,8 @@ class Ui_PJGUIPages(object):
 
         self.settings_page_grid_layout.addWidget(self.settings_label, 2, 0, 1, 1)
 
-        self.random_seed_prefix_textbox = QTextEdit(self.settings_page)
+        self.random_seed_prefix_textbox = QLineEdit(self.settings_page)
         self.random_seed_prefix_textbox.setObjectName(u"random_seed_prefix_textbox")
-        self.random_seed_prefix_textbox.setMinimumSize(QSize(0, 24))
-        self.random_seed_prefix_textbox.setMaximumSize(QSize(16777215, 24))
-        self.random_seed_prefix_textbox.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.random_seed_prefix_textbox.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         self.settings_page_grid_layout.addWidget(self.random_seed_prefix_textbox, 1, 1, 1, 1)
 
@@ -118,21 +110,13 @@ class Ui_PJGUIPages(object):
 
         self.settings_page_grid_layout.addWidget(self.attr_name_label, 6, 0, 1, 1)
 
-        self.tr_dag_node_textbox = QTextEdit(self.settings_page)
+        self.tr_dag_node_textbox = QLineEdit(self.settings_page)
         self.tr_dag_node_textbox.setObjectName(u"tr_dag_node_textbox")
-        self.tr_dag_node_textbox.setMinimumSize(QSize(0, 24))
-        self.tr_dag_node_textbox.setMaximumSize(QSize(16777215, 24))
-        self.tr_dag_node_textbox.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.tr_dag_node_textbox.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         self.settings_page_grid_layout.addWidget(self.tr_dag_node_textbox, 5, 1, 1, 1)
 
-        self.attr_name_textbox = QTextEdit(self.settings_page)
+        self.attr_name_textbox = QLineEdit(self.settings_page)
         self.attr_name_textbox.setObjectName(u"attr_name_textbox")
-        self.attr_name_textbox.setMinimumSize(QSize(0, 24))
-        self.attr_name_textbox.setMaximumSize(QSize(16777215, 24))
-        self.attr_name_textbox.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.attr_name_textbox.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         self.settings_page_grid_layout.addWidget(self.attr_name_textbox, 6, 1, 1, 1)
 
@@ -794,6 +778,10 @@ class Ui_PJGUIPages(object):
         self.random_seed_prefix_label.setText(QCoreApplication.translate("PJGUIPages", u"Random seed:", None))
         self.stoch_map_label.setText(QCoreApplication.translate("PJGUIPages", u"Stochastic mapping", None))
         self.settings_label.setText(QCoreApplication.translate("PJGUIPages", u"Output configuration", None))
+        self.random_seed_prefix_textbox.setPlaceholderText(QCoreApplication.translate("PJGUIPages", u"Optional seed", None))
+#if QT_CONFIG(tooltip)
+        self.random_seed_prefix_textbox.setToolTip(QCoreApplication.translate("PJGUIPages", u"Integer from 0 to 4294967295. Used when reading a script or clicking Rerun. Leave blank to continue the random sequence without resetting it.", None))
+#endif // QT_CONFIG(tooltip)
         self.sim_config_label.setText(QCoreApplication.translate("PJGUIPages", u"Simulation configuration", None))
         self.attr_name_label.setText(QCoreApplication.translate("PJGUIPages", u"Attribute name", None))
         self.node_content_tabs.setTabText(self.node_content_tabs.indexOf(self.values_tab), QCoreApplication.translate("PJGUIPages", u"Value(s)", None))
@@ -805,9 +793,9 @@ class Ui_PJGUIPages(object):
         self.repl_idx_spin.setPrefix(QCoreApplication.translate("PJGUIPages", u"Replicate #", None))
         self.save_pgm_node_plot.setText(QCoreApplication.translate("PJGUIPages", u"Save plot as", None))
         self.model_label.setText(QCoreApplication.translate("PJGUIPages", u"Model nodes", None))
-        self.resample_model.setText(QCoreApplication.translate("PJGUIPages", u"Resample", None))
+        self.resample_model.setText(QCoreApplication.translate("PJGUIPages", u"Rerun", None))
 #if QT_CONFIG(tooltip)
-        self.resample_model.setToolTip(QCoreApplication.translate("PJGUIPages", u"Load a script or enter commands to enable resampling.", None))
+        self.resample_model.setToolTip(QCoreApplication.translate("PJGUIPages", u"Load a script or enter commands to enable rerunning.", None))
 #endif // QT_CONFIG(tooltip)
         self.clear_model.setText(QCoreApplication.translate("PJGUIPages", u" Clear model", None))
         self.cmd_prompt_label.setText(QCoreApplication.translate("PJGUIPages", u"Command prompt", None))

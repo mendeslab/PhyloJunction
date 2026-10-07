@@ -329,7 +329,7 @@ After generation, retain the resource registration import alongside the custom w
 from phylojunction.interface.pysidegui.images.icons import resources
 ```
 
-The clear icon uses `:/icon_clear.svg`; Resample uses Qt's standard browser-reload icon.
+The clear icon uses `:/icon_clear.svg`; Rerun uses Qt's standard browser-reload icon.
 The UI file supplies the custom widget module paths. Review generated changes separately from
 layout changes when switching generator versions.
 
@@ -340,13 +340,19 @@ Keep the control objects in the UI file and their layout setup in that method.
 The model page redraws when node selection or display controls change, including keyboard
 navigation and the Reconstructed checkbox. These actions display existing samples.
 
-Resample reruns the stored script and subsequent successful commands entered at the prompt,
+All four Settings inputs are single-line fields. Editing a seed or pressing Return does not
+run the model; Return validates the entry. A blank seed continues the current random sequence.
+
+Rerun executes the stored script and subsequent successful commands entered at the prompt,
 then restores the selected node and display settings. It does not reread the original script
-file. A nonblank random seed in Settings produces a warning without running anything; clear
-that field to continue drawing from the current random-number sequence. Resampling is
-synchronous, so a long simulation can temporarily block the window. Execution failures leave
-existing results displayed. Clear or load a script after a command error to enable replay;
-serialized models alone do not provide a verified replay source.
+file. A specified seed resets the generators once per run; the bottom status bar explains
+that unchanged seeds and inputs reproduce the same samples. Read script also applies the seed,
+returns to the model page and selects a node automatically. For incremental prompt commands,
+a seed is applied only when the current model has none; edited seeds apply on a full rerun.
+Execution is synchronous, so a long simulation can temporarily block the window. Rerun failures
+leave existing results displayed, although failed execution can consume randomness. Clear or
+load a script after a command error to enable replay; serialized models alone do not provide
+a verified replay source.
 
 ### Qt Creator / Qt Designer
 
