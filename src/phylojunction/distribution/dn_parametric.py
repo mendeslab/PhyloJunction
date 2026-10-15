@@ -25,6 +25,7 @@ class DnLogNormal(pgm.DistrForSampling):
     ln_mean_list: ty.List[float]
     ln_sd_list: ty.List[float]
     ln_log_space: bool
+    n_each_list: ty.Optional[ty.List[int]]
     vectorized_params: ty.List[ty.List[ty.Union[int, float, str]]]
     param_dict: ty.Dict[str, ty.Union[bool, ty.List[ty.Union[int, float, str]]]]
     parent_node_tracker: ty.Optional[ty.Dict[str, str]]
@@ -38,9 +39,35 @@ class DnLogNormal(pgm.DistrForSampling):
             log_space: bool = True) -> ty.Union[np.float64, np.ndarray]:
         """Return sample from log-normal distribution.
 
+        NOTE on 'mean_param': this is never the arithmetic mean of the
+        returned values, in either mode -- scipy's own
+        'lognorm(s, scale)' parameterizes a log-normal by 's' (sigma,
+        the log-space standard deviation) and 'scale' (= exp(mu),
+        where mu is the log-space mean), and 'mean_param' here always
+        plays the role of 'scale':
+
+        - 'log_space=True' (the default): 'mean_param' IS mu, the
+          log-space mean (i.e., E[log(X)]) -- this is also what R's
+          'rlnorm(meanlog, sdlog)' calls 'meanlog', and that name is
+          accurate because of the "log" qualifier: it is the mean,
+          but of log(X), not of X.
+        - 'log_space=False': 'mean_param' is exp(mu) given directly,
+          i.e., the real-space value whose log is mu. Unlike the
+          'log_space=True' case, there is no "log" qualifier to
+          signal this, which makes it easy to mistake for the
+          arithmetic mean of X -- it is not. exp(mu) is X's *median*
+          (medians survive the monotonic exp() transform; means do
+          not). The true arithmetic mean of X is always
+          'scale * exp(s ** 2 / 2)', which is strictly greater than
+          'scale' (the median) whenever 's' > 0, and only converges to
+          it as 's' -> 0 (by Jensen's inequality).
+
         Args:
             n_samples (int): Number of draws (sample size).
-            mean_param (float): Mean (scale) of log-normal.
+            mean_param (float): log-space mean (mu) if 'log_space' is
+                'True'; the real-space value exp(mu) -- i.e., the
+                distribution's scale/median, NOT its arithmetic mean
+                -- if 'log_space' is 'False'. See note above.
             sd_param (float): Std. deviation (shape) of log-normal
                 distribution.
             scale (float): Mean (scale) of log-normal distribution in
@@ -54,17 +81,19 @@ class DnLogNormal(pgm.DistrForSampling):
         """
 
         if not log_space:
-            # have to use scale if in natural space
+            # 'mean_param' is exp(mu) already (the scale/median, not
+            # the arithmetic mean -- see docstring note above)
             return lognorm.rvs(s=sd_param,
                                scale=mean_param,
                                loc=0.0,
                                size=n_samples)
 
-        # s is the shape parameter (std dev)
-        # scale is the mean 
+        # s is the shape parameter (std dev, in log-space)
+        # scale is exp(mu), mu being the log-space mean
         #
-        # scipy assumes the scale is in natural space, so if the user passed
-        # it in log-scale (default), we need to exponentiate it
+        # scipy assumes 'scale' is already exponentiated (real-space),
+        # so if the user passed mu itself (log-space, the default),
+        # we exponentiate it here
         return lognorm.rvs(s=sd_param,
                            scale=math.exp(mean_param),
                            loc=0.0,
@@ -78,8 +107,29 @@ class DnLogNormal(pgm.DistrForSampling):
             ln_mean: ty.List[float],
             ln_sd: ty.List[float],
             ln_log_space: bool,
-            parent_node_tracker: ty.Optional[ty.Dict[str, str]] = None) \
+            parent_node_tracker: ty.Optional[ty.Dict[str, str]] = None,
+            n_each_list: ty.Optional[ty.List[int]] = None) \
                 -> None:
+        """
+        Args:
+            n_samples, n_repl, ln_mean, ln_sd, ln_log_space,
+                parent_node_tracker: see 'draw_ln' and the class
+                docstring.
+            n_each_list (list of int, optional): When given (the
+                grammar's 'n_nr_from' argument), overrides the usual
+                "draw a flat list of 'n_samples * n_repl' scalars"
+                behavior: one entry per (sample, replicate) slot (so
+                must have length 'n_samples * n_repl'), each giving
+                how many i.i.d. values to draw *for that slot*. The
+                result is then a list of 'n_samples * n_repl' lists
+                (one per slot), rather than a flat list of floats --
+                see 'generate'. 'n_samples'/'n_repl' themselves still
+                come from the same place they always do (grammar-level
+                'n_nr_from' sets them from the referenced node's own
+                shape before ever reaching this constructor -- see
+                'interface.grammar.dn_grammar'). Defaults to 'None'
+                (today's ordinary, flat-list behavior).
+        """
 
         self.param_dict = dict()
         self.n_samples = n_samples
@@ -87,6 +137,7 @@ class DnLogNormal(pgm.DistrForSampling):
         self.ln_mean_arg = ln_mean
         self.ln_sd_arg = ln_sd
         self.ln_log_space = ln_log_space
+        self.n_each_list = n_each_list
 
         # one element per parameter
         check_sample_size_return = \
@@ -110,10 +161,42 @@ class DnLogNormal(pgm.DistrForSampling):
 
         self.parent_node_tracker = parent_node_tracker
 
-    def generate(self) -> ty.List[float]:
+    def generate(self) -> ty.Union[ty.List[float], ty.List[ty.List[float]]]:
         sampled_values: ty.List[float] = list()
 
         try:
+            if self.n_each_list is not None:
+                # ragged mode ('n_nr_from'/'n_each_list'): one entry
+                # per (sample, replicate) slot, each entry itself a
+                # list of 'n_each_list[slot]' i.i.d. draws. The mean/
+                # sd vectorization convention is unchanged (one value
+                # per SAMPLE, shared by every replicate of that
+                # sample) -- only the inner draw count is now per-slot
+                # instead of a constant 'n_repl'
+                ragged_values: ty.List[ty.List[float]] = list()
+                slot = 0
+
+                for i in range(self.n_samples):
+                    mean_i = self.ln_mean_list[
+                        0 if len(self.ln_mean_list) == 1 else i]
+                    sd_i = self.ln_sd_list[
+                        0 if len(self.ln_sd_list) == 1 else i]
+
+                    for _ in range(self.n_repl):
+                        this_n = self.n_each_list[slot]
+                        slot_draws = ty.cast(
+                            ty.List[float],
+                            DnLogNormal.draw_ln(
+                                this_n,
+                                mean_i,
+                                sd_i,
+                                log_space=self.ln_log_space).tolist()) \
+                            if this_n > 0 else []
+                        ragged_values.append(slot_draws)
+                        slot += 1
+
+                return ragged_values
+
             if len(self.ln_mean_list) == 1 and len(self.ln_sd_list) == 1:
                 n_draws: int = self.n_samples * self.n_repl
 

@@ -1074,7 +1074,7 @@ def call_gui():
                 tree_value_df_dict, tree_ann_value_df_dict, tree_rec_value_df_dict, \
                 tree_rec_ann_value_df_dict, tree_summary_df_dict, tree_repl_summary_df_dict, \
                 tree_living_nd_states_str_dict, tree_living_nd_states_str_nexus_dict, \
-                tree_internal_nd_states_str_dict = tree_output_stash
+                tree_internal_nd_states_str_dict, tree_n_stub_df_dict = tree_output_stash
                 
                 # adding "program" column to PJ's pandas DataFrame's stored inside dicts
                 for repl_size in scalar_value_df_dict:
@@ -1210,7 +1210,7 @@ def call_gui():
                 tree_value_df_dict, tree_ann_value_df_dict, tree_rec_value_df_dict, \
                 tree_rec_ann_value_df_dict, tree_summary_df_dict, tree_repl_summary_df_dict, \
                 tree_living_nd_states_str_dict, tree_living_nd_states_str_nexus_dict, \
-                tree_internal_nd_states_str_dict = tree_output_stash
+                tree_internal_nd_states_str_dict, tree_n_stub_df_dict = tree_output_stash
 
                 # str because could be constant set by hand
                 if isinstance(selected_node.value[0], (str, int, float, np.float64)):

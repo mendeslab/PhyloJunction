@@ -18,6 +18,7 @@ def execute_pj_script(
         user_prefix: ty.Optional[str] = None,
         out_dir: str = "./",
         write_data: bool = False,
+        write_stub_counts: bool = False,
         write_smap: bool = False,
         write_figures: ty.Optional[str] = None,
         write_inference: bool = False,
@@ -98,7 +99,8 @@ def execute_pj_script(
                     dag_obj,
                     prefix,
                     write_nex,
-                    bit_format)
+                    bit_format,
+                    write_stub_counts=write_stub_counts)
 
             if write_smap:
                 if not tr_dag_nd_names:
@@ -169,6 +171,18 @@ def call_cli() -> None:
         action="store_true",
         default=False,
         help="Toggle data output")
+    parser.add_argument(
+        "-nstub",
+        "--stub-count-output",
+        dest="write_stub_counts",
+        action="store_true",
+        default=False,
+        help=("Toggle an additional "
+              "'[tree_dag_node_name]_n_stub.tsv' file per tree-valued "
+              "DAG node, with one row per (sample, replicate) tree, "
+              "one column per reconstructed-tree node, and stub "
+              "counts as cells. Only takes effect together with "
+              "'-d'/'--data-output'."))
     parser.add_argument(
         "-smap",
         "--smap-output",
@@ -242,6 +256,7 @@ def call_cli() -> None:
         user_prefix=args.prefix,
         out_dir=args.out_dir,
         write_data=args.write_data,
+        write_stub_counts=args.write_stub_counts,
         write_smap=args.write_smap,
         write_figures=args.write_figures,
         # write_inference=args.write_inference,

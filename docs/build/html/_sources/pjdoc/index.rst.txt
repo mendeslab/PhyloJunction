@@ -424,6 +424,11 @@ The example above is then invoked later in ``pj_sandbox.py``:
 Lexicon
 -------
 
+Constant functions
+====================
+
+.. include:: constfns.rst
+
 Parametric distributions
 ========================
 
@@ -433,3 +438,8 @@ Tree distributions
 ==================
 
 .. include::  treedists.rst
+
+Deterministic functions
+========================
+
+.. include:: detfns.rst

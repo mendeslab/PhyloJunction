@@ -20,7 +20,7 @@ class PJDnGrammar():
     dn_grammar_dict: ty.Dict[str, ty.Tuple[str, ...]] = \
         {
             "lognormal":
-            tuple(["n", "nr", "meanlog", "sdlog", "log_space"]),
+            tuple(["n", "nr", "meanlog", "sdlog", "log_space", "n_nr_from"]),
             "normal":
             tuple(["n", "nr", "mean", "sd"]),
             "exponential":
@@ -88,6 +88,7 @@ class PJDnGrammar():
             ln_mean: ty.List[float] = list()
             ln_sd: ty.List[float] = list()
             ln_log_space: bool = True
+            n_each_list: ty.Optional[ty.List[int]] = None
 
             # { mean: node_dag1_name, sd: node_dag2_name, ... }
             if dn_param_dict:
@@ -108,6 +109,30 @@ class PJDnGrammar():
                         raise ec.ParseNotAParameterError(arg)
 
                     elif arg == "n":
+                        # a DAG node that itself carries real
+                        # sample/replicate structure (as opposed to a
+                        # trivial, single-valued one) cannot be
+                        # faithfully reduced to a single integer here
+                        # -- 'n_nr_from' is the mechanism meant for
+                        # that (it infers both 'n' and 'nr' from such
+                        # a node automatically), so point the user at
+                        # it instead of failing with a generic
+                        # "too many values" error below
+                        if isinstance(val[0], pgm.NodeDAG) and \
+                                (val[0].sample_size > 1 or
+                                 val[0].repl_size > 1):
+                            raise ec.ParseInvalidArgumentError(
+                                "n",
+                                "'" + val[0].node_name + "'",
+                                "This DAG node carries its own "
+                                "sample/replicate structure "
+                                "(sample_size=" +
+                                str(val[0].sample_size) +
+                                ", repl_size=" + str(val[0].repl_size) +
+                                "); use 'n_nr_from' instead of 'n' to "
+                                "have both inferred from it "
+                                "automatically.")
+
                         if len(extracted_val_list) > 1:
                             raise ec.ParseRequireSingleValueError(
                                 dnpar.DnLogNormal.DN_NAME, arg)
@@ -121,6 +146,23 @@ class PJDnGrammar():
                                 dnpar.DnNormal.DN_NAME, arg)
 
                     elif arg == "nr":
+                        # see the matching comment under 'n' above --
+                        # the same issue, symmetrically, for 'nr'
+                        if isinstance(val[0], pgm.NodeDAG) and \
+                                (val[0].sample_size > 1 or
+                                 val[0].repl_size > 1):
+                            raise ec.ParseInvalidArgumentError(
+                                "nr",
+                                "'" + val[0].node_name + "'",
+                                "This DAG node carries its own "
+                                "sample/replicate structure "
+                                "(sample_size=" +
+                                str(val[0].sample_size) +
+                                ", repl_size=" + str(val[0].repl_size) +
+                                "); use 'n_nr_from' instead of 'nr' to "
+                                "have both inferred from it "
+                                "automatically.")
+
                         if len(extracted_val_list) > 1:
                             raise ec.ParseRequireSingleValueError(
                                 dnpar.DnLogNormal.DN_NAME, arg)
@@ -132,6 +174,31 @@ class PJDnGrammar():
                         except ValueError:
                             raise ec.ParseRequireIntegerError(
                                 dnpar.DnNormal.DN_NAME, arg)
+
+                    elif arg == "n_nr_from":
+                        if not isinstance(val[0], pgm.NodeDAG):
+                            raise ec.ParseInvalidArgumentError(
+                                "n_nr_from",
+                                "'" + str(val[0]) + "'",
+                                "Argument must be a DAG node "
+                                "reference (e.g., the output of "
+                                "'n_rec_branches'), not a literal value.")
+
+                        n_nr_from_node = val[0]
+                        n_samples = n_nr_from_node.sample_size
+                        n_repl = n_nr_from_node.repl_size
+
+                        try:
+                            n_each_list = [
+                                int(v) for v in n_nr_from_node.value]
+
+                        except (TypeError, ValueError):
+                            raise ec.ParseInvalidArgumentError(
+                                "n_nr_from",
+                                "'" + n_nr_from_node.node_name + "'",
+                                "Every value held by the referenced "
+                                "DAG node must be an integer (e.g., "
+                                "the output of 'n_rec_branches').")
 
                     elif arg == "meanlog":
                         try:
@@ -163,6 +230,22 @@ class PJDnGrammar():
                 if not par_obj:
                     raise ec.ParseMissingParameterError(par_name)
 
+            # 'n_nr_from' infers 'n' and 'nr' automatically; supplying
+            # either alongside it is redundant and, if they disagree
+            # with what 'n_nr_from' infers, silently ambiguous about
+            # which one wins -- so they are mutually exclusive
+            if n_each_list is not None:
+                for conflicting_arg in ("n", "nr"):
+                    if conflicting_arg in dn_param_dict:
+                        raise ec.ParseInvalidArgumentError(
+                            conflicting_arg,
+                            "'" +
+                            str(dn_param_dict[conflicting_arg][0]) + "'",
+                            "Cannot be combined with 'n_nr_from': when "
+                            "'n_nr_from' is given, 'n' and 'nr' are "
+                            "inferred automatically from it, and must "
+                            "be omitted.")
+
             # return dnpar.DnLogNormal(pars, parent_node_tracker)
             return dnpar.DnLogNormal(
                 n_samples,
@@ -170,7 +253,8 @@ class PJDnGrammar():
                 ln_mean,
                 ln_sd,
                 ln_log_space,
-                parent_node_tracker)
+                parent_node_tracker,
+                n_each_list=n_each_list)
 
         elif dn_id == "normal":
             norm_mean: ty.List[float] = list()

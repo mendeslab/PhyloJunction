@@ -5,6 +5,8 @@ import phylojunction.calculation.discrete_sse as sseobj
 import phylojunction.utility.exception_classes as ec
 import phylojunction.interface.grammar.det_fn_discrete_sse_makers as detsse
 import phylojunction.interface.grammar.det_fn_map_attribute as detatt
+import phylojunction.interface.grammar.det_fn_clock_makers as detclock
+import phylojunction.interface.grammar.det_fn_branch_count_makers as detbrcount
 import phylojunction.pgm.pgm as pgm
 import phylojunction.data.tree as pjtr
 
@@ -26,7 +28,12 @@ class PJDetFnGrammar():
                           "seed_age", "epoch_age_ends", "n_epochs"]),
         "map_attr": set(["tree", "fun", "tip_attr_file_path",
                          "maps_file_path", "attr_name", "n_regions",
-                         "geo"])
+                         "geo"]),
+        "gamma_spike_clock": set(["tree", "attr_name", "clock_rate",
+                                  "br_specific_rel_rate",
+                                  "spike_mean", "spike_shape",
+                                  "strict_clock_when_no_stubs"]),
+        "n_rec_branches": set(["tree"])
     }
 
     @classmethod
@@ -104,6 +111,41 @@ class PJDetFnGrammar():
             raise ec.ParseDetFnInitFailError("map_attr", e.message)
 
     @classmethod
+    def init_return_gamma_spike_clock_tree(
+        cls,
+        det_fn_param_dict:
+            ty.Dict[str, ty.List[ty.Union[str, pgm.NodeDAG]]]) \
+            -> ty.List[pjtr.AnnotatedTree]:
+
+        try:
+            return detclock.make_gamma_spike_clock_tree(
+                "gamma_spike_clock", det_fn_param_dict)
+
+        except (ec.ParseMissingParameterError,
+                ec.ParseMissingArgumentError,
+                ec.ParseInvalidArgumentError,
+                ec.ParseRequireSingleValueError,
+                ec.ParseRequireNumericError,
+                ValueError) as e:
+            raise ec.ParseDetFnInitFailError("gamma_spike_clock", str(e))
+
+    @classmethod
+    def init_return_n_rec_branches(
+        cls,
+        det_fn_param_dict:
+            ty.Dict[str, ty.List[ty.Union[str, pgm.NodeDAG]]]) \
+            -> ty.List[int]:
+
+        try:
+            return detbrcount.make_n_rec_branches(
+                "n_rec_branches", det_fn_param_dict)
+
+        except (ec.ParseMissingParameterError,
+                ec.ParseMissingArgumentError,
+                ec.ParseInvalidArgumentError) as e:
+            raise ec.ParseDetFnInitFailError("n_rec_branches", str(e))
+
+    @classmethod
     def create_det_fn_obj(
         cls,
         det_fn_id: str,
@@ -113,7 +155,8 @@ class PJDetFnGrammar():
                     sseobj.DiscreteStateDependentRate,
                     sseobj.DiscreteStateDependentProbability,
                     sseobj.SSEStash,
-                    ty.List[pjtr.AnnotatedTree]
+                    ty.List[pjtr.AnnotatedTree],
+                    ty.List[int]
                 ]]:
         """
         Build and return deterministic function object.
@@ -150,6 +193,12 @@ class PJDetFnGrammar():
         
         if det_fn_id == "map_attr":
             return cls.init_return_tree_mapped_with_attr(det_fn_param_dict)
+
+        if det_fn_id == "gamma_spike_clock":
+            return cls.init_return_gamma_spike_clock_tree(det_fn_param_dict)
+
+        if det_fn_id == "n_rec_branches":
+            return cls.init_return_n_rec_branches(det_fn_param_dict)
 
         return None
 

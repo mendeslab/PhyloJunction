@@ -17,7 +17,9 @@ class PJCtFnGrammar():
     # All available deterministic functions #
     #########################################
     ct_fn_grammar_dict = {
-        "read_tree": set(["n", "nr", "file_path", "string", "node_name_attr", "epoch_age_ends"])
+        "read_tree": set(["n", "nr", "file_path", "string", "node_name_attr",
+                          "epoch_age_ends", "is_complete",
+                          "keep_unsampled_alive"])
     }
 
     @classmethod

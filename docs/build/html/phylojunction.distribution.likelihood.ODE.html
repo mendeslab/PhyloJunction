@@ -1,0 +1,223 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>phylojunction.distribution.likelihood.ODE package &mdash; PhyloJunction 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="_static/sphinx-new-tab-link.css?v=d87cb1ac" />
+      <link rel="stylesheet" type="text/css" href="_static/css/pj_custom.css" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=d45e8c67"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="phylojunction.functionality package" href="phylojunction.functionality.html" />
+    <link rel="prev" title="phylojunction.distribution.likelihood package" href="phylojunction.distribution.likelihood.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html">
+            
+              <img src="_static/pj_logo_doc.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="index.html">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installing.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pjdoc/index.html">Documentation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">Library API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="phylojunction.html">phylojunction package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="phylojunction.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="phylojunction.calculation.html">phylojunction.calculation package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="phylojunction.constant_function.html">phylojunction.constant_function package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="phylojunction.data.html">phylojunction.data package</a></li>
+<li class="toctree-l4 current"><a class="reference internal" href="phylojunction.distribution.html">phylojunction.distribution package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="phylojunction.functionality.html">phylojunction.functionality package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="phylojunction.inference.html">phylojunction.inference package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="phylojunction.interface.html">phylojunction.interface package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="phylojunction.pgm.html">phylojunction.pgm package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="phylojunction.plotting.html">phylojunction.plotting package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="phylojunction.readwrite.html">phylojunction.readwrite package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="phylojunction.utility.html">phylojunction.utility package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="phylojunction.html#module-phylojunction">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PhyloJunction</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="modules.html">phylojunction</a></li>
+          <li class="breadcrumb-item"><a href="phylojunction.html">phylojunction package</a></li>
+          <li class="breadcrumb-item"><a href="phylojunction.distribution.html">phylojunction.distribution package</a></li>
+          <li class="breadcrumb-item"><a href="phylojunction.distribution.likelihood.html">phylojunction.distribution.likelihood package</a></li>
+      <li class="breadcrumb-item active">phylojunction.distribution.likelihood.ODE package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/phylojunction.distribution.likelihood.ODE.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="phylojunction-distribution-likelihood-ode-package">
+<h1>phylojunction.distribution.likelihood.ODE package<a class="headerlink" href="#phylojunction-distribution-likelihood-ode-package" title="Link to this heading"></a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading"></a></h2>
+</section>
+<section id="module-phylojunction.distribution.likelihood.ODE.dn_bisse_ode">
+<span id="phylojunction-distribution-likelihood-ode-dn-bisse-ode-module"></span><h2>phylojunction.distribution.likelihood.ODE.dn_bisse_ode module<a class="headerlink" href="#module-phylojunction.distribution.likelihood.ODE.dn_bisse_ode" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="phylojunction.distribution.likelihood.ODE.dn_bisse_ode.bisse_d_eqns">
+<span class="sig-prename descclassname"><span class="pre">phylojunction.distribution.likelihood.ODE.dn_bisse_ode.</span></span><span class="sig-name descname"><span class="pre">bisse_d_eqns</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ds_es</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mus</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lambdas</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#phylojunction.distribution.likelihood.ODE.dn_bisse_ode.bisse_d_eqns" title="Link to this definition"></a></dt>
+<dd><p>Return Maddison et al. d/dt D(t) equations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>t</strong> (<em>float</em>) – Time (not used).</p></li>
+<li><p><strong>ds_es</strong> (<em>numpy.ndarray</em>) – Values of Ds for states 0 and 1,
+followed by values of Es, for states 0 and 1.</p></li>
+<li><p><strong>qs</strong> (<em>numpy.ndarray</em>) – Two-dimensional array of values of
+transition rate parameters for states 0 and 1.</p></li>
+<li><p><strong>mus</strong> (<em>numpy.ndarray</em>) – Values of extinction rate parameters for
+states 0 and 1.</p></li>
+<li><p><strong>lambdas</strong> (<em>numpy.ndarray</em>) – Values of birth-rate parameters for
+states 0 and 1.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="simple">
+<dt>Returns</dt><dd><dl class="simple">
+<dt>(numpy.ndarray): Values (floats) of D for all states</dt><dd><p>and of E for all states.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="phylojunction.distribution.likelihood.ODE.dn_bisse_ode.bisse_e_eqns">
+<span class="sig-prename descclassname"><span class="pre">phylojunction.distribution.likelihood.ODE.dn_bisse_ode.</span></span><span class="sig-name descname"><span class="pre">bisse_e_eqns</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">es</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mus</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lambdas</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#phylojunction.distribution.likelihood.ODE.dn_bisse_ode.bisse_e_eqns" title="Link to this definition"></a></dt>
+<dd><p>Return Maddison et al. d/dt E(t) equations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>es</strong> (<em>numpy.ndarray</em>) – Values of Es for states 0 and 1.</p></li>
+<li><p><strong>qs</strong> (<em>numpy.ndarray</em>) – Two-dimensional array of values of
+transition rate parameters for states 0 and 1.</p></li>
+<li><p><strong>mus</strong> (<em>numpy.ndarray</em>) – Values of extinction rate parameters for
+states 0 and 1.</p></li>
+<li><p><strong>lambdas</strong> (<em>numpy.ndarray</em>) – Two-dimensional array of values of
+birth-rate parameters for states 0 and 1.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Values (floats) of E for states 0 and 1</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(tuple)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="phylojunction.distribution.likelihood.ODE.dn_bisse_ode.solve_bisse_ds_es">
+<span class="sig-prename descclassname"><span class="pre">phylojunction.distribution.likelihood.ODE.dn_bisse_ode.</span></span><span class="sig-name descname"><span class="pre">solve_bisse_ds_es</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ds_es</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t_start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t_end</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mus</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lambdas</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#phylojunction.distribution.likelihood.ODE.dn_bisse_ode.solve_bisse_ds_es" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-phylojunction.distribution.likelihood.ODE.dn_mbt_ode">
+<span id="phylojunction-distribution-likelihood-ode-dn-mbt-ode-module"></span><h2>phylojunction.distribution.likelihood.ODE.dn_mbt_ode module<a class="headerlink" href="#module-phylojunction.distribution.likelihood.ODE.dn_mbt_ode" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="phylojunction.distribution.likelihood.ODE.dn_mbt_ode.mbt_bisse_d_eqn">
+<span class="sig-prename descclassname"><span class="pre">phylojunction.distribution.likelihood.ODE.dn_mbt_ode.</span></span><span class="sig-name descname"><span class="pre">mbt_bisse_d_eqn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ds_es</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ds_es_buffer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mus</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#phylojunction.distribution.likelihood.ODE.dn_mbt_ode.mbt_bisse_d_eqn" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="phylojunction.distribution.likelihood.ODE.dn_mbt_ode.mbt_e_eqn">
+<span class="sig-prename descclassname"><span class="pre">phylojunction.distribution.likelihood.ODE.dn_mbt_ode.</span></span><span class="sig-name descname"><span class="pre">mbt_e_eqn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">es</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mus</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#phylojunction.distribution.likelihood.ODE.dn_mbt_ode.mbt_e_eqn" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="phylojunction.distribution.likelihood.ODE.dn_mbt_ode.solve_mbt_ds_es">
+<span class="sig-prename descclassname"><span class="pre">phylojunction.distribution.likelihood.ODE.dn_mbt_ode.</span></span><span class="sig-name descname"><span class="pre">solve_mbt_ds_es</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ds_es</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t_start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t_end</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ds_es_buffer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mus</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#phylojunction.distribution.likelihood.ODE.dn_mbt_ode.solve_mbt_ds_es" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-phylojunction.distribution.likelihood.ODE">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-phylojunction.distribution.likelihood.ODE" title="Link to this heading"></a></h2>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="phylojunction.distribution.likelihood.html" class="btn btn-neutral float-left" title="phylojunction.distribution.likelihood package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="phylojunction.functionality.html" class="btn btn-neutral float-right" title="phylojunction.functionality package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Fabio K. Mendes.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

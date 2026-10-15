@@ -81,6 +81,48 @@ class TestParametricDns(unittest.TestCase):
         self.assertAlmostEqual(0.01, stdev(lognormal_rv1), delta=0.01)
         self.assertAlmostEqual(0.01, stdev(lognormal_rv2), delta=0.01)
 
+    def test_lognormal_n_each_list_matches_flat_n(self):
+        """Ragged ('n_each_list') mode matches ordinary flat 'n' mode.
+
+        'n_each_list' (what the grammar's 'n_nr_from' argument --
+        see 'interface.grammar.dn_grammar' -- ultimately builds and
+        passes in) draws one value *per (sample, replicate) slot*,
+        with a possibly different count for each slot, rather than a
+        single flat 'n_samples * n_repl' list. When every slot's count
+        is 1, drawing 'n_samples * n_repl' slots of 1 value each must
+        be statistically indistinguishable from drawing a single flat
+        list of 'n_samples * n_repl' values the ordinary way (same
+        draws, same distribution, just grouped differently) -- so this
+        reuses 'test_lognormal's own tolerances on exactly that
+        comparison, with 'n_samples=2, n_repl=100000' (product =
+        200000, the same total 'test_lognormal' itself draws),
+        deliberately split across BOTH axes (not just one) so the
+        ragged mode's double loop over samples AND replicates is
+        actually exercised, not just one of the two.
+        """
+
+        n_samples, n_repl = 2, 100000
+        n_each_list = [1] * (n_samples * n_repl)
+
+        ragged_rv = dnpar.DnLogNormal(
+            n_samples,
+            n_repl,
+            [-3.25],
+            [0.25],
+            True,
+            n_each_list=n_each_list
+        ).generate()
+
+        # one single-element list per slot -- flatten before comparing
+        # against the same tolerances 'test_lognormal' uses for its
+        # ordinary, flat 'n=200000' draw
+        self.assertEqual(len(ragged_rv), n_samples * n_repl)
+        flattened_rv = [v for slot in ragged_rv for v in slot]
+        self.assertEqual(len(flattened_rv), n_samples * n_repl)
+
+        self.assertAlmostEqual(0.04, mean(flattened_rv), delta=0.01)
+        self.assertAlmostEqual(0.01, stdev(flattened_rv), delta=0.01)
+
 
 if __name__ == '__main__':
     # Assuming you opened the PhyloJunction/ (repo root) folder

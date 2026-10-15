@@ -210,7 +210,7 @@ def cmdline2dag(dag_obj: pgm.DirectedAcyclicGraph,
                 det_fn_spec,
                 cmd_line)
 
-        except ec.ParseDnInitFailError as e:
+        except ec.ParseDetFnInitFailError as e:
             raise ec.ScriptSyntaxError(
                 cmd_line,
                 e.message)
@@ -344,7 +344,17 @@ def parse_variable_assignment(
              "'(file=\"examples/geosse_dummy_tree1\", node_name_attr=\"index\")')."))
 
     val_obj_list = cmdu.val_or_obj(dag_obj, values_list)
-    n_samples = len(val_obj_list)
+
+    # for the "return of a function" branch above (e.g. 'read_tree()'),
+    # 'values_list' is never populated -- the actual value only comes
+    # into existence later, inside 'StochasticNodeDAG.generate_value()',
+    # via 'ct_fn_obj.generate()' -- so 'len(val_obj_list)' is always 0
+    # here and cannot be used as this node's sample size; every
+    # concrete 'ConstantFn' is required to expose its own 'n_samples'
+    # (an abstract attribute on 'ValueGenerator') precisely so callers
+    # have a correct count to use before that value is generated
+    n_samples = \
+        ct_fn_obj.n_samples if ct_fn_obj is not None else len(val_obj_list)
 
     create_add_stoch_node_dag(stoch_node_name,
                               n_samples,
@@ -434,7 +444,8 @@ def parse_samp_dn_assignment(
                 ec.ParseRequireSingleValueError,
                 ec.ParseRequireIntegerError,
                 ec.ParseRequireNumericError,
-                ec.ParseMissingParameterError) as e:
+                ec.ParseMissingParameterError,
+                ec.ParseInvalidArgumentError) as e:
             raise ec.ParseDnInitFailError(dn_name, e.message)
 
         ####################
@@ -521,6 +532,19 @@ def parse_samp_dn_assignment(
                 #          "storing a scalar constant. Distribution "
                 #          "discrete_sse() could not be initialized."))
 
+        # 'n_nr_from' (currently only 'lognormal' supports it -- see
+        # 'interface.grammar.dn_grammar') infers both 'sample_size'
+        # and 'repl_size' at once, directly from the referenced DAG
+        # node's own shape, instead of from literal 'n'/'nr' values --
+        # mutually exclusive with 'n'/'nr' (already enforced inside
+        # '.create_dn_obj()' above), so there is no ordering conflict
+        # with the two blocks above
+        if "n_nr_from" in spec_dict and \
+                isinstance(spec_dict["n_nr_from"][0], pgm.NodeDAG):
+            n_nr_from_node = spec_dict["n_nr_from"][0]
+            sample_size = n_nr_from_node.sample_size
+            repl_size = n_nr_from_node.repl_size
+
         try:
             create_add_rv_pgm(
                 stoch_node_name,
@@ -563,7 +587,8 @@ def parse_deterministic_function_assignment(
 
         det_nd_pgm = pgm.DeterministicNodeDAG(det_nd_name,
                                               value=det_obj,
-                                              parent_nodes=parent_pgm_nodes)
+                                              parent_nodes=parent_pgm_nodes,
+                                              dag_sample_size=dag_obj.sample_size)
         dag_obj.add_node(det_nd_pgm)
 
         # deterministic node is of class DeterministicNodeDAG, which

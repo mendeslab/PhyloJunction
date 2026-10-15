@@ -24,14 +24,32 @@ class TestDetFnDiscreteSSEErrors(unittest.TestCase):
              "stash := sse_stash(flat_rate_mat=[l0ratet1, l0ratet2, l0ratet3], n_states=1, n_epochs=2, "
              "seed_age=3.0, epoch_age_ends=[1.2, 0.7])")
 
-        with self.assertRaises(ec.ParseDetFnInitFailError) as exc:
+        # NOTE: previously, this test asserted that a raw
+        # 'ec.ParseDetFnInitFailError' propagated all the way out of
+        # 'cmd.script2dag'. That was actually a pre-existing bug:
+        # 'cmd_parse.py' was catching 'ec.ParseDnInitFailError' (the
+        # '~' operator's exception class) instead of
+        # 'ec.ParseDetFnInitFailError' (the ':=' operator's own), so
+        # det-fn init failures were never wrapped into a
+        # 'ScriptSyntaxError' the way every other script-level error
+        # is. Now that this is fixed, 'ParseDetFnInitFailError' is
+        # caught and wrapped, matching the '~' pathway (see
+        # 'test_cmd_parametric_sampling_dn_assignment.py', which
+        # already asserts 'ec.ParseDnInitFailError' is *not* what
+        # leaks out of 'cmd.script2dag' for '~' misspecifications).
+        with self.assertRaises(ec.ScriptSyntaxError) as exc:
             dag_obj = cmd.script2dag(yule_timehet_invalid_epoch, in_pj_file=False)
 
         self.assertEqual(
             str(exc.exception),
-            ("Deterministic output from 'sse_stash' could not be instantiated. "
-             "Incorrect dimension of container epoch_age_ends, which was of size 2. "
-             "The expected dimension was 1."))
+            ("ERROR: stash := sse_stash(flat_rate_mat=[l0ratet1, l0ratet2, "
+             "l0ratet3], n_states=1, n_epochs=2, seed_age=3.0, "
+             "epoch_age_ends=[1.2, 0.7])\n\n"
+             "The line above had a syntax problem and could not be "
+             "tokenized. Deterministic output from 'sse_stash' could not "
+             "be instantiated. Incorrect dimension of container "
+             "epoch_age_ends, which was of size 2. The expected dimension "
+             "was 1."))
         
     def test_rate_epoch_index_zero(self):
         """

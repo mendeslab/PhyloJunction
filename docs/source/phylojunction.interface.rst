@@ -9,6 +9,8 @@ Subpackages
 
    phylojunction.interface.cmdbox
    phylojunction.interface.grammar
+   phylojunction.interface.pjcli
+   phylojunction.interface.pysidegui
 
 Submodules
 ----------
@@ -18,13 +20,13 @@ phylojunction.interface.pj\_sandbox module
 
 .. automodule:: phylojunction.interface.pj_sandbox
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 Module contents
 ---------------
 
 .. automodule:: phylojunction.interface
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:

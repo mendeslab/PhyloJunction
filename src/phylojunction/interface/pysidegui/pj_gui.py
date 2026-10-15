@@ -487,6 +487,7 @@ class GUIMainWindow(QMainWindow):
                     self.draw_node_dag(fig_axes,
                                         node_dag,
                                         sample_idx=sample_idx,
+                                        repl_idx=repl_idx,
                                         repl_size=repl_size)
 
         # if deterministic, not subscriptable
@@ -615,7 +616,7 @@ class GUIMainWindow(QMainWindow):
             tree_value_df_dict, tree_ann_value_df_dict, tree_rec_value_df_dict, \
                 tree_rec_ann_value_df_dict, tree_summary_df_dict, tree_repl_summary_df_dict, \
                 tree_living_nd_states_str_dict, tree_living_nd_states_str_nexus_dict, \
-                tree_internal_nd_states_str_dict = tree_output_stash
+                tree_internal_nd_states_str_dict, tree_n_stub_df_dict = tree_output_stash
 
             # adding "program" column to
             # PJ's pandas DataFrame's stored inside dicts
@@ -692,7 +693,7 @@ class GUIMainWindow(QMainWindow):
             tree_value_df_dict, tree_ann_value_df_dict, tree_rec_value_df_dict, \
                 tree_rec_ann_value_df_dict, tree_summary_df_dict, tree_repl_summary_df_dict, \
                 tree_living_nd_states_str_dict, tree_living_nd_states_str_nexus_dict, \
-                tree_internal_nd_states_str_dict = tree_output_stash
+                tree_internal_nd_states_str_dict, tree_n_stub_df_dict = tree_output_stash
 
             # str because could be constant set by hand
             if isinstance(selected_node_dag.value[0], (str, int, float, np.float64)):
@@ -1178,6 +1179,23 @@ class GUIMainWindow(QMainWindow):
 
     def init_and_refresh_radio_spin(self, node_dag, sample_size, repl_size):
 
+        # preserve the user's current sample/replicate selection
+        # across node switches (e.g., going from a chronogram DAG
+        # node to a phylogram one derived from it), as long as it is
+        # still a valid index for the newly selected node; otherwise
+        # (e.g., the first node ever selected, or the previous
+        # index is out of range for this node) fall back to 1.
+        # these are captured here, before anything below modifies
+        # the spin boxes' current values.
+        current_sample_idx = self.ui.ui_pages.sample_idx_spin.value()
+        current_repl_idx = self.ui.ui_pages.repl_idx_spin.value()
+
+        def _clamp_to_range(idx: int, upper: int) -> int:
+            if upper <= 0:
+                return 1
+
+            return min(max(idx, 1), upper)
+
         def _prepare_for_tree(potential_repl: bool = False):
             # radio #
             # we always look one tree at a time
@@ -1192,10 +1210,13 @@ class GUIMainWindow(QMainWindow):
             # spin #
             self.ui.ui_pages.sample_idx_spin.setEnabled(True)
             self.ui.ui_pages.sample_idx_spin.setMinimum(1)
-            self.ui.ui_pages.sample_idx_spin.setValue(1)
+            self.ui.ui_pages.sample_idx_spin.setValue(
+                _clamp_to_range(current_sample_idx, sample_size))
 
             self.ui.ui_pages.repl_idx_spin.setMinimum(1)
-            self.ui.ui_pages.repl_idx_spin.setValue(1)
+            self.ui.ui_pages.repl_idx_spin.setValue(
+                _clamp_to_range(current_repl_idx, repl_size)
+                if potential_repl else 1)
             if potential_repl:
                 self.ui.ui_pages.repl_idx_spin.setEnabled(True)
 
@@ -1207,7 +1228,8 @@ class GUIMainWindow(QMainWindow):
 
             # spin #
             self.ui.ui_pages.sample_idx_spin.setMinimum(1)
-            self.ui.ui_pages.sample_idx_spin.setValue(1)
+            self.ui.ui_pages.sample_idx_spin.setValue(
+                _clamp_to_range(current_sample_idx, sample_size))
             self.ui.ui_pages.sample_idx_spin.setDisabled(True)
 
             # if there are replicates, then it makes sense to
@@ -1250,21 +1272,55 @@ class GUIMainWindow(QMainWindow):
                 else:
                     _prepare_for_tree(potential_repl=False)
 
-            # scalar r.v.
+            # scalar r.v. (or a list-of-lists -- one vector, e.g. of
+            # per-branch rates, per (sample, replicate) slot)
             else:
-                if not self.ui.ui_pages.all_samples_radio.isEnabled() and \
-                        not self.ui.ui_pages.one_sample_radio.isEnabled():
-                    if node_dag.repl_size > 1:
-                        _prepare_for_scalar(potential_repl=True)
-                    
-                    else:
-                        _prepare_for_scalar(potential_repl=False)
+                # called unconditionally, same as '_prepare_for_tree'
+                # above for tree-valued nodes -- a guard here that
+                # only ran this when neither radio was yet enabled
+                # used to skip it whenever the *previously* selected
+                # node was tree-valued (which leaves 'one_sample_radio'
+                # enabled via '_prepare_for_tree'), leaving
+                # 'all_samples_radio' stuck unchecked from that prior
+                # node. That silently changed 'do_all_samples' to
+                # 'False' for this (unrelated) scalar node, routing
+                # 'selected_node_plot' into passing its stale,
+                # disabled 'sample_idx_spin' value of 0 (so
+                # 'sample_idx=-1') into 'plot_node_histogram' instead
+                # of 'None' ("show everything") -- which, for a
+                # single-(sample,replicate) node, slices to an empty
+                # list and plots nothing.
+                if node_dag.repl_size > 1:
+                    _prepare_for_scalar(potential_repl=True)
 
-                # we always bundle replicates together, so
-                # we never spin through them
-                self.ui.ui_pages.repl_idx_spin.setMinimum(0)
-                self.ui.ui_pages.repl_idx_spin.setValue(0)
-                self.ui.ui_pages.repl_idx_spin.setDisabled(True) 
+                else:
+                    _prepare_for_scalar(potential_repl=False)
+
+                is_vector_per_slot = isinstance(node_dag.value[0], list)
+
+                if is_vector_per_slot and node_dag.repl_size > 1:
+                    # each (sample, replicate) slot is its own,
+                    # independently meaningful distribution (e.g. one
+                    # tree's per-branch rates) -- unlike an ordinary
+                    # scalar's replicates (always bundled together,
+                    # below), these are worth spinning through
+                    # individually, the same way tree replicates are
+                    self.ui.ui_pages.repl_idx_spin.setMinimum(1)
+                    self.ui.ui_pages.repl_idx_spin.setValue(
+                        _clamp_to_range(current_repl_idx, repl_size))
+                    self.ui.ui_pages.repl_idx_spin.setEnabled(True)
+
+                else:
+                    # we always bundle ordinary scalar replicates
+                    # together, so we never spin through them --
+                    # still displays '1' (not '0'), matching every
+                    # other spin box's 1-indexed convention (e.g. a
+                    # tree node's own spin boxes, via
+                    # '_prepare_for_tree'), even though there is
+                    # nothing to actually cycle through
+                    self.ui.ui_pages.repl_idx_spin.setMinimum(1)
+                    self.ui.ui_pages.repl_idx_spin.setValue(1)
+                    self.ui.ui_pages.repl_idx_spin.setDisabled(True)
 
                 # irrespective of all samples or one sample
                 # it should always be possible to check one
@@ -1276,7 +1332,8 @@ class GUIMainWindow(QMainWindow):
                     
                     # spin
                     self.ui.ui_pages.sample_idx_spin.setMinimum(1)
-                    self.ui.ui_pages.sample_idx_spin.setValue(1)
+                    self.ui.ui_pages.sample_idx_spin.setValue(
+                        _clamp_to_range(current_sample_idx, sample_size))
                     self.ui.ui_pages.sample_idx_spin.setEnabled(True)
                 
                 # if there are no replicates, it does not make
@@ -1284,18 +1341,19 @@ class GUIMainWindow(QMainWindow):
                 else:
                     # radio
                     self.ui.ui_pages.one_sample_radio.setDisabled(True)
-                    self.ui.ui_pages.one_sample_radio.setCheckable(False)       
+                    self.ui.ui_pages.one_sample_radio.setCheckable(False)
 
-                    # spin #
-                    self.ui.ui_pages.sample_idx_spin.setMinimum(0)
-                    self.ui.ui_pages.sample_idx_spin.setValue(0)
+                    # spin -- displays '1', not '0', for the same
+                    # reason as 'repl_idx_spin' above
+                    self.ui.ui_pages.sample_idx_spin.setMinimum(1)
+                    self.ui.ui_pages.sample_idx_spin.setValue(1)
                     self.ui.ui_pages.sample_idx_spin.setDisabled(True)
 
                 # all samples checked, so we won't be spinning
                 # through individuals samples
                 if self.ui.ui_pages.all_samples_radio.isChecked():
-                    self.ui.ui_pages.sample_idx_spin.setMinimum(0)
-                    self.ui.ui_pages.sample_idx_spin.setValue(0)
+                    self.ui.ui_pages.sample_idx_spin.setMinimum(1)
+                    self.ui.ui_pages.sample_idx_spin.setValue(1)
                     self.ui.ui_pages.sample_idx_spin.setDisabled(True)
 
         # can't spin through anything! nothing to do!

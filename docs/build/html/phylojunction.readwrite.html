@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" data-content_root="./">
 <head>
@@ -5,20 +7,17 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>phylojunction.readwrite package &mdash; PhyloJunction 0.0.1 documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
-      <link rel="stylesheet" type="text/css" href="_static/css/pj_custom.css?v=b916aa57" />
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="_static/sphinx-new-tab-link.css?v=d87cb1ac" />
+      <link rel="stylesheet" type="text/css" href="_static/css/pj_custom.css" />
 
   
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-        <script src="_static/jquery.js?v=5d32c60e"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=d45e8c67"></script>
-        <script src="_static/doctools.js?v=888ff710"></script>
-        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=d45e8c67"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -54,8 +53,10 @@
 <li class="toctree-l2 current"><a class="reference internal" href="phylojunction.html">phylojunction package</a><ul class="current">
 <li class="toctree-l3 current"><a class="reference internal" href="phylojunction.html#subpackages">Subpackages</a><ul class="current">
 <li class="toctree-l4"><a class="reference internal" href="phylojunction.calculation.html">phylojunction.calculation package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="phylojunction.constant_function.html">phylojunction.constant_function package</a></li>
 <li class="toctree-l4"><a class="reference internal" href="phylojunction.data.html">phylojunction.data package</a></li>
 <li class="toctree-l4"><a class="reference internal" href="phylojunction.distribution.html">phylojunction.distribution package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="phylojunction.functionality.html">phylojunction.functionality package</a></li>
 <li class="toctree-l4"><a class="reference internal" href="phylojunction.inference.html">phylojunction.inference package</a></li>
 <li class="toctree-l4"><a class="reference internal" href="phylojunction.interface.html">phylojunction.interface package</a></li>
 <li class="toctree-l4"><a class="reference internal" href="phylojunction.pgm.html">phylojunction.pgm package</a></li>
@@ -193,7 +194,7 @@ with attribute name and values</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="phylojunction.readwrite.pj_read.read_nwk_tree_str">
-<span class="sig-prename descclassname"><span class="pre">phylojunction.readwrite.pj_read.</span></span><span class="sig-name descname"><span class="pre">read_nwk_tree_str</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nwk_tree_path_or_str</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fn_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'read_tree'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">in_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_names_attribute</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1e-12</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="phylojunction.data.html#phylojunction.data.tree.AnnotatedTree" title="phylojunction.data.tree.AnnotatedTree"><span class="pre">AnnotatedTree</span></a></span></span><a class="headerlink" href="#phylojunction.readwrite.pj_read.read_nwk_tree_str" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">phylojunction.readwrite.pj_read.</span></span><span class="sig-name descname"><span class="pre">read_nwk_tree_str</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nwk_tree_path_or_str</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fn_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'read_tree'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">in_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_names_attribute</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_complete</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keep_unsampled_alive</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1e-12</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="phylojunction.data.html#phylojunction.data.tree.AnnotatedTree" title="phylojunction.data.tree.AnnotatedTree"><span class="pre">AnnotatedTree</span></a></span></span><a class="headerlink" href="#phylojunction.readwrite.pj_read.read_nwk_tree_str" title="Link to this definition"></a></dt>
 <dd><p>Read Newick tree string directly or in provided file.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -206,6 +207,51 @@ called.</p></li>
 argument (True) or if Newick string is being passed directly
 (False). Defaults to ‘True’.</p></li>
 <li><p><strong>node_names_attribute</strong> (<em>str</em>) – Defaults to empty string “”.</p></li>
+<li><p><strong>is_complete</strong> (<em>bool</em>) – If ‘False’ (the default), the Newick string
+is treated as already being the <em>reconstructed</em> tree –
+every leaf is sampled by construction, no annotations
+needed <em>or</em> consulted at all: ‘alive’ is inferred purely
+from depth (a leaf at the tree’s maximum depth is extant;
+any other leaf is a fossil sample – no ‘&amp;alive=’
+annotation required, or looked at, either way), and
+‘is_sa’ from branch length (a zero-length leaf is a direct
+ancestor). Because neither is ever actually read from an
+annotation in this mode, an explicit ‘&amp;alive=’ of either
+value on any leaf is rejected outright (not only when it
+happens to disagree with the depth-based inference), and
+so is an explicit ‘[&amp;sampled=False]’ (every leaf of an
+already-reconstructed tree is sampled, by definition) –
+both raise ‘AnnotatedTreeIncorrectAnnotationError’ rather
+than being silently ignored, since either is most likely
+a sign that ‘is_complete=”true”’ should have been passed
+instead. If ‘True’, the
+Newick string is treated as a <em>complete</em> tree (as a
+simulator would produce, including lineages that were
+never sampled) – PhyloJunction will not try to infer
+which terminal branches are alive or sampled from branch
+lengths alone (not reliable for arbitrary, possibly non-
+ultrametric, externally-provided data); instead, every
+non-direct-ancestor leaf must carry an explicit
+‘[&amp;alive=True]’/’[&amp;alive=False]’ NHX annotation, and, for
+any leaf so annotated ‘alive=False’, an explicit
+‘[&amp;sampled=True]’/’[&amp;sampled=False]’ one too (to
+distinguish a sampled fossil tip from an unsampled
+extinction event) – see ‘keep_unsampled_alive’ for the
+symmetric case on the ‘alive=True’ side. A missing
+required annotation raises
+‘AnnotatedTreeMissingNodeAnnotationError’; an explicit
+annotation that contradicts a structural invariant (an
+internal node marked alive/sampled, or a direct ancestor
+marked alive) raises ‘AnnotatedTreeIncorrectAnnotationError’.</p></li>
+<li><p><strong>keep_unsampled_alive</strong> (<em>bool</em>) – Only consulted when
+‘is_complete’ is ‘True’. An alive leaf explicitly
+annotated ‘[&amp;sampled=False]’ is, by default (‘False’),
+treated the same way an unsampled extinction would be
+(i.e., it will be pruned away when the reconstructed tree
+is extracted). If ‘True’, such a leaf is instead kept
+(‘sampled’ forced back to ‘True’), letting a known-but-
+unsampled living taxon be represented without it being
+discarded from the reconstructed tree.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -259,7 +305,7 @@ read</p>
 <span id="phylojunction-readwrite-pj-write-module"></span><h2>phylojunction.readwrite.pj_write module<a class="headerlink" href="#module-phylojunction.readwrite.pj_write" title="Link to this heading"></a></h2>
 <dl class="py function">
 <dt class="sig sig-object py" id="phylojunction.readwrite.pj_write.dump_pgm_data">
-<span class="sig-prename descclassname"><span class="pre">phylojunction.readwrite.pj_write.</span></span><span class="sig-name descname"><span class="pre">dump_pgm_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dir_string</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dag_obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="phylojunction.pgm.html#phylojunction.pgm.pgm.DirectedAcyclicGraph" title="phylojunction.pgm.pgm.DirectedAcyclicGraph"><span class="pre">DirectedAcyclicGraph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">prefix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_nex_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bit_format</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#phylojunction.readwrite.pj_write.dump_pgm_data" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">phylojunction.readwrite.pj_write.</span></span><span class="sig-name descname"><span class="pre">dump_pgm_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dir_string</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dag_obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="phylojunction.pgm.html#phylojunction.pgm.pgm.DirectedAcyclicGraph" title="phylojunction.pgm.pgm.DirectedAcyclicGraph"><span class="pre">DirectedAcyclicGraph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">prefix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_nex_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bit_format</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_stub_counts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#phylojunction.readwrite.pj_write.dump_pgm_data" title="Link to this definition"></a></dt>
 <dd><p>Write stochastic-node sampled values in specified directory.</p>
 <p>This function has the side-effect of writing to disk.</p>
 <dl class="field-list simple">
@@ -274,6 +320,10 @@ additionally written. Defaults to ‘False’.</p></li>
 <li><p><strong>bit_format</strong> (<em>bool</em>) – Flag specifying if states are to be
 represented as bit patterns (e.g., ‘A’ -&gt; ‘10’, ‘B’ -&gt;
 ‘01’, ‘AB’ -&gt; ‘11’). Defaults to ‘False’.</p></li>
+<li><p><strong>write_stub_counts</strong> (<em>bool</em>) – Flag specifying if a
+‘[tr_node_name]_n_stub.tsv’ file should additionally be
+written for every tree-valued DAG node – see
+‘prep_n_stub_df’. Defaults to ‘False’.</p></li>
 </ul>
 </dd>
 </dl>
@@ -390,7 +440,7 @@ statistics summarized over replicates. Defaults to False.</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="phylojunction.readwrite.pj_write.prep_data_df">
-<span class="sig-prename descclassname"><span class="pre">phylojunction.readwrite.pj_write.</span></span><span class="sig-name descname"><span class="pre">prep_data_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dag_obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="phylojunction.pgm.html#phylojunction.pgm.pgm.DirectedAcyclicGraph" title="phylojunction.pgm.pgm.DirectedAcyclicGraph"><span class="pre">DirectedAcyclicGraph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_nex_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bit_format</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#phylojunction.readwrite.pj_write.prep_data_df" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">phylojunction.readwrite.pj_write.</span></span><span class="sig-name descname"><span class="pre">prep_data_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dag_obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="phylojunction.pgm.html#phylojunction.pgm.pgm.DirectedAcyclicGraph" title="phylojunction.pgm.pgm.DirectedAcyclicGraph"><span class="pre">DirectedAcyclicGraph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_nex_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bit_format</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_stub_counts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#phylojunction.readwrite.pj_write.prep_data_df" title="Link to this definition"></a></dt>
 <dd><p>Return two pandas DataFrame’s, with scalar and tree random variables.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -402,6 +452,11 @@ additionally written. Defaults to ‘False’.</p></li>
 <li><p><strong>bit_format</strong> (<em>bool</em>) – Flag specifying if states are to be
 represented as bit patterns (e.g., ‘A’ -&gt; ‘10’, ‘B’ -&gt;
 ‘01’, ‘AB’ -&gt; ‘11’). Defaults to ‘False’.</p></li>
+<li><p><strong>write_stub_counts</strong> (<em>bool</em>) – Flag specifying if a per-(sample,
+replicate) table of reconstructed-tree stub counts
+(‘n_stub’) should additionally be built, one per
+tree-valued DAG node – see ‘prep_n_stub_df’. Defaults to
+‘False’.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -442,6 +497,45 @@ These contains tree simulated data.</p></li>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>(tuple)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="phylojunction.readwrite.pj_write.prep_n_stub_df">
+<span class="sig-prename descclassname"><span class="pre">phylojunction.readwrite.pj_write.</span></span><span class="sig-name descname"><span class="pre">prep_n_stub_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node_val</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="phylojunction.data.html#phylojunction.data.tree.AnnotatedTree" title="phylojunction.data.tree.AnnotatedTree"><span class="pre">AnnotatedTree</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_repl</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#phylojunction.readwrite.pj_write.prep_n_stub_df" title="Link to this definition"></a></dt>
+<dd><p>Build a per-(sample, replicate) table of reconstructed-tree stub counts.</p>
+<p>One row per (sample, replicate) tree (same convention as
+‘initialize_tree_dataframe’s “sample”/”replicate” columns). One
+column per reconstructed-tree node label observed across ALL of
+‘node_val’s trees – different replicate trees can have different
+topologies (and so different node labels), so the column set is
+the union over every tree, not just those labels common to all of
+them; a tree missing a given column’s node is left with an empty
+(‘pandas.NA’) cell there.</p>
+<p>Stub counts (‘n_stub’) are (re-)computed here via
+‘AnnotatedTree.populate_n_stubs_on_branches_of_rec_tr’, which is
+pure tree-topology bookkeeping (no randomness involved) – so this
+table can be requested for any tree-valued DAG node, whether or
+not a clock model (e.g.,
+‘calculation.gamma_spike_clock_model.GammaSpikeClockModel’) was
+ever applied to it.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>node_val</strong> (<em>list</em><em> of </em><a class="reference internal" href="phylojunction.data.html#phylojunction.data.tree.AnnotatedTree" title="phylojunction.data.tree.AnnotatedTree"><em>AnnotatedTree</em></a>) – All (sample, replicate)
+trees for one tree-valued DAG node, in iteration order
+(sample 1 replicate 1, sample 1 replicate 2, …, sample
+2 replicate 1, …).</p></li>
+<li><p><strong>sample_size</strong> (<em>int</em>) – Number of samples.</p></li>
+<li><p><strong>n_repl</strong> (<em>int</em>) – Number of replicates per sample. Defaults to 1.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>See above.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(pd.DataFrame)</p>
 </dd>
 </dl>
 </dd></dl>

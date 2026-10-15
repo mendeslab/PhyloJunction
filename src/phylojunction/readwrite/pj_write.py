@@ -168,6 +168,68 @@ def initialize_tree_dataframe(
     return return_df
 
 
+def prep_n_stub_df(
+        node_val: ty.List[AnnotatedTree],
+        sample_size: int,
+        n_repl: int = 1) -> pd.DataFrame:
+    """Build a per-(sample, replicate) table of reconstructed-tree stub counts.
+
+    One row per (sample, replicate) tree (same convention as
+    'initialize_tree_dataframe's "sample"/"replicate" columns). One
+    column per reconstructed-tree node label observed across ALL of
+    'node_val's trees -- different replicate trees can have different
+    topologies (and so different node labels), so the column set is
+    the union over every tree, not just those labels common to all of
+    them; a tree missing a given column's node is left with an empty
+    ('pandas.NA') cell there.
+
+    Stub counts ('n_stub') are (re-)computed here via
+    'AnnotatedTree.populate_n_stubs_on_branches_of_rec_tr', which is
+    pure tree-topology bookkeeping (no randomness involved) -- so this
+    table can be requested for any tree-valued DAG node, whether or
+    not a clock model (e.g.,
+    'calculation.gamma_spike_clock_model.GammaSpikeClockModel') was
+    ever applied to it.
+
+    Args:
+        node_val (list of AnnotatedTree): All (sample, replicate)
+            trees for one tree-valued DAG node, in iteration order
+            (sample 1 replicate 1, sample 1 replicate 2, ..., sample
+            2 replicate 1, ...).
+        sample_size (int): Number of samples.
+        n_repl (int): Number of replicates per sample. Defaults to 1.
+
+    Returns:
+        (pd.DataFrame): See above.
+    """
+
+    rec_trees = []
+    all_labels: ty.Set[str] = set()
+
+    for ith_val in node_val:
+        rec_tree = ith_val.extract_reconstructed_tree(plotting_overhead=False)
+        ith_val.populate_n_stubs_on_branches_of_rec_tr()
+        rec_trees.append(rec_tree)
+        all_labels.update(
+            nd.label for nd in rec_tree.preorder_node_iter()
+            if nd.label is not None)
+
+    return_df = initialize_tree_dataframe(
+        sample_size, n_repl=n_repl, summaries=False)
+
+    for label in sorted(all_labels):
+        return_df[label] = pd.array(
+            [pd.NA] * len(node_val), dtype="Int64")
+
+    for idx, rec_tree in enumerate(rec_trees):
+        for nd in rec_tree.preorder_node_iter():
+            n_stub = getattr(nd, "n_stub", None)
+            if nd.label is not None and n_stub is not None:
+                return_df.at[idx, nd.label] = n_stub
+
+    return return_df
+
+
 def prep_trees_rb_smap_dfs(dag_obj: pgm.DirectedAcyclicGraph,
                            tree_dag_node_name_list: ty.List[str],
                            mapped_attr_name: str) -> \
@@ -483,7 +545,8 @@ def prep_trees_rb_smap_dfs(dag_obj: pgm.DirectedAcyclicGraph,
 def prep_data_df(
         dag_obj: pgm.DirectedAcyclicGraph,
         write_nex_states: bool = False,
-        bit_format: bool = False) -> \
+        bit_format: bool = False,
+        write_stub_counts: bool = False) -> \
         ty.Tuple[ty.List[ty.Union[pd.DataFrame, ty.Dict[int, pd.DataFrame]]],
         ty.List[ty.Dict[str, pd.DataFrame]]]:
     """Return two pandas DataFrame's, with scalar and tree random variables.
@@ -496,6 +559,11 @@ def prep_data_df(
         bit_format (bool): Flag specifying if states are to be
             represented as bit patterns (e.g., 'A' -> '10', 'B' ->
             '01', 'AB' -> '11'). Defaults to 'False'.
+        write_stub_counts (bool): Flag specifying if a per-(sample,
+            replicate) table of reconstructed-tree stub counts
+            ('n_stub') should additionally be built, one per
+            tree-valued DAG node -- see 'prep_n_stub_df'. Defaults to
+            'False'.
 
     Returns:
         (tuple): Tuple with two lists as elements, one with file-suffix
@@ -528,6 +596,12 @@ def prep_data_df(
     # { "[tr_node_name1]_replicate_summary.tsv": pd.DataFrame summary stats
     # averaged over replicates, for all samples }
     tree_repl_summary_df_dict: ty.Dict[str, pd.DataFrame] = dict()
+
+    # { "[tr_node_name1]_n_stub.tsv": pd.DataFrame with one row per
+    # (sample, replicate) tree and one column per reconstructed-tree
+    # node label, holding that node's stub count -- only populated if
+    # 'write_stub_counts' is 'True' (see 'prep_n_stub_df') }
+    tree_n_stub_df_dict: ty.Dict[str, pd.DataFrame] = dict()
 
     # { "[tr_node_name1]_sampleidx_repl_idx": states_str, ... }
     tree_living_nd_states_str_dict: ty.Dict[str, str] = dict()
@@ -750,6 +824,14 @@ def prep_data_df(
                 tree_rec_ann_value_df_dict[rv_name][rv_name] = \
                     rec_tree_ann_list
 
+                ##############################################
+                # DataFrame holding reconstructed-tree stub   #
+                # counts (one per tree node), if requested    #
+                ##############################################
+                if write_stub_counts:
+                    tree_n_stub_df_dict[rv_name] = prep_n_stub_df(
+                        node_val, sample_size, n_repl=n_repl)
+
                 ####################################
                 # DataFrame holding tree summaries #
                 # (one per tree node)              #
@@ -848,7 +930,7 @@ def prep_data_df(
 
                         if "Origin age" in repls_all_stats_dict:
                             tree_repl_summary_df_dict[rv_name].at[j, "origin_age"] = \
-                                "{:,.5f}".format(stat.mean(repls_all_stats_dict["Origin age"]))
+                                round(stat.mean(repls_all_stats_dict["Origin age"]), 5)
                             sd = stat.stdev(repls_all_stats_dict["Origin age"])
 
                             if sd < 1E-10:
@@ -856,10 +938,10 @@ def prep_data_df(
 
                             else:
                                 tree_repl_summary_df_dict[rv_name].at[j + 1, "origin_age"] = \
-                                    "{:,.5f}".format(sd)
+                                    round(sd, 5)
 
                         tree_repl_summary_df_dict[rv_name].at[j, "root_age"] = \
-                            "{:,.5f}".format(stat.mean(repls_all_stats_dict["Root age"]))
+                            round(stat.mean(repls_all_stats_dict["Root age"]), 5)
                         sd = stat.stdev(repls_all_stats_dict["Root age"])
 
                         if sd < 1E-10:
@@ -867,24 +949,24 @@ def prep_data_df(
 
                         else:
                             tree_repl_summary_df_dict[rv_name].at[j + 1, "root_age"] = \
-                                "{:,.5f}".format(sd)
+                                round(sd, 5)
 
                         tree_repl_summary_df_dict[rv_name].at[j, "n_total"] = \
                             stat.mean(repls_all_stats_dict["Total taxon count"])
                         tree_repl_summary_df_dict[rv_name].at[j + 1, "n_total"] = \
-                            "{:,.5f}".format(stat.stdev(repls_all_stats_dict["Total taxon count"]))
+                            round(stat.stdev(repls_all_stats_dict["Total taxon count"]), 5)
                         tree_repl_summary_df_dict[rv_name].at[j, "n_extant"] = \
                             stat.mean(repls_all_stats_dict["Extant taxon count"])
                         tree_repl_summary_df_dict[rv_name].at[j + 1, "n_extant"] = \
-                            "{:,.5f}".format(stat.stdev(repls_all_stats_dict["Extant taxon count"]))
+                            round(stat.stdev(repls_all_stats_dict["Extant taxon count"]), 5)
                         tree_repl_summary_df_dict[rv_name].at[j, "n_extinct"] = \
                             stat.mean(repls_all_stats_dict["Extinct taxon count"])
                         tree_repl_summary_df_dict[rv_name].at[j + 1, "n_extinct"] = \
-                            "{:,.5f}".format(stat.stdev(repls_all_stats_dict["Extinct taxon count"]))
+                            round(stat.stdev(repls_all_stats_dict["Extinct taxon count"]), 5)
                         tree_repl_summary_df_dict[rv_name].at[j, "n_sa"] = \
                             stat.mean(repls_all_stats_dict["Direct ancestor count"])
                         tree_repl_summary_df_dict[rv_name].at[j + 1, "n_sa"] = \
-                            "{:,.5f}".format(stat.stdev(repls_all_stats_dict["Direct ancestor count"]))
+                            round(stat.stdev(repls_all_stats_dict["Direct ancestor count"]), 5)
 
                         j += 2
 
@@ -997,7 +1079,8 @@ def prep_data_df(
                               tree_repl_summary_df_dict,
                               tree_living_nd_states_str_dict,
                               tree_living_nd_states_str_nexus_dict,
-                              tree_internal_nd_states_str_dict])
+                              tree_internal_nd_states_str_dict,
+                              tree_n_stub_df_dict])
 
     return scalar_output_stash, tree_output_stash
 
@@ -1092,6 +1175,13 @@ def prep_data_filepaths_dfs(
             output_fp_list.append(state_tsv_fp)
             output_df_str_list.append(state_string)
 
+    # reconstructed-tree stub counts, one .tsv per tree node (only
+    # populated if the caller requested 'write_stub_counts')
+    if tree_output_stash[9]:
+        for rv_name, df in tree_output_stash[9].items():
+            output_fp_list.append(rv_name + "_n_stub.tsv")
+            output_df_str_list.append(df)
+
     return output_fp_list, output_df_str_list
 
 
@@ -1099,7 +1189,8 @@ def dump_pgm_data(dir_string: str,
                   dag_obj: pgm.DirectedAcyclicGraph,
                   prefix: str = "",
                   write_nex_states: bool = False,
-                  bit_format: bool = False) -> None:
+                  bit_format: bool = False,
+                  write_stub_counts: bool = False) -> None:
     """Write stochastic-node sampled values in specified directory.
 
     This function has the side-effect of writing to disk.
@@ -1114,6 +1205,10 @@ def dump_pgm_data(dir_string: str,
         bit_format (bool): Flag specifying if states are to be
             represented as bit patterns (e.g., 'A' -> '10', 'B' ->
             '01', 'AB' -> '11'). Defaults to 'False'.
+        write_stub_counts (bool): Flag specifying if a
+            '[tr_node_name]_n_stub.tsv' file should additionally be
+            written for every tree-valued DAG node -- see
+            'prep_n_stub_df'. Defaults to 'False'.
     """
 
     sorted_node_dag_list: \
@@ -1130,7 +1225,8 @@ def dump_pgm_data(dir_string: str,
     scalar_output_stash, tree_output_stash = \
         prep_data_df(dag_obj,
                      write_nex_states=write_nex_states,
-                     bit_format=bit_format)
+                     bit_format=bit_format,
+                     write_stub_counts=write_stub_counts)
 
     output_fp_list, output_df_str_list = \
         prep_data_filepaths_dfs(scalar_output_stash, tree_output_stash)

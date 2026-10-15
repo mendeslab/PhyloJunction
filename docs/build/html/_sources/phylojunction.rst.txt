@@ -8,8 +8,10 @@ Subpackages
    :maxdepth: 4
 
    phylojunction.calculation
+   phylojunction.constant_function
    phylojunction.data
    phylojunction.distribution
+   phylojunction.functionality
    phylojunction.inference
    phylojunction.interface
    phylojunction.pgm
@@ -22,5 +24,5 @@ Module contents
 
 .. automodule:: phylojunction
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:

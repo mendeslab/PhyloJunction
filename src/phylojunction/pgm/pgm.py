@@ -89,11 +89,20 @@ class DirectedAcyclicGraph():
             # Important #
             #############
 
-            # note how only sampled nodes have any business in setting
-            # the sample size of a DAG object; this means we let the users
-            # fool around with nodes with assigned (fixed, clamped) values
-            # through '<-'
-            if node_dag.is_sampled:
+            # note how only sampled nodes -- or a clamped node backed
+            # by a constant *function* with its own real (sample,
+            # replicate) structure (e.g. 'read_tree', via its own
+            # 'n'/'nr'; 'node_dag.constant_fn' is 'None' for anything
+            # else) -- have any business in setting the sample size of
+            # a DAG object; this means we still let users freely
+            # assign plain literal/vector constants through '<-'
+            # (e.g. 'birth_rate <- 1.0'), which carry no such function
+            # and so no sample/replicate structure of their own to
+            # check against anything -- 'read_tree' is conceptually
+            # equivalent to a tree-valued stochastic node here (e.g.
+            # 'discrete_sse'), not to a plain constant, precisely
+            # because it has its own meaningful 'n'/'nr'
+            if node_dag.is_sampled or node_dag.constant_fn is not None:
                 # if the pgm's sample size is still 0,
                 # or if we started off with a scalar node but then
                 # added sampled node, we update the DAG's sample size
@@ -209,7 +218,7 @@ class DistrForSampling(ValueGenerator):
 
 class ConstantFn(ValueGenerator):
     """Class for deterministically generating values.
-    
+
     An object is class whenever user input must be parsed and modified
     before it can be stored in a DAG node.
     """
@@ -218,6 +227,53 @@ class ConstantFn(ValueGenerator):
     @abstractmethod
     def CT_FN_NAME(self):
         raise NotImplementedError
+
+
+class DeterministicFn(ValueGenerator):
+    """Class for deterministically computing values from DAG parents.
+
+    An object of this class is required whenever a DAG node's value
+    is computed as a pure function of one or more parent DAG nodes.
+    This is in contrast to randomly sampling a value from a
+    distribution ('~', see DistrForSampling), or parsing a value out
+    of literal user input with no tracked DAG parents ('<-', see
+    ConstantFn). This class backs PhyloJunction's ':=' operator.
+    """
+
+    # python3's way of "declaring" an (required) abstract attribute
+    @property
+    @abstractmethod
+    def DET_FN_NAME(self) -> str:
+        raise NotImplementedError
+
+
+def get_vector_stats_dict(vals: ty.List[ty.Union[int, float]]) \
+        -> ty.Dict[str, str]:
+    """Get dict with a plain float vector's own summary stats.
+
+    Mirrors 'tree.AnnotatedTree.get_stats_dict()'s str-valued dict
+    shape (name -> str(value)), so that 'NodeDAG.get_node_stats_str'
+    can treat a per-(sample, replicate)-slot vector (e.g., a
+    'lognormal(n_nr_from=...)'-sampled per-branch rate list, such as
+    the 'br_specific_rel_rate' node in
+    'examples/fbd_read_gamma_spike.pj')
+    exactly like an object with its own '.get_stats_dict()' -- same
+    downstream focal-value/cross-replicate-average/std-dev handling,
+    just sourced from a plain vector instead of calling a method on
+    an object.
+    """
+
+    float_vals = [float(v) for v in vals]
+
+    ks = ["N", "Mean", "Std. dev.", "Min", "Max"]
+    vs: ty.List[ty.Union[int, float]] = [
+        len(float_vals),
+        stat.mean(float_vals),
+        stat.stdev(float_vals) if len(float_vals) > 1 else 0.0,
+        min(float_vals),
+        max(float_vals)]
+
+    return dict((ks[i], str(vs[i])) for i in range(len(ks)))
 
 
 class NodeDAG(ABC):
@@ -335,8 +391,18 @@ class NodeDAG(ABC):
         # so mypy won't complain
         if isinstance(self._value, list):
             for v in self._value:
-                # ._value is a 2D-list
-                if not isinstance(v, (int, float, str, np.float64)):
+                # 'v' is already a plain, ground-truth value in its
+                # own right (e.g., a per-branch rate vector produced
+                # by a ragged/'n_nr_from'-driven distribution --
+                # see 'distribution.dn_parametric.DnLogNormal's
+                # 'n_each_list' mode), not a reference to another
+                # NodeDAG needing its own '.value' extracted -- keep
+                # it as-is
+                if isinstance(v, list):
+                    values.append(v)
+
+                # ._value is a 2D-list (of NodeDAG-like objects)
+                elif not isinstance(v, (int, float, str, np.float64)):
                     values_inside_nodes = v.value
 
                     # so mypy won't complain
@@ -374,6 +440,15 @@ class NodeDAG(ABC):
                                   (int, float, str, np.float64)):
                         return ", ".join(
                             str(v) for v in self._value[start:end])
+
+                    # one vector (e.g., per-branch rates) per (sample,
+                    # replicate) slot -- unlike an ordinary scalar's
+                    # replicates (bundled together, above), each slot
+                    # here is independently meaningful, so show just
+                    # the one currently selected by 'repl_idx' (same
+                    # indexing convention as the tree case below)
+                    elif isinstance(self._value[0], list):
+                        return str(self._value[start + repl_idx])
 
                     else:
                         return "\n".join(
@@ -502,15 +577,24 @@ class NodeDAG(ABC):
                         avg_str + str(repl_value_avg) + "\n" + \
                         std_str + str(repl_value_sd)
 
-                # values are objects (e.g., AnnotatedTree), not scalars
+                # values are either objects with their own
+                # '.get_stats_dict()' (e.g., AnnotatedTree), or a
+                # per-(sample, replicate)-slot vector itself (e.g., a
+                # per-branch rate vector from a ragged/'n_nr_from'-
+                # driven distribution, such as 'br_specific_rel_rate'
+                # in 'examples/fbd_read_gamma_spike.pj') -- both
+                # expose a str-valued stats dict, either directly, or
+                # via 'get_vector_stats_dict' below, so the same
+                # cross-replicate averaging logic handles either kind
                 else:
                     # do stuff with the below
                     repl_objs = self.value[start:end]
                     repl_all_stats_dict: ty.Dict[str, ty.List[float]] = dict()
 
-                    # focal replicate given by repl_idx above
-                    focal_repl_stats_dict: \
-                        ty.Dict[str, ty.Union[int, float]] = dict()
+                    # focal replicate given by repl_idx above -- both
+                    # '.get_stats_dict()' and 'get_vector_stats_dict'
+                    # return a str-valued dict
+                    focal_repl_stats_dict: ty.Dict[str, str] = dict()
                     # all replicates
                     repl_value_avg_dict: ty.Dict[str, float] = dict()
                     # all replicates
@@ -519,7 +603,10 @@ class NodeDAG(ABC):
                     # reading over all obj replicates and collecting
                     # their stats
                     for idx, repl_obj in enumerate(repl_objs):
-                        obj_stat_dict = repl_obj.get_stats_dict()
+                        obj_stat_dict = \
+                            get_vector_stats_dict(repl_obj) \
+                            if isinstance(repl_obj, list) \
+                            else repl_obj.get_stats_dict()
 
                         for st, stat_v in obj_stat_dict.items():
                             float_stat_v: float = 0.0
@@ -580,9 +667,16 @@ class NodeDAG(ABC):
                 if isinstance(self.value[0], (str, int, float, np.float64)):
                     return stats_str
 
-                # if it's an object (e.g., AnnotatedTree, or SequenceAlignment)
+                # if it's an object with its own '.get_stats_dict()'
+                # (e.g., AnnotatedTree, or SequenceAlignment), or a
+                # per-(sample, replicate)-slot vector itself (see the
+                # matching comment on the multi-value case above)
                 else:
-                    obj_stats_dict = self.value[start:end][0].get_stats_dict()
+                    repl_obj = self.value[start:end][0]
+                    obj_stats_dict = \
+                        get_vector_stats_dict(repl_obj) \
+                        if isinstance(repl_obj, list) \
+                        else repl_obj.get_stats_dict()
                     obj_stats_df = pd.DataFrame(obj_stats_dict.items())
                     stats_str = tabulate(
                         obj_stats_df,
@@ -712,6 +806,29 @@ class StochasticNodeDAG(NodeDAG):
                             .plot_node(axes,
                                        draw_reconstructed=draw_reconstructed)
 
+            # a value that is itself a list (e.g., a per-branch rate
+            # vector from a ragged/'n_nr_from'-driven distribution --
+            # see 'distribution.dn_parametric.DnLogNormal's
+            # 'n_each_list' mode) is neither a tree nor a plain
+            # scalar -- histogram whichever (sample, replicate) slot
+            # is currently selected (that slot's own value already is
+            # a flat list of floats, e.g. one tree's per-branch
+            # rates), or every slot's values combined, if viewing
+            # "all samples" (no single slot selected)
+            elif isinstance(self.value[0], list):
+                if isinstance(sample_idx, int) and \
+                        0 <= sample_idx * repl_size + repl_idx < \
+                        len(self.value):
+                    slot_vals = self.value[
+                        sample_idx * repl_size + repl_idx]
+                    plot_node_histogram(
+                        axes, [float(v) for v in slot_vals])
+
+                else:
+                    all_vals = [
+                        float(v) for slot in self.value for v in slot]
+                    plot_node_histogram(axes, all_vals)
+
             # not a tree
             else:
                 # so mypy won't complain
@@ -770,15 +887,63 @@ class DeterministicNodeDAG(NodeDAG):
                  value: ty.Optional[ty.List[ty.Any]] = None,
                  call_order_idx: ty.Optional[int] = None,
                  deterministic: bool = True,
-                 parent_nodes: ty.Optional[ty.List[NodeDAG]] = None) -> None:
+                 parent_nodes: ty.Optional[ty.List[NodeDAG]] = None,
+                 dag_sample_size: ty.Optional[int] = None) -> None:
 
         sample_size = None
+        replicate_size = 1
+
         if isinstance(value, list):
-            sample_size = len(value)
+            # if 'value' holds one element per (sample, replicate)
+            # pair -- e.g., a tree-valued deterministic function like
+            # 'gamma_spike_clock' or 'map_attr' that returns one
+            # (possibly modified) tree per tree in its 'tree' parent
+            # node -- we want this node's own 'sample_size'/
+            # 'replicate_size' to reflect that same (sample,
+            # replicate) structure, not collapse it into
+            # 'len(value)' samples with a single replicate each. We
+            # use the DAG's own (already-established) sample size for
+            # this, since every node in a given DAG shares it (see
+            # 'DirectedAcyclicGraph.add_node').
+            if dag_sample_size and dag_sample_size > 0 and \
+                    len(value) % dag_sample_size == 0:
+                sample_size = dag_sample_size
+                replicate_size = len(value) // dag_sample_size
+
+            else:
+                # 'dag_sample_size' is not (yet) established -- this
+                # happens whenever no *sampled* ('~') node has been
+                # added to the DAG yet (see 'DirectedAcyclicGraph.
+                # add_node': a constant-function node, e.g. 'read_tree'
+                # via '<-', deliberately never sets it, even when it
+                # legitimately has its own (sample, replicate) shape
+                # other than (len(value), 1), e.g. 'n=1, nr=2'). Borrow
+                # that shape from whichever parent node has the same
+                # total element count as our own 'value' -- by
+                # construction, every det-fn this class is used for
+                # (e.g. 'n_rec_branches', 'map_attr', 'gamma_spike_clock')
+                # outputs exactly one value per element of its single
+                # shape-determining parent (its 'tree' argument), so a
+                # same-length parent is reliably the right anchor,
+                # rather than naively assuming 'len(value)' distinct
+                # samples with a single replicate each.
+                sample_size = len(value)
+
+                if parent_nodes:
+                    for parent_nd in parent_nodes:
+                        if isinstance(parent_nd.value, list) and \
+                                len(parent_nd.value) == len(value) and \
+                                parent_nd.sample_size and \
+                                parent_nd.sample_size > 0 and \
+                                len(value) % parent_nd.sample_size == 0:
+                            sample_size = parent_nd.sample_size
+                            replicate_size = \
+                                len(value) // parent_nd.sample_size
+                            break
 
         super().__init__(node_name,
                          sample_size=sample_size,
-                         replicate_size=1,
+                         replicate_size=replicate_size,
                          value=value,
                          call_order_idx=call_order_idx,
                          deterministic=deterministic,
@@ -815,13 +980,99 @@ class DeterministicNodeDAG(NodeDAG):
                 if isinstance(sample_idx, int) and \
                         isinstance(self.value[sample_idx * repl_size + repl_idx],
                                    pjtr.AnnotatedTree):
-                    if self.value[0].state_count > 1:
-                        self.value[sample_idx * repl_size + repl_idx] \
-                            .plot_node(axes, node_attr=branch_attr)
+                    tree_to_plot = \
+                        self.value[sample_idx * repl_size + repl_idx]
+
+                    # a tree whose 'clock_model_attr_name' is set was
+                    # produced by a clock model (e.g.,
+                    # 'gamma_spike_clock') -- for such trees, default
+                    # to the (monochromatic) phylogram visualization,
+                    # with branch lengths rescaled by that model's own
+                    # rate attribute (so the x-axis reads as expected
+                    # evolutionary change, not time), rather than the
+                    # categorical, 'state'-colored chronogram, since
+                    # 'state' would look identical to (and so be
+                    # redundant with) this node's own tree parent.
+                    # 'clock_model_attr_name' is set generically, for
+                    # every clock model, by
+                    # 'calculation.clock_model.ClockModel.generate()'
+                    # -- see that attribute's own docstring (on
+                    # 'tree.AnnotatedTree') -- so this works regardless
+                    # of which attribute name (e.g., "mutation_rate",
+                    # "morph_rate") a given script chose.
+                    if tree_to_plot.clock_model_attr_name is not None and \
+                            tree_to_plot.tree_reconstructed is not None:
+                        # a clock model's rate attribute is only ever
+                        # populated on a tree's *reconstructed*
+                        # topology (stubs, and so spikes, are only
+                        # meaningfully defined there -- see
+                        # 'calculation.gamma_spike_clock_model'), never
+                        # on its complete one. Ignoring the GUI's own
+                        # 'draw_reconstructed' (from its "reconstructed"
+                        # checkbox) and always forcing it 'True' here
+                        # avoids a degenerate rendering (every branch's
+                        # rate lookup misses, so every branch gets
+                        # length/color 0.0) when that checkbox happens
+                        # to be unchecked -- there is no meaningful
+                        # complete-tree version of this plot to fall
+                        # back to.
+                        tree_to_plot.plot_node_phylogram(
+                            axes,
+                            node_attr=tree_to_plot.clock_model_attr_name,
+                            draw_reconstructed=True)
+
+                    elif self.value[0].state_count > 1:
+                        tree_to_plot.plot_node(
+                            axes,
+                            node_attr=branch_attr,
+                            draw_reconstructed=draw_reconstructed)
 
                     else:
-                        self.value[sample_idx * repl_size + repl_idx] \
-                            .plot_node(axes)
+                        tree_to_plot.plot_node(
+                            axes,
+                            draw_reconstructed=draw_reconstructed)
+
+            # one vector per (sample, replicate) slot (e.g., a
+            # per-branch base-rate vector produced via a
+            # 'lognormal(n_nr_from=...)' node) -- histogram whichever
+            # slot is currently selected, or every slot's values
+            # combined, if viewing "all samples" (no single slot
+            # selected)
+            elif isinstance(self.value[0], list):
+                # so mypy won't complain
+                a_repl_size = ty.cast(int, repl_size)
+                a_repl_idx = ty.cast(int, repl_idx)
+
+                if isinstance(sample_idx, int) and \
+                        0 <= sample_idx * a_repl_size + a_repl_idx < \
+                        len(self.value):
+                    slot_vals = self.value[
+                        sample_idx * a_repl_size + a_repl_idx]
+                    plot_node_histogram(
+                        axes, [float(v) for v in slot_vals])
+
+                else:
+                    all_vals = [
+                        float(v) for slot in self.value for v in slot]
+                    plot_node_histogram(axes, all_vals)
+
+            # plain scalar (e.g., int or float) value, one entry per
+            # (sample, replicate) slot (e.g., 'n_rec_branches's output)
+            # -- same histogram dispatch 'StochasticNodeDAG.plot_node'
+            # uses for its own scalar values
+            else:
+                hist_vals = [ty.cast(float, v) for v in self.value]
+
+                if sample_idx is not None:
+                    plot_node_histogram(
+                        axes,
+                        hist_vals,
+                        sample_idx=sample_idx,
+                        repl_size=ty.cast(int, repl_size))
+
+                else:
+                    plot_node_histogram(
+                        axes, hist_vals, repl_size=ty.cast(int, repl_size))
 
         else:
             plot_blank(axes)
@@ -830,6 +1081,24 @@ class DeterministicNodeDAG(NodeDAG):
         pass
 
     def get_node_stats_str(self, start: int, end: int, repl_idx: int) -> str:
+        # the base implementation already knows how to safely
+        # summarize scalar values, 'AnnotatedTree' values (e.g., this
+        # det-fn being 'gamma_spike_clock'/'map_attr', the same as
+        # any '~'-sampled tree node, so the GUI shows the same kind
+        # of summary stats for either), and per-slot vector values
+        # (via 'get_vector_stats_dict', same as
+        # 'StochasticNodeDAG.get_node_stats_str') -- but NOT arbitrary
+        # other deterministic-function outputs (e.g., 'sse_rate'/
+        # 'sse_stash's, neither scalar, list, nor tree), which have no
+        # '.get_stats_dict()' and would crash there. Only delegate for
+        # the shapes we know are safe; keep today's "nothing to show"
+        # behavior for everything else.
+        if isinstance(self.value, list) and self.value and \
+                isinstance(self.value[0],
+                          (str, int, float, np.float64, list,
+                           pjtr.AnnotatedTree)):
+            return super().get_node_stats_str(start, end, repl_idx)
+
         return ""
 
 
@@ -853,6 +1122,14 @@ def plot_node_histogram(axes: plt.Axes,
 
     # figure canvas was created outside main loop in GUI
     axes.cla()
+    # a previously-drawn clock-model-annotated tree (e.g., a
+    # 'gamma_spike_clock' node) may have left behind a colorbar of its
+    # own (see 'tree.plot_ann_tree_continuous_attr') -- 'cla()' above
+    # only clears drawn content, not that colorbar (nor the shrink to
+    # 'axes's own geometry it caused), so switching from such a tree
+    # node straight to a scalar node (e.g., an origin-age node) would
+    # otherwise leave the old colorbar on screen indefinitely
+    pjtr.clear_trait_colorbar(axes)
     counts, bins, _ = \
         axes.hist(values_list_to_plot,
                   histtype='stepfilled',
@@ -874,6 +1151,8 @@ def plot_node_histogram(axes: plt.Axes,
 
 def plot_blank(axes: plt.Axes) -> None:
     axes.cla()
+    # see the matching comment in 'plot_node_histogram' above
+    pjtr.clear_trait_colorbar(axes)
     axes.patch.set_alpha(0.0)
     axes.xaxis.set_ticks([])
     axes.yaxis.set_ticks([])

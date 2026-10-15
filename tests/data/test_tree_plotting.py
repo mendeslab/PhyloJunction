@@ -1596,6 +1596,237 @@ class TestReconstructedTreePrint(unittest.TestCase):
               'nd0': 7.0625}
         )
 
+    def test_y_coords_sa_dummy_parent_not_along_branches(self) -> None:
+        """An 'is_sa_dummy_parent' node is averaged when SAs get own rows.
+
+        The pre-existing special-case for 'is_sa_dummy_parent' nodes
+        (give it its single non-SA child's height) only applies when
+        'sa_along_branches' is True -- when it is False (e.g.
+        phylogram plotting, where a direct ancestor is drawn as its
+        own row instead of placed along its parent's branch), a
+        dummy parent has two real, positioned children (the SA leaf
+        and the continuing lineage) and must instead be averaged over
+        them, like any other bifurcating node. This used to be
+        explicitly excluded from that averaging case too, leaving
+        such a node out of the returned dict altogether -- a real
+        bug, not an artifact of unusual input: it reproduces on any
+        FBD tree simulated by PhyloJunction itself ('discrete_sse'
+        with an 'anc_sampling'-event rate) that has at least one
+        direct ancestor, the moment its phylogram is plotted.
+
+        Tree: (tipa:3.0,(sa:0.0,tipb:2.0)dummy:1.0)root:1.0)origin:0.0;
+        """
+
+        origin_node = Node(taxon=Taxon(label="origin"), label="origin",
+                           edge_length=0.0)
+        origin_node.state = 0
+        origin_node.alive = False
+        origin_node.sampled = False
+        origin_node.is_sa = False
+        origin_node.is_sa_dummy_parent = False
+        origin_node.is_sa_lineage = False
+
+        root_node = Node(taxon=Taxon(label="root"), label="root",
+                         edge_length=1.0)
+        root_node.state = 0
+        root_node.alive = False
+        root_node.sampled = False
+        root_node.is_sa = False
+        root_node.is_sa_dummy_parent = False
+        root_node.is_sa_lineage = False
+        origin_node.add_child(root_node)
+
+        tip_a = Node(taxon=Taxon(label="tipa"), label="tipa",
+                    edge_length=3.0)
+        tip_a.state = 0
+        tip_a.alive = True
+        tip_a.sampled = True
+        tip_a.is_sa = False
+        tip_a.is_sa_dummy_parent = False
+        tip_a.is_sa_lineage = False
+
+        dummy = Node(taxon=Taxon(label="dummy"), label="dummy",
+                    edge_length=1.0)
+        dummy.state = 0
+        dummy.alive = False
+        dummy.sampled = False
+        dummy.is_sa = False
+        dummy.is_sa_dummy_parent = True
+        dummy.is_sa_lineage = False
+
+        root_node.add_child(tip_a)
+        root_node.add_child(dummy)
+
+        sa_leaf = Node(taxon=Taxon(label="sa"), label="sa",
+                      edge_length=0.0)
+        sa_leaf.state = 0
+        sa_leaf.alive = False
+        sa_leaf.sampled = True
+        sa_leaf.is_sa = True
+        sa_leaf.is_sa_dummy_parent = False
+        sa_leaf.is_sa_lineage = False
+
+        tip_b = Node(taxon=Taxon(label="tipb"), label="tipb",
+                    edge_length=2.0)
+        tip_b.state = 0
+        tip_b.alive = True
+        tip_b.sampled = True
+        tip_b.is_sa = False
+        tip_b.is_sa_dummy_parent = False
+        tip_b.is_sa_lineage = True
+
+        dummy.add_child(sa_leaf)
+        dummy.add_child(tip_b)
+
+        tr_complete = Tree(seed_node=origin_node)
+        for nd in (origin_node, root_node, tip_a, dummy, sa_leaf, tip_b):
+            tr_complete.taxon_namespace.add_taxon(nd.taxon)
+
+        sa_lineage_dict = {
+            "tipb": [pjsa.SampledAncestor(
+                "sa", "tipb", 2.0, time_to_lineage_node=2.0)]}
+
+        ann_tr = pjtr.AnnotatedTree(
+            tr_complete, total_state_count=1, start_at_origin=True,
+            max_age=4.0, sa_lineage_dict=sa_lineage_dict, epsilon=1e-12)
+
+        y_coords = pjtr.get_y_coord_from_n_obs_nodes(
+            ann_tr, start_at_origin=True, sa_along_branches=False,
+            draw_reconstructed=False)
+
+        self.assertEqual(
+            y_coords["dummy"], (y_coords["sa"] + y_coords["tipb"]) / 2.0)
+        self.assertEqual(
+            y_coords,
+            {"tipa": 2.0, "sa": 3.0, "tipb": 4.0, "dummy": 3.5,
+             "root": 2.75, "origin": 2.75})
+
+    def test_continuous_attr_tree_draws_sa_as_dot(self) -> None:
+        """A direct ancestor is a dot, not its own zero-length branch.
+
+        '_draw_continuous_attr_tree' (shared by
+        'plot_ann_tree_continuous_attr' and 'plot_ann_tree_phylogram')
+        used to size its y-axis with one row per direct ancestor (via
+        'sa_along_branches=False'), then draw each as an ordinary,
+        zero-length leaf branch -- a visually degenerate dot-less
+        segment, and, before 'read_nwk_tree_str' started correctly
+        setting 'n_sa_nodes' (see that function), a Newick-read tree
+        with direct ancestors would even end up with y-coordinates
+        running well into negative territory, pushing most of the
+        tree outside the plot's hard-coded y-limits. This checks the
+        fix directly: a direct ancestor gets drawn as a dot at its
+        dummy parent's own position (matching 'plot_ann_tree's own
+        '_draw_clade' convention), using exactly one less row than
+        before.
+
+        Tree: (tipa:3.0,(sa:0.0,tipb:2.0)dummy:1.0)root:1.0)origin:0.0;
+        """
+
+        origin_node = Node(taxon=Taxon(label="origin"), label="origin",
+                           edge_length=0.0)
+        origin_node.state = 0
+        origin_node.alive = False
+        origin_node.sampled = False
+        origin_node.is_sa = False
+        origin_node.is_sa_dummy_parent = False
+        origin_node.is_sa_lineage = False
+
+        root_node = Node(taxon=Taxon(label="root"), label="root",
+                         edge_length=1.0)
+        root_node.state = 0
+        root_node.alive = False
+        root_node.sampled = False
+        root_node.is_sa = False
+        root_node.is_sa_dummy_parent = False
+        root_node.is_sa_lineage = False
+        origin_node.add_child(root_node)
+
+        tip_a = Node(taxon=Taxon(label="tipa"), label="tipa",
+                    edge_length=3.0)
+        tip_a.state = 0
+        tip_a.alive = True
+        tip_a.sampled = True
+        tip_a.is_sa = False
+        tip_a.is_sa_dummy_parent = False
+        tip_a.is_sa_lineage = False
+
+        dummy = Node(taxon=Taxon(label="dummy"), label="dummy",
+                    edge_length=1.0)
+        dummy.state = 0
+        dummy.alive = False
+        dummy.sampled = False
+        dummy.is_sa = False
+        dummy.is_sa_dummy_parent = True
+        dummy.is_sa_lineage = False
+
+        root_node.add_child(tip_a)
+        root_node.add_child(dummy)
+
+        sa_leaf = Node(taxon=Taxon(label="sa"), label="sa",
+                      edge_length=0.0)
+        sa_leaf.state = 0
+        sa_leaf.alive = False
+        sa_leaf.sampled = True
+        sa_leaf.is_sa = True
+        sa_leaf.is_sa_dummy_parent = False
+        sa_leaf.is_sa_lineage = False
+
+        tip_b = Node(taxon=Taxon(label="tipb"), label="tipb",
+                    edge_length=2.0)
+        tip_b.state = 0
+        tip_b.alive = True
+        tip_b.sampled = True
+        tip_b.is_sa = False
+        tip_b.is_sa_dummy_parent = False
+        tip_b.is_sa_lineage = True
+
+        dummy.add_child(sa_leaf)
+        dummy.add_child(tip_b)
+
+        tr_complete = Tree(seed_node=origin_node)
+        for nd in (origin_node, root_node, tip_a, dummy, sa_leaf, tip_b):
+            tr_complete.taxon_namespace.add_taxon(nd.taxon)
+
+        ann_tr = pjtr.AnnotatedTree(
+            tr_complete, total_state_count=1, start_at_origin=True,
+            max_age=4.0, epsilon=1e-12)
+
+        x_coords = {
+            "origin": 0.0, "root": 0.1, "tipa": 0.4, "dummy": 0.2,
+            "sa": 0.2, "tipb": 0.3}
+
+        fig = matplotlib.pyplot.figure()
+        ax = fig.add_subplot()
+
+        y_coords = pjtr._draw_continuous_attr_tree(
+            ann_tr, ax, x_coords, lambda nd: "k", draw_reconstructed=False)
+
+        # one row fewer than the (now-reverted) 'sa_along_branches=
+        # False' sizing would have used -- 'dummy' simply takes on
+        # 'tipb's own height, exactly like 'is_sa_dummy_parent' is
+        # handled everywhere else when SAs are placed along branches
+        self.assertEqual(y_coords["dummy"], y_coords["tipb"])
+        self.assertNotIn("sa", y_coords)
+        self.assertEqual(
+            y_coords,
+            {"tipa": 2.0, "tipb": 3.0, "dummy": 3.0, "root": 2.5,
+             "origin": 2.5})
+
+        # the direct ancestor is drawn as a dot (a Line2D with a
+        # marker), at its dummy parent's own (x, y) position -- not
+        # as its own branch segment
+        self.assertEqual(len(ax.lines), 1)
+        dot = ax.lines[0]
+        self.assertEqual(dot.get_marker(), "o")
+        self.assertEqual(
+            (dot.get_xdata()[0], dot.get_ydata()[0]),
+            (x_coords["dummy"], y_coords["dummy"]))
+
+        # 'tipa'/'tipb' get an ordinary tip label each, 'sa' gets its
+        # own (rotated) dot label -- three labels total, none of them
+        # duplicated
+        self.assertEqual(len(ax.texts), 3)
+
 
 if __name__ == "__main__":
     # $ python3.11 tests/data/test_tree_plotting.py

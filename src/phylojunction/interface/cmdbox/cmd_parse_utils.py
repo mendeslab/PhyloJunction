@@ -32,8 +32,20 @@ character_value_regex = re.compile(r"\s*([a-zA-Z]+)\s*")
 quoted_character_value_regex = re.compile(r"\s*(\"[a-zA-Z]+\")\s*")
 
 # sampling dn
+#
+# this regex is also (re-)used for parsing deterministic function
+# ('det_fn') specifications; it is named after the former only for
+# historical reasons
 sampled_as_regex = re.compile(r"\s*(~)\s*")
-sampling_dn_spec_regex = re.compile(r"([a-zA-Z]+_*[a-zA-Z]*)\((.+)\)")
+# the function/distribution name can have any number of underscores
+# (e.g., 'sse_rate', 'gamma_spike_clock') -- it used to only allow a
+# single one (([a-zA-Z]+_*[a-zA-Z]*)), so 'gamma_spike_clock(...)' was
+# mis-tokenized (only 'spike_clock' was captured as the name,
+# silently corrupting every call to this det-fn); see
+# 'tests.interface.test_cmd_parse_utils.
+# test_sampling_dn_spec_regex_multi_underscore_name' for that
+# regression test
+sampling_dn_spec_regex = re.compile(r"([a-zA-Z][a-zA-Z_]*)\((.+)\)")
 
 # det functions
 deterministic_regex = re.compile(r"\s*(:=)\s*")

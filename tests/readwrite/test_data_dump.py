@@ -169,7 +169,8 @@ class TestDataDump(unittest.TestCase):
         cls.tree_summary_df_dict, cls.tree_repl_summary_df_dict, \
         cls.tree_living_nd_states_str_dict, \
         cls.tree_living_nd_states_str_nexus_dict, \
-        cls.tree_internal_nd_states_str_dict = cls.tree_output_stash 
+        cls.tree_internal_nd_states_str_dict, \
+        cls.tree_n_stub_df_dict = cls.tree_output_stash
 
     def test_bisse_data_dump_file_names(self):
         """Test output file names."""
@@ -206,6 +207,35 @@ class TestDataDump(unittest.TestCase):
             ],
             self.output_fp_list
         )
+
+    def test_tree_output_stash_length(self):
+        """Test 'prep_data_df's tree-output stash has the expected length.
+
+        'cls.tree_output_stash' is unpacked positionally, by every
+        caller that needs its individual pieces, into a fixed number
+        of names -- here, in 'pj_gui.py' (twice), and in
+        'pysimple_pjgui/pj_gui_pysimplegui.py' (twice). None of those
+        4 call sites raise a clear error if 'prep_data_df' ever grows
+        (or shrinks) the stash without every unpacking site being
+        updated to match -- they just fail with a generic Python
+        'ValueError: too many/not enough values to unpack', far from
+        where the actual mismatch was introduced. This test exists so
+        that mismatch is caught here, loudly and explicitly, instead.
+        """
+
+        self.assertEqual(
+            len(self.tree_output_stash),
+            10,
+            msg=(
+                "'tree_output_stash' no longer has 10 elements. If you "
+                "added (or removed) an element in 'prep_data_df' "
+                "(src/phylojunction/readwrite/pj_write.py), you must "
+                "also update every place that unpacks 'tree_output_stash' "
+                "positionally: 'pj_gui.py's 'do_selected_node_compare_page' "
+                "and 'do_selected_node_coverage_page' (interface/pysidegui/"
+                "pj_gui.py), and their pysimplegui counterparts "
+                "(interface/pysimple_pjgui/pj_gui_pysimplegui.py) -- then "
+                "update the expected length here to match."))
 
     def test_bisse_data_dump_scalar_val_table(self):
         """Test scalar variables values."""

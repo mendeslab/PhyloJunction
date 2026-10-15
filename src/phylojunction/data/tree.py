@@ -212,6 +212,7 @@ class AnnotatedTree(dp.Tree):
     extant_terminal_nodes_labels: ty.Tuple[str, ...]
     extinct_terminal_nodes_labels: ty.Tuple[str, ...]
     extant_sampled_terminal_nodes_labels: ty.Tuple[str, ...]
+    extinct_sampled_terminal_nodes_labels: ty.Tuple[str, ...]
     sa_obs_nodes_labels: ty.Tuple[str, ...]
 
     # for plotting #
@@ -280,6 +281,19 @@ class AnnotatedTree(dp.Tree):
         # trees
         self.tree = a_tree
         self.tree_reconstructed = None
+
+        # name of the per-branch rate attribute a clock model (e.g.,
+        # 'gamma_spike_clock') has populated on 'self.tree_reconstructed'
+        # -- e.g., "mutation_rate", "morph_rate" -- or 'None' if no
+        # clock model has been applied to this tree. Set generically,
+        # for every clock model at once, by
+        # 'calculation.clock_model.ClockModel.generate()', rather than
+        # by any one concrete clock model, so that code reading this
+        # (e.g., 'get_stats_dict'/'pgm.DeterministicNodeDAG.plot_node')
+        # does not need to hard-code any one clock model's attribute
+        # name to recognize "this tree is a clock-model-annotated
+        # phylogram".
+        self.clock_model_attr_name: ty.Optional[str] = None
 
         # check if simulated, or specified by user
         self.tree_read_as_newick = read_as_newick_string
@@ -384,6 +398,7 @@ class AnnotatedTree(dp.Tree):
         self.n_extant_terminal_nodes = 0
         self.n_extinct_terminal_nodes = 0
         self.n_extant_sampled_terminal_nodes = 0
+        self.n_extinct_sampled_terminal_nodes = 0
         self.n_sa_nodes = 0
 
         # initializes (side-effect):
@@ -765,18 +780,21 @@ class AnnotatedTree(dp.Tree):
         correctly.
 
         The initialization side-effects are on:
-            (i)   self.n_extant_terminal_nodes
-            (ii)  self.n_extant_sampled_terminal_nodes
-            (iii) self.n_extinct_terminal_nodes
-            (iv)  self.extant_terminal_nodes_labels
-            (v)   self.extant_sampled_terminal_nodes_labels
-            (vi)  self.extinct_terminal_nodes_labels
+            (i)    self.n_extant_terminal_nodes
+            (ii)   self.n_extant_sampled_terminal_nodes
+            (iii)  self.n_extinct_terminal_nodes
+            (iv)   self.n_extinct_sampled_terminal_nodes
+            (v)    self.extant_terminal_nodes_labels
+            (vi)   self.extant_sampled_terminal_nodes_labels
+            (vii)  self.extinct_terminal_nodes_labels
+            (viii) self.extinct_sampled_terminal_nodes_labels
         """
 
         # nd.distance_from_root() gives distance to seed!
         extant_terminal_nd_labels_list: ty.List[str] = []
         extinct_terminal_nd_labels_list: ty.List[str] = []
         extant_sampled_terminal_nd_labels_list: ty.List[str] = []
+        extinct_sampled_terminal_nd_labels_list: ty.List[str] = []
 
         # tree died!
         #
@@ -815,9 +833,21 @@ class AnnotatedTree(dp.Tree):
                             <= self.epsilon:
                         if self.tree_read_as_newick:
                             self.n_extant_terminal_nodes += 1
-                            self.n_extant_sampled_terminal_nodes += 1
                             extant_terminal_nd_labels_list. \
                                 append(nd.taxon.label)
+
+                            # a leaf read from Newick may have been
+                            # explicitly annotated 'sampled=False'
+                            # (e.g. a known-but-unsequenced living
+                            # taxon, when 'read_tree's
+                            # 'keep_unsampled_alive' argument is left
+                            # at its "false" default) -- respect that
+                            # instead of assuming every extant leaf is
+                            # sampled
+                            if hasattr(nd, "sampled") and nd.sampled:
+                                self.n_extant_sampled_terminal_nodes += 1
+                                extant_sampled_terminal_nd_labels_list.\
+                                    append(nd.taxon.label)
 
                         # if tree was created via simulation
                         # (and .alive has been set as an attribute)
@@ -840,12 +870,27 @@ class AnnotatedTree(dp.Tree):
                             extinct_terminal_nd_labels_list \
                                 .append(nd.taxon.label)
 
+                            # a dead leaf read from Newick may still
+                            # have been sampled (a fossil tip, '&
+                            # sampled=True') -- track that separately
+                            # from "extinct" in general, same as for
+                            # extant leaves above
+                            if hasattr(nd, "sampled") and nd.sampled:
+                                self.n_extinct_sampled_terminal_nodes += 1
+                                extinct_sampled_terminal_nd_labels_list \
+                                    .append(nd.taxon.label)
+
                         # if tree was created via simulation
                         # (and .alive a member of Node)
                         elif not nd.alive:
                             self.n_extinct_terminal_nodes += 1
                             extinct_terminal_nd_labels_list \
                                 .append(nd.label)
+
+                            if hasattr(nd, "sampled") and nd.sampled:
+                                self.n_extinct_sampled_terminal_nodes += 1
+                                extinct_sampled_terminal_nd_labels_list \
+                                    .append(nd.label)
 
                         else:
                             raise ec.AnnotatedTreeIncorrectAnnotationError(
@@ -865,6 +910,8 @@ class AnnotatedTree(dp.Tree):
             tuple(extant_sampled_terminal_nd_labels_list)
         self.extinct_terminal_nodes_labels = \
             tuple(extinct_terminal_nd_labels_list)
+        self.extinct_sampled_terminal_nodes_labels = \
+            tuple(extinct_sampled_terminal_nd_labels_list)
 
     def _count_sampled_ancestors(self) -> None:
         """Count direct (sampled) ancestor nodes.
@@ -1498,17 +1545,32 @@ class AnnotatedTree(dp.Tree):
             self.rec_tr_root_node_label = self.rec_tr_root_node.label
             self.rec_tr_root_age = self.node_ages_dict[self.rec_tr_root_node_label]
 
-            # if tree went extinct, return empty new tree
+            # if tree went extinct, return empty new tree -- a dead,
+            # but sampled (fossil) tip still counts as "something
+            # retained", same as an extant sample or a direct
+            # ancestor, so it must be included here too, or a
+            # fossil-only tree would incorrectly be treated as having
+            # nothing to reconstruct
             # if (self.n_extant_terminal_nodes + self.n_sa_nodes) <= 1:
-            if (self.n_extant_sampled_terminal_nodes + self.n_sa_nodes) == 0:
+            if (self.n_extant_sampled_terminal_nodes +
+                    self.n_extinct_sampled_terminal_nodes +
+                    self.n_sa_nodes) == 0:
                 return dp.Tree()
 
             # filter_fn = lambda nd: \
             #     nd.is_sa or (nd.is_leaf() and nd.alive and nd.sampled)
 
+            # a sampled leaf survives regardless of whether it is
+            # alive or dead -- a dead, sampled leaf is a fossil tip
+            # (e.g. read from an annotated Newick string via
+            # 'read_tree's 'is_complete' argument -- see
+            # 'readwrite.pj_read.read_nwk_tree_str'), which belongs in
+            # the reconstructed tree exactly as much as an extant
+            # sample does; only a dead, *unsampled* lineage should be
+            # pruned away
             def filter_fn(nd):
                 return nd.is_sa or \
-                       (nd.is_leaf() and nd.alive and nd.sampled) or \
+                       (nd.is_leaf() and nd.sampled) or \
                        nd.is_sa_dummy_parent
                 # return nd.is_sa or (nd.is_leaf() and nd.alive and nd.sampled)
 
@@ -1531,6 +1593,20 @@ class AnnotatedTree(dp.Tree):
                 root_node = \
                     self.tree_reconstructed.find_node_with_taxon_label("root")
 
+            # tree was read in with a 'node_name_attr' (e.g., to
+            # cross-reference externally-computed stochastic maps),
+            # so the root's literal label is not "root" -- it is
+            # whatever 'alternative_root_label' holds instead
+            if root_node is None and self.alternative_root_label:
+                root_node = \
+                    self.tree_reconstructed.find_node_with_label(
+                        self.alternative_root_label)
+
+                if root_node is None:
+                    root_node = \
+                        self.tree_reconstructed.find_node_with_taxon_label(
+                            self.alternative_root_label)
+
             if root_node:
                 root_node_distance_from_seed = \
                     root_node.distance_from_root()
@@ -1549,7 +1625,8 @@ class AnnotatedTree(dp.Tree):
 
                 # double-checking we're looking at just internal
                 # nodes that are not the root
-                if internal_nd.label not in ("root", "origin"):
+                if internal_nd.label not in \
+                        ("root", "origin", self.alternative_root_label):
                     # we set int_node_deeper_than_root if
                     # (i) we haven't looked at any internal nodes yet,
                     # i.e., smallest_distance == 0.0,
@@ -1676,7 +1753,8 @@ class AnnotatedTree(dp.Tree):
                         # if so, it is because there must be a sampled ancestor
                         # before the root, so we need to re-root above complete
                         # tree's root
-                        if rec_tree_mrca_label != "root":
+                        if rec_tree_mrca_label not in \
+                                ("root", self.alternative_root_label):
                             rec_mrca_node = \
                                 self.tree_reconstructed \
                                     .find_node_with_label(rec_tree_mrca_label)
@@ -1805,6 +1883,14 @@ class AnnotatedTree(dp.Tree):
         e.g., when a Gamma-spike clock model is used somewhere in the
         DAG.
 
+        The reconstructed tree's root/seed node always ends up with
+        'n_stub == 0' here -- not as a special case, but because the
+        root has no reconstructed parent for the accumulation loop
+        below to walk up from in the first place (see 'is_real_branch',
+        module-level, for the full reasoning on why this is
+        structural, not a convention, and why it holds even when the
+        root is reached via a chain of direct ancestors above it).
+
         There is no return and only a side-effect (each node in the
         reconstructed tree has a member 'n_stub' initialized and
         populated.
@@ -1851,6 +1937,32 @@ class AnnotatedTree(dp.Tree):
 
                 rec_nd.n_stub = 0
 
+    def n_rec_branches(self) -> int:
+        """Return the number of real branches in the reconstructed tree.
+
+        Counts every node of 'self.tree_reconstructed' whose incoming
+        edge is a real branch (see 'is_real_branch', module-level,
+        for exactly which ones that excludes -- notably, a lineage
+        bisected by a sampled ancestor contributes two real branches,
+        not one, as long as both segments have non-zero length).
+
+        Always operates on the reconstructed tree (extracting it
+        first, if not already done) -- unlike the complete tree, the
+        reconstructed tree is what every per-branch, clock-model-style
+        quantity in PhyloJunction (stub counts, Gamma-spike rates) is
+        defined over, so "number of branches" is tied to the same
+        tree for consistency.
+
+        Returns:
+            (int): Number of real branches in the reconstructed tree.
+        """
+
+        if not self.tree_reconstructed:
+            self.extract_reconstructed_tree(plotting_overhead=False)
+
+        return sum(
+            1 for nd in self.tree_reconstructed.preorder_node_iter()
+            if is_real_branch(nd, self.epsilon))
 
     def populate_nd_attr_dict(self,
                               attrs_of_interest_list: ty.List[str],
@@ -1954,16 +2066,113 @@ class AnnotatedTree(dp.Tree):
                           attr_of_interest=node_attr,
                           draw_reconstructed=draw_reconstructed)
 
+    def plot_node_continuous_attr(
+            self,
+            axes: plt.Axes,
+            node_attr: str = "mutation_rate",
+            use_age: bool = False,
+            cmap_name: str = "inferno",
+            draw_reconstructed: bool = False) -> None:
+        """Draw tree on provided Axes, colored by a continuous attribute.
+
+        This is the 'colored chronogram' visualization (branch
+        lengths remain in time units; see 'plot_ann_tree_continuous_attr'
+        for details). Not currently PhyloJunction's GUI default for a
+        clock-model-annotated tree node (see 'plot_node_phylogram'
+        below, and 'pgm.DeterministicNodeDAG.plot_node'); still
+        available for direct use.
+
+        Args:
+            axes (matplotlib.pyplot.Axes): Axes object where we are
+                drawing the tree.
+            node_attr (str): Name of the per-branch attribute to
+                color branches by. Defaults to 'mutation_rate'
+                (currently the only such attribute; letting the user
+                choose among several is future work).
+            use_age (bool): Flag specifying if age or time is being
+                used. Defaults to 'False'.
+            cmap_name (str): Name of a Matplotlib sequential colormap.
+                Defaults to 'inferno'.
+            draw_reconstructed (bool, optional): Whether we are
+                drawing the reconstructed tree instead of the
+                complete tree. Defaults to 'False'.
+        """
+
+        if draw_reconstructed:
+            self.extract_reconstructed_tree(plotting_overhead=True)
+
+        _, _ = plot_ann_tree_continuous_attr(
+            self,
+            axes,
+            attr_of_interest=node_attr,
+            use_age=use_age,
+            cmap_name=cmap_name,
+            draw_reconstructed=draw_reconstructed)
+
+    def plot_node_phylogram(
+            self,
+            axes: plt.Axes,
+            node_attr: str = "mutation_rate",
+            draw_reconstructed: bool = False,
+            color: str = "black") -> None:
+        """Draw tree on provided Axes as a monochromatic phylogram.
+
+        Branch lengths are rescaled by 'node_attr' instead of being
+        in time units; see 'plot_ann_tree_phylogram' for details.
+        This is the default way PhyloJunction's GUI draws a
+        deterministic tree node whose branches carry a continuous,
+        clock-model-populated attribute (see
+        'pgm.DeterministicNodeDAG.plot_node').
+
+        Args:
+            axes (matplotlib.pyplot.Axes): Axes object where we are
+                drawing the tree.
+            node_attr (str): Name of the per-branch attribute to
+                scale branch lengths by. Defaults to 'mutation_rate'.
+            draw_reconstructed (bool, optional): Whether we are
+                drawing the reconstructed tree instead of the
+                complete tree. Defaults to 'False'.
+            color (str): Color every branch is drawn in. Defaults to
+                'black'.
+        """
+
+        if draw_reconstructed:
+            self.extract_reconstructed_tree(plotting_overhead=True)
+
+        _, _ = plot_ann_tree_phylogram(
+            self,
+            axes,
+            attr_of_interest=node_attr,
+            draw_reconstructed=draw_reconstructed,
+            color=color)
+
     def get_stats_dict(self) -> ty.Dict[str, ty.Union[int, float]]:
         """Get dictionary with AnnotatedTree's summary stats.
 
         This method is required whenever the user asks for a DAG node
         to be summarized.
 
+        A tree whose 'self.clock_model_attr_name' is set was annotated
+        by a clock model (e.g., 'gamma_spike_clock') -- such a node
+        exists to represent its reconstructed topology (its
+        phylogram), not the complete tree, so its stats summarize
+        'self.tree_reconstructed' itself. 'clock_model_attr_name' is
+        set generically by 'calculation.clock_model.ClockModel.generate()'
+        for every clock model, regardless of which attribute name
+        (e.g., "mutation_rate", "morph_rate") that particular model's
+        caller chose -- see that attribute's own docstring. This is
+        the same detection 'pgm.DeterministicNodeDAG.plot_node' uses
+        to decide whether to draw the (monochromatic) phylogram
+        instead of the complete chronogram.
+
         Returns:
             (dict): Dictionary with summary statistic names as keys
             and their values as values.
         """
+
+        if self.clock_model_attr_name is not None and \
+                self.tree_reconstructed is not None:
+            return self._get_rec_tr_stats_dict()
 
         ks = ["Origin age",
               "Root age",
@@ -1976,6 +2185,61 @@ class AnnotatedTree(dp.Tree):
               (self.n_extant_terminal_nodes + self.n_extinct_terminal_nodes),
               self.n_extant_terminal_nodes,
               self.n_extinct_terminal_nodes,
+              self.n_sa_nodes]
+
+        return dict((ks[i], str(vs[i])) for i in range(len(ks)))
+
+    def _get_rec_tr_stats_dict(self) -> ty.Dict[str, ty.Union[int, float]]:
+        """Get dictionary with the reconstructed tree's own summary stats.
+
+        Unlike 'get_stats_dict()' in the general case, every count
+        here is recomputed directly from 'self.tree_reconstructed'
+        itself, rather than reused from the complete tree's own
+        (pre-computed) counters -- unsampled lineages that died are
+        pruned away entirely during reconstruction, and chains of
+        direct ancestors are unifurcation-suppressed, so the complete
+        tree's counts do not, in general, describe the reconstructed
+        tree (e.g., a reconstructed tree's "Extinct taxon count" is
+        only ever its *sampled* fossil tips, never the unsampled ones
+        that did not survive reconstruction).
+
+        There is no "Origin age" here: the reconstructed tree has no
+        origin node of its own at all (see 'tree.is_real_branch' for
+        why) -- its own root/seed node's age ('self.rec_tr_root_age')
+        is, by construction, the oldest point for which there is any
+        retained evidence (see 'tree.is_real_branch's docstring and
+        'AnnotatedTree.extract_reconstructed_tree').
+
+        Direct (sampled) ancestors are never pruned nor
+        unifurcation-suppressed (they are always leaves, in both the
+        complete and reconstructed tree), so 'self.n_sa_nodes' is
+        reused unchanged here.
+        """
+
+        n_extant = 0
+        n_extinct = 0
+        for nd in ty.cast(
+                dp.Tree, self.tree_reconstructed).leaf_node_iter():
+            # direct (sampled) ancestors are not terminal taxa, same
+            # convention as 'get_stats_dict's complete-tree counters
+            if nd.is_sa:
+                continue
+
+            if nd.alive:
+                n_extant += 1
+
+            else:
+                n_extinct += 1
+
+        ks = ["Root age",
+              "Total taxon count",
+              "Extant taxon count",
+              "Extinct taxon count",
+              "Direct ancestor count"]
+        vs = [self.rec_tr_root_age,
+              n_extant + n_extinct,
+              n_extant,
+              n_extinct,
               self.n_sa_nodes]
 
         return dict((ks[i], str(vs[i])) for i in range(len(ks)))
@@ -2129,6 +2393,68 @@ def get_node_name(nd: dp.Node) -> str:
         raise ec.AnnotatedTreeMissingNodeName()
 
 
+def is_real_branch(nd: dp.Node, epsilon: float) -> bool:
+    """Return whether 'nd's incoming edge is a 'real' branch.
+
+    A branch is not "real" (and so is excluded from things like
+    per-branch rate draws or branch counts) if it has no parent (the
+    root/seed node has no incoming edge at all), or if its length is
+    'None' or effectively zero (e.g., a sampled-ancestor's own
+    zero-length edge). A lineage bisected by a sampled ancestor is
+    represented as two separate edges in the reconstructed tree (the
+    dummy parent's incoming edge, and the 'is_sa_lineage' edge
+    continuing past it) -- both count as separate real branches here,
+    as long as each has non-zero length, since each really is a
+    distinct branch of the tree.
+
+    On the root/seed node specifically: this exclusion is not a
+    special case bolted on for convenience, nor a statement that the
+    root "has zero stubs" or "gets no baseline spike" as some kind of
+    assumption -- it falls out structurally from what the root *is*.
+    The reconstructed tree's root is, by construction, the oldest
+    point for which there is any retained evidence at all (the MRCA
+    of every sampled/retained node) -- so it has no reconstructed
+    parent, and therefore no incoming branch for a stub count or a
+    clock-model rate to even be defined *along*, regardless of
+    whether earlier, unobserved branching events might have happened
+    further back in the complete tree. (If an earlier branching event
+    *did* have retained descendants on both sides, that event -- not
+    the current one -- would itself be the root; if only one side was
+    retained, that event is unifurcation-suppressed away during
+    reconstruction and never becomes a distinguishable "stub on the
+    root's own branch", precisely because the root does not have
+    one.) This matches Douglas et al. (2025)'s own treatment: their
+    eqn (2.8) explicitly excludes "nodes with branch length zero...
+    i.e. sampled ancestors and the root" from the saltative-branching
+    proportion, for the same reason -- neither has a real, time-
+    bearing branch of its own for a rate or a spike to apply to. This
+    holds regardless of whether the root happens to be reached via a
+    chain of direct ancestors above it (see
+    'calculation.gamma_spike_clock_model' for why a node that is both
+    'is_sa_lineage' and a genuine bifurcation, e.g. such a root,
+    still correctly gets no baseline "+1" spike on its own incoming
+    branch either -- same underlying reason, one level down).
+
+    This is shared by every piece of code that needs to agree on
+    exactly which branches count (e.g.,
+    'calculation.gamma_spike_clock_model.populate_gamma_spike_mol_rates_on_rec_tr_branches'
+    and 'AnnotatedTree.n_rec_branches', below) so they can never drift
+    apart from one another.
+
+    Args:
+        nd (dendropy.Node): Node whose incoming edge is being checked.
+        epsilon (float): Threshold below which a branch length is
+            considered effectively zero (see 'AnnotatedTree.epsilon').
+
+    Returns:
+        (bool): Whether 'nd's incoming edge counts as a real branch.
+    """
+
+    return nd.parent_node is not None and \
+        nd.edge_length is not None and \
+        nd.edge_length > epsilon
+
+
 def get_x_coord_from_nd_heights(ann_tr: AnnotatedTree,
                                 use_age: bool = False,
                                 unit_branch_lengths: bool = False,
@@ -2266,8 +2592,18 @@ def get_y_coord_from_n_obs_nodes(ann_tr: AnnotatedTree,
                 y_coords[get_node_name(nd)] = \
                     y_coords[get_node_name(children[0])]
 
-            # root and bifurcating internal nodes
-            elif n_children == 2 and not nd.is_sa_dummy_parent:
+            # root and bifurcating internal nodes -- an
+            # 'is_sa_dummy_parent' node is excluded here only when
+            # 'sa_along_branches' is True, since the branch above
+            # already gives it its single (non-SA) child's height in
+            # that case; when 'sa_along_branches' is False (e.g.
+            # phylogram plotting, where the SA leaf gets its own row
+            # instead of being drawn along its parent's branch), a
+            # dummy parent has two real, positioned children (the SA
+            # leaf and the continuing lineage) and must be averaged
+            # over them like any other bifurcating node
+            elif n_children == 2 and \
+                    not (sa_along_branches and nd.is_sa_dummy_parent):
                 y_coords[get_node_name(nd)] = \
                     (y_coords[get_node_name(children[0])]
                      + y_coords[get_node_name(children[1])]) / 2.0
@@ -2373,6 +2709,60 @@ def get_y_coord_from_n_obs_nodes(ann_tr: AnnotatedTree,
     return y_coords
 
 
+def clear_trait_colorbar(axes: plt.Axes) -> None:
+    """Remove 'axes's own colorbar (if any), restoring its position.
+
+    PhyloJunction's GUI reuses a single Figure/Axes pair across node
+    selections and re-draws. 'plot_ann_tree_continuous_attr' (below)
+    draws its colorbar directly onto 'axes' (via 'fig.colorbar(...,
+    ax=axes, ...)'), which carves the space for it out of 'axes'
+    itself -- a resize that is part of 'axes's own position state, so
+    it survives 'axes.cla()' (which only clears drawn content, not
+    geometry). Calling that again (e.g., every time the GUI's
+    'Re-draw' button is clicked) would otherwise shrink an
+    already-shrunk 'axes' further each time, and a colorbar is never
+    removed just because a later plot does not itself add one. That
+    "later plot" is not limited to tree-plotting functions: a
+    completely different, non-tree DAG node (e.g., a scalar like an
+    origin-age node, rendered through
+    'pgm.plot_node_histogram'/'pgm.plot_blank') can be selected right
+    after a colored-chronogram one, reusing the very same Axes/Figure,
+    so this function is called from there too (not only from every
+    'plot_ann_tree*' function below) -- otherwise a colorbar added for
+    a previous tree would be left behind indefinitely, since nothing
+    about plotting a histogram or a blank Axes would ever remove it
+    on its own.
+
+    The colorbar and 'axes's pre-colorbar position are tracked via
+    '_pj_trait_colorbar'/'_pj_trait_position', two attributes stashed
+    directly on 'axes' itself (set by 'plot_ann_tree_continuous_attr'
+    right before it draws the colorbar) -- there is nothing to do
+    here if neither was ever set (no colorbar has been drawn on this
+    Axes yet).
+    """
+
+    colorbar = getattr(axes, "_pj_trait_colorbar", None)
+
+    if colorbar is not None:
+        colorbar.remove()
+
+        # 'set_position' opts an axes out of constrained layout; only
+        # restore a fixed rectangle for unmanaged axes, including
+        # PhyloJunction's own GUI/CLI, which always position their
+        # tree-plotting Axes manually (via 'fig.add_axes(...)')
+        managed = (axes.figure.get_constrained_layout() and
+                   getattr(axes, "get_subplotspec", lambda: None)()
+                   is not None)
+
+        if not managed:
+            axes.set_position(
+                axes._pj_trait_position,  # type: ignore[attr-defined]
+                which="both")
+
+        axes._pj_trait_colorbar = None  # type: ignore[attr-defined]
+        axes._pj_trait_position = None  # type: ignore[attr-defined]
+
+
 def plot_ann_tree(ann_tr: AnnotatedTree,
                   axes: plt.Axes,
                   use_age: bool = False,
@@ -2468,6 +2858,7 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
 
     # make sure we reset things
     axes.cla()
+    clear_trait_colorbar(axes)
 
     # side-effect:
     # populates: horizontal_linecollections
@@ -2680,19 +3071,25 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
         #################################
 
         # SA nodes are plotted along the branches subtending nodes
-        # where '.is_sa_lineage' == True, which cannot also be
-        # dummy nodes
-        if sa_along_branches and \
-                (not nd.is_sa_dummy_parent and nd.is_sa_lineage):
+        # where '.is_sa_lineage' == True. Such a node CAN also,
+        # itself, be the dummy parent of a *different*, later direct
+        # ancestor (a chain of direct ancestors along the same
+        # lineage, e.g. two 'anc_sampling' events in a row before the
+        # next real speciation/extinction event) -- 'is_sa_lineage'
+        # and 'is_sa_dummy_parent' are not mutually exclusive, so
+        # excluding dummy parents here (as a previous version of this
+        # check did) silently dropped every direct ancestor whose own
+        # lineage sibling happened to be such a node
+        if sa_along_branches and nd.is_sa_lineage:
 
             sas: ty.List[pjsa.SampledAncestor] = []
             if isinstance(ann_tr.sa_lineage_dict, dict):
                 if draw_reconstructed:
-                    sas = ann_tr.rec_tr_sa_lineage_dict[nd_name]
+                    sas = ann_tr.rec_tr_sa_lineage_dict.get(nd_name, [])
 
                 # drawing complete tree
                 else:
-                    sas = ann_tr.sa_lineage_dict[nd_name]
+                    sas = ann_tr.sa_lineage_dict.get(nd_name, [])
 
             for sa in sas:
                 sa_color: str = "k"
@@ -2951,6 +3348,456 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
 
     if use_age:
         axes.invert_xaxis()
+
+    axes.yaxis.set_ticks([])
+    axes.spines['left'].set_visible(False)
+    axes.spines['right'].set_visible(False)
+    axes.spines['top'].set_visible(False)
+
+    return x_coords, y_coords
+
+
+#######################################################
+# Plotting trees by a continuous, per-branch attribute #
+# (e.g., 'mutation_rate', populated by a ClockModel)   #
+#######################################################
+#
+# Unlike 'plot_ann_tree' above (which colors branches by a discrete
+# attribute, e.g. 'state', and supports mid-branch color changes via
+# 'at_dict'), a continuous, per-branch-constant attribute like
+# 'mutation_rate' has exactly one value for the whole branch -- there
+# is no analogous "attribute transition" concept. This lets the two
+# functions below be considerably simpler than 'plot_ann_tree' and
+# its nested '_draw_clade'.
+#
+# KNOWN LIMITATION: unlike 'plot_ann_tree', sampled ancestors are not
+# specially placed as a dot along their parent lineage here -- they
+# are drawn as regular branches/tips. Matching 'plot_ann_tree's SA
+# rendering is a reasonable future refinement, not implemented yet.
+
+def get_x_coord_from_attr_product(
+        ann_tr: AnnotatedTree,
+        attr_of_interest: str = "mutation_rate",
+        draw_reconstructed: bool = False) -> ty.Dict[str, float]:
+    """Return x-coordinates for a phylogram (genetic-distance) layout.
+
+    Unlike 'get_x_coord_from_nd_heights' (branch length = time), here
+    each node's x-coordinate is the cumulative sum, from the root (or
+    origin), of 'branch_length * getattr(node, attr_of_interest)'
+    along its ancestral path -- i.e., distance in units of expected
+    character change, not time. A branch whose 'attr_of_interest'
+    value is 'None' (e.g., the root, or a sampled-ancestor branch;
+    see
+    'calculation.gamma_spike_clock_model.populate_gamma_spike_mol_rates_on_rec_tr_branches')
+    contributes 0.0 (i.e., it is drawn with zero length).
+
+    Note that a clock model currently only populates
+    'attr_of_interest' on a tree's *reconstructed* topology (not its
+    complete one; see the clock model's own documentation for why),
+    so calling this with 'draw_reconstructed=False' on a tree whose
+    complete topology was never annotated returns every node at
+    x-coordinate 0.0 (not an error, just an uninformative layout).
+
+    Args:
+        ann_tr (AnnotatedTree): Instance of AnnotatedTree that we
+            are drawing.
+        attr_of_interest (str): Name of the (per-branch, constant)
+            node attribute whose product with branch length gives
+            each branch's contribution to the x-axis. Defaults to
+            'mutation_rate'.
+        draw_reconstructed (bool, optional): Whether we are drawing
+            the reconstructed tree instead of the complete tree.
+            Defaults to 'False'.
+
+    Returns:
+        (dict): Dictionary with node labels (str) as keys and
+            cumulative genetic-distance x-coordinates (float) as
+            values.
+    """
+
+    x_coords: ty.Dict[str, float] = dict()
+
+    def _recur(nd: dp.Node, parent_x: float) -> None:
+        rate = getattr(nd, attr_of_interest, None)
+        branch_contribution = 0.0
+        if rate is not None and nd.edge_length is not None:
+            branch_contribution = nd.edge_length * rate
+
+        this_x = parent_x + branch_contribution
+        x_coords[get_node_name(nd)] = this_x
+
+        for ch_nd in nd.child_nodes():
+            _recur(ch_nd, this_x)
+
+    seed_nd = ann_tr.tree.seed_node
+    if draw_reconstructed:
+        seed_nd = ann_tr.rec_tr_root_node
+
+    _recur(seed_nd, 0.0)
+
+    return x_coords
+
+
+def _continuous_attr_color_fn(
+        ann_tr: AnnotatedTree,
+        attr_of_interest: str,
+        cmap_name: str,
+        draw_reconstructed: bool,
+        none_color: str = "lightgray") -> \
+        ty.Tuple[ty.Callable[[dp.Node], str], float, float]:
+    """Build a node -> hex color function for a continuous attribute.
+
+    Args:
+        ann_tr (AnnotatedTree): Instance of AnnotatedTree that we
+            are drawing.
+        attr_of_interest (str): Name of the per-branch attribute to
+            color by.
+        cmap_name (str): Name of a Matplotlib colormap (e.g.,
+            'inferno', 'plasma') -- a 'cold-to-hot'-style sequential
+            map is recommended, since this attribute has no
+            meaningful zero-midpoint the way a diverging map implies.
+        draw_reconstructed (bool): Whether the reconstructed tree
+            (rather than the complete tree) is being drawn.
+        none_color (str): Color used for branches with no value for
+            'attr_of_interest' (e.g., the root, or sampled-ancestor
+            branches). Defaults to 'lightgray'.
+
+    Returns:
+        (tuple): A function mapping a dendropy.Node to a hex color
+            string, and the (min, max) attribute values it was built
+            from (both 0.0 if no branch had a value -- the color
+            function then always returns 'none_color').
+    """
+
+    tr2look = ann_tr.tree_reconstructed if draw_reconstructed else ann_tr.tree
+
+    values = [
+        getattr(nd, attr_of_interest)
+        for nd in tr2look.preorder_node_iter()
+        if getattr(nd, attr_of_interest, None) is not None
+    ]
+
+    vmin = min(values) if values else 0.0
+    vmax = max(values) if values else 0.0
+
+    cmap = plt.get_cmap(cmap_name)
+    # avoid a degenerate (zero-width) normalization range when every
+    # branch shares the same value (or there is only one branch)
+    norm = colors.Normalize(
+        vmin=vmin, vmax=vmax if vmax > vmin else vmin + 1.0)
+
+    def _color_for_node(nd: dp.Node) -> str:
+        value = getattr(nd, attr_of_interest, None)
+
+        if value is None:
+            return none_color
+
+        return colors.rgb2hex(cmap(norm(value)))
+
+    return _color_for_node, vmin, vmax
+
+
+def _draw_continuous_attr_tree(
+        ann_tr: AnnotatedTree,
+        axes: plt.Axes,
+        x_coords: ty.Dict[str, float],
+        get_color: ty.Callable[[dp.Node], str],
+        draw_reconstructed: bool,
+        clip_tip_labels: bool = False) -> ty.Dict[str, float]:
+    """Shared recursive drawer for the two continuous-attribute layouts.
+
+    Draws one horizontal line segment per branch (colored by
+    'get_color'), plus a vertical connector between the two children
+    of each bifurcating internal node -- see the module-level note
+    above this function for how this differs from (and is simpler
+    than) 'plot_ann_tree's '_draw_clade'.
+
+    The vertical connector at a node is split into two segments at
+    that node's own y-coordinate (the midpoint between its two
+    children's y-coordinates, by construction of
+    'get_y_coord_from_n_obs_nodes'), each colored to match the branch
+    it leads into -- NOT the color of the branch leading into the
+    node itself (its ancestral branch). This matches each visible
+    line segment to the branch it is adjacent to.
+
+    A direct (sampled) ancestor is drawn as a dot along its dummy
+    parent's own position, exactly like 'plot_ann_tree's
+    '_draw_clade'/'_draw_sa_along_branch' do for the plain chronogram
+    -- not as its own, separately-positioned zero-length branch (a
+    distinct row of its own), which is all a literal, structural
+    reading of 'is_sa'/zero edge length would otherwise produce. This
+    needs no 'sa_lineage_dict' (unlike '_draw_clade', which looks up
+    'SampledAncestor' objects there for their recorded time/age): a
+    direct ancestor's dot belongs at its dummy parent's own
+    (x, y) position regardless -- zero elapsed branch length means
+    zero elapsed distance in this (or any) coordinate system, and
+    that position is already being computed for the dummy parent
+    itself, with no extra bookkeeping required. This also means it
+    works just as well for a tree read in from an annotated Newick
+    string (see 'readwrite.pj_read.read_nwk_tree_str's 'is_complete'
+    argument) as for a simulated one, since only the structural
+    'is_sa' flag is used, never 'sa_lineage_dict'.
+
+    Side-effect: draws on 'axes'.
+
+    Args:
+        clip_tip_labels (bool): Whether a tip label is clipped at
+            'axes's own right edge, no matter how long the label text
+            is or how little margin 'axes.set_xlim' leaves for it,
+            rather than being allowed to spill past it. Defaults to
+            'False' (the phylogram's own case: there is nothing just
+            outside 'axes' to spill onto, and the attribute-rescaled
+            x-axis this function draws for a phylogram is often tiny
+            in data units, e.g. a handful of 0.00X-scale
+            'mutation_rate' units -- so clipping would cut most of a
+            typical tip label's rendered width, not just its
+            overflow). 'plot_ann_tree_continuous_attr' passes 'True'
+            instead, since it places a colorbar immediately past
+            'axes's right edge (see there), which a long, unclipped
+            tip label could otherwise visually spill onto.
+
+    Returns:
+        (dict): Dictionary with node labels (str) as keys and
+            y-coordinates (float) as values (same convention as
+            'get_y_coord_from_n_obs_nodes'; returned for testing).
+    """
+
+    start_at_origin = draw_reconstructed and \
+        ann_tr.rec_tr_root_node.num_child_nodes() == 1
+    if not draw_reconstructed:
+        start_at_origin = bool(ann_tr.origin_node)
+
+    y_coords = get_y_coord_from_n_obs_nodes(
+        ann_tr,
+        start_at_origin=start_at_origin,
+        sa_along_branches=True,
+        draw_reconstructed=draw_reconstructed)
+
+    lw = plt.rcParams["lines.linewidth"]
+
+    def _draw_sa_dot(sa_nd: dp.Node, x: float, y: float) -> None:
+        # same visual convention as 'plot_ann_tree's own
+        # '_draw_sa_along_branch' -- a small dot, plus a rotated
+        # label, placed directly on top of the branch/axes
+        axes.plot(x, y, marker="o", color=get_color(sa_nd),
+                 markersize=4, zorder=10)
+        axes.text(x, y - 0.05, f" {get_node_name(sa_nd)}",
+                 rotation=45, horizontalalignment="center", fontsize=10)
+
+    def _recur(nd: dp.Node, x_start: float) -> None:
+        nd_name = get_node_name(nd)
+        x_here = x_coords[nd_name]
+        y_here = y_coords[nd_name]
+        color = get_color(nd)
+
+        axes.add_collection(
+            mpcollections.LineCollection(
+                [[(x_start, y_here), (x_here, y_here)]],
+                color=color, lw=lw))
+
+        if nd.is_leaf():
+            # see this function's own 'clip_tip_labels' docstring
+            # entry for when/why this clips
+            axes.text(x_here, y_here, f" {nd_name}",
+                      verticalalignment="center",
+                      clip_on=clip_tip_labels)
+
+        # a direct ancestor is drawn as a dot at this node's own
+        # (x_here, y_here) -- not recursed into as an ordinary child
+        # -- see this function's own docstring for why
+        children = []
+        for ch_nd in nd.child_nodes():
+            if ch_nd.is_sa:
+                _draw_sa_dot(ch_nd, x_here, y_here)
+
+            else:
+                children.append(ch_nd)
+
+        if len(children) == 2:
+            # split the vertical connector at 'y_here' (the midpoint)
+            # into two segments, each colored like the child branch
+            # it leads into, rather than drawing it as a single
+            # segment in this node's own (ancestral) color
+            for ch_nd in children:
+                ch_y = y_coords[get_node_name(ch_nd)]
+                axes.add_collection(
+                    mpcollections.LineCollection(
+                        [[(x_here, y_here), (x_here, ch_y)]],
+                        color=get_color(ch_nd), lw=lw))
+
+        for ch_nd in children:
+            _recur(ch_nd, x_here)
+
+    seed_nd = ann_tr.tree.seed_node
+    if draw_reconstructed:
+        seed_nd = ann_tr.rec_tr_root_node
+
+    _recur(seed_nd, 0.0)
+
+    return y_coords
+
+
+def plot_ann_tree_continuous_attr(
+        ann_tr: AnnotatedTree,
+        axes: plt.Axes,
+        attr_of_interest: str = "mutation_rate",
+        use_age: bool = False,
+        cmap_name: str = "inferno",
+        draw_reconstructed: bool = False) -> \
+        ty.Tuple[ty.Dict[str, float], ty.Dict[str, float]]:
+    """Plot a chronogram with branches colored by a continuous attribute.
+
+    This is the 'colored chronogram' visualization: branch lengths
+    remain in units of time (same x-coordinates as 'plot_ann_tree'),
+    and each branch is colored along a sequential ('cold' to 'hot')
+    colormap according to its (constant) value for 'attr_of_interest'
+    (e.g., 'mutation_rate', as populated by a 'calculation.clock_model.ClockModel').
+
+    Plotting is a side-effect. A colorbar reflecting the attribute's
+    (min, max) range is added alongside the tree.
+
+    Args:
+        ann_tr (AnnotatedTree): Instance of AnnotatedTree that we
+            are drawing.
+        axes (matplotlib.pyplot.Axes): Axes object where we are
+            drawing the tree.
+        attr_of_interest (str): Name of the per-branch attribute to
+            color branches by. Defaults to 'mutation_rate' (currently
+            the only continuous, clock-model-populated attribute;
+            letting the user choose among several is future work).
+        use_age (bool): Flag specifying if age or time is being used.
+            Defaults to 'False'.
+        cmap_name (str): Name of a Matplotlib sequential colormap.
+            Defaults to 'inferno'.
+        draw_reconstructed (bool): Flag specifying if the
+            reconstructed tree is meant to be drawn instead of the
+            complete tree. Defaults to 'False'.
+
+    Returns:
+        (tuple): Tuple with two dictionaries (node name -> x- or
+            y-coordinate). This return is used for unit testing
+            purposes only.
+    """
+
+    axes.cla()
+    clear_trait_colorbar(axes)
+
+    x_coords = get_x_coord_from_nd_heights(
+        ann_tr, use_age=use_age, draw_reconstructed=draw_reconstructed)
+
+    get_color, vmin, vmax = _continuous_attr_color_fn(
+        ann_tr, attr_of_interest, cmap_name, draw_reconstructed)
+
+    y_coords = _draw_continuous_attr_tree(
+        ann_tr, axes, x_coords, get_color, draw_reconstructed,
+        clip_tip_labels=True)
+
+    fig = axes.get_figure()
+    if fig is not None:
+        # draw the colorbar directly onto 'axes' (rather than into a
+        # separate Axes of its own) -- this does carve the space for
+        # it out of 'axes' itself, shrinking it, but that shrink is
+        # captured below ('_pj_trait_position', read by
+        # 'axes.get_position(original=True)' *before* the colorbar is
+        # drawn) and undone by 'clear_trait_colorbar' (called at the
+        # top of this and every other 'plot_ann_tree*' function, and
+        # also from 'pgm.plot_node_histogram'/'pgm.plot_blank') the
+        # next time this Axes is reused -- so the shrink never
+        # compounds across repeated draws (e.g., every GUI 'Re-draw'
+        # click)
+        sm = plt.cm.ScalarMappable(
+            cmap=plt.get_cmap(cmap_name),
+            norm=colors.Normalize(vmin=vmin, vmax=max(vmax, vmin + 1e-12)))
+
+        axes._pj_trait_position = axes.get_position(  # type: ignore[attr-defined]
+            original=True).frozen()
+        cbar = fig.colorbar(sm, ax=axes, label=attr_of_interest)
+        axes._pj_trait_colorbar = cbar  # type: ignore[attr-defined]
+        cbar.ax.tick_params(labelsize=7)
+
+    axes.set_xlabel("Age" if use_age else "Time")
+
+    axes.spines['bottom'].set_visible(True)
+    xmax = max(x_coords.values()) if x_coords else 1.0
+    axes.set_xlim(-0.05 * xmax, 1.05 * xmax)
+    axes.set_ylim(max(y_coords.values()) + 0.8, 0.2)
+
+    if use_age:
+        axes.invert_xaxis()
+
+    axes.yaxis.set_ticks([])
+    axes.spines['left'].set_visible(False)
+    axes.spines['right'].set_visible(False)
+    axes.spines['top'].set_visible(False)
+
+    return x_coords, y_coords
+
+
+def plot_ann_tree_phylogram(
+        ann_tr: AnnotatedTree,
+        axes: plt.Axes,
+        attr_of_interest: str = "mutation_rate",
+        draw_reconstructed: bool = False,
+        color: str = "black") -> \
+        ty.Tuple[ty.Dict[str, float], ty.Dict[str, float]]:
+    """Plot a monochromatic phylogram (branches scaled by an attribute).
+
+    This is the 'phylogram' visualization: unlike 'plot_ann_tree' and
+    'plot_ann_tree_continuous_attr' (both of which place branches by
+    time), here each branch's length is rescaled by its (constant)
+    value for 'attr_of_interest' (e.g., 'mutation_rate') -- i.e., the
+    x-axis becomes a genetic-distance (expected character change)
+    axis instead of a time axis. Branches are drawn in a single,
+    neutral color, since the rescaled length already encodes the
+    attribute.
+
+    This is PhyloJunction's GUI default for a deterministic tree node
+    whose branches carry a continuous, clock-model-populated attribute
+    (see 'pgm.DeterministicNodeDAG.plot_node'). A manual
+    chronogram/phylogram toggle (letting the user switch back to
+    'plot_ann_tree_continuous_attr' for the same node) is future work.
+
+    Plotting is a side-effect.
+
+    Args:
+        ann_tr (AnnotatedTree): Instance of AnnotatedTree that we
+            are drawing.
+        axes (matplotlib.pyplot.Axes): Axes object where we are
+            drawing the tree.
+        attr_of_interest (str): Name of the per-branch attribute to
+            scale branch lengths by. Defaults to 'mutation_rate'.
+        draw_reconstructed (bool): Flag specifying if the
+            reconstructed tree is meant to be drawn instead of the
+            complete tree. Defaults to 'False'.
+        color (str): Color every branch is drawn in. Defaults to
+            'black'.
+
+    Returns:
+        (tuple): Tuple with two dictionaries (node name -> x- or
+            y-coordinate). This return is used for unit testing
+            purposes only.
+    """
+
+    axes.cla()
+    clear_trait_colorbar(axes)
+
+    x_coords = get_x_coord_from_attr_product(
+        ann_tr, attr_of_interest, draw_reconstructed=draw_reconstructed)
+
+    y_coords = _draw_continuous_attr_tree(
+        ann_tr, axes, x_coords, lambda nd: color, draw_reconstructed)
+
+    # unlike 'plot_ann_tree'/'plot_ann_tree_continuous_attr' (whose
+    # x-axis is literally time or age), a phylogram's x-axis is
+    # branch length rescaled by 'attr_of_interest' (e.g.,
+    # 'mutation_rate'), i.e., expected evolutionary change -- labeled
+    # accordingly so it is not mistaken for a chronogram's time axis
+    axes.set_xlabel("Evolutionary change")
+
+    axes.spines['bottom'].set_visible(True)
+    xmax = max(x_coords.values()) if x_coords else 1.0
+    axes.set_xlim(-0.05 * xmax, 1.05 * xmax)
+    axes.set_ylim(max(y_coords.values()) + 0.8, 0.2)
 
     axes.yaxis.set_ticks([])
     axes.spines['left'].set_visible(False)

@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" data-content_root="./">
 <head>
@@ -5,25 +7,22 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>phylojunction.data package &mdash; PhyloJunction 0.0.1 documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
-      <link rel="stylesheet" type="text/css" href="_static/css/pj_custom.css?v=b916aa57" />
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="_static/sphinx-new-tab-link.css?v=d87cb1ac" />
+      <link rel="stylesheet" type="text/css" href="_static/css/pj_custom.css" />
 
   
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-        <script src="_static/jquery.js?v=5d32c60e"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=d45e8c67"></script>
-        <script src="_static/doctools.js?v=888ff710"></script>
-        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=d45e8c67"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="phylojunction.distribution package" href="phylojunction.distribution.html" />
-    <link rel="prev" title="phylojunction.calculation package" href="phylojunction.calculation.html" /> 
+    <link rel="prev" title="phylojunction.constant_function package" href="phylojunction.constant_function.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -54,8 +53,10 @@
 <li class="toctree-l2 current"><a class="reference internal" href="phylojunction.html">phylojunction package</a><ul class="current">
 <li class="toctree-l3 current"><a class="reference internal" href="phylojunction.html#subpackages">Subpackages</a><ul class="current">
 <li class="toctree-l4"><a class="reference internal" href="phylojunction.calculation.html">phylojunction.calculation package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="phylojunction.constant_function.html">phylojunction.constant_function package</a></li>
 <li class="toctree-l4 current"><a class="current reference internal" href="#">phylojunction.data package</a></li>
 <li class="toctree-l4"><a class="reference internal" href="phylojunction.distribution.html">phylojunction.distribution package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="phylojunction.functionality.html">phylojunction.functionality package</a></li>
 <li class="toctree-l4"><a class="reference internal" href="phylojunction.inference.html">phylojunction.inference package</a></li>
 <li class="toctree-l4"><a class="reference internal" href="phylojunction.interface.html">phylojunction.interface package</a></li>
 <li class="toctree-l4"><a class="reference internal" href="phylojunction.pgm.html">phylojunction.pgm package</a></li>
@@ -106,31 +107,31 @@
 <span id="phylojunction-data-attribute-transition-module"></span><h2>phylojunction.data.attribute_transition module<a class="headerlink" href="#module-phylojunction.data.attribute_transition" title="Link to this heading"></a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="phylojunction.data.attribute_transition.AttributeTransition">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">phylojunction.data.attribute_transition.</span></span><span class="sig-name descname"><span class="pre">AttributeTransition</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">attr_label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subtending_node_label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">global_time</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">from_state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">to_state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">age</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">to_state2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">at_speciation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#phylojunction.data.attribute_transition.AttributeTransition" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">phylojunction.data.attribute_transition.</span></span><span class="sig-name descname"><span class="pre">AttributeTransition</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">attr_label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subtending_node_label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">global_time</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">from_state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">to_state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">age</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">to_state2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">at_speciation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#phylojunction.data.attribute_transition.AttributeTransition" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.attribute_transition.AttributeTransition.age">
-<span class="sig-name descname"><span class="pre">age</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#phylojunction.data.attribute_transition.AttributeTransition.age" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">age</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#phylojunction.data.attribute_transition.AttributeTransition.age" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.attribute_transition.AttributeTransition.at_speciation">
-<span class="sig-name descname"><span class="pre">at_speciation</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#phylojunction.data.attribute_transition.AttributeTransition.at_speciation" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">at_speciation</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#phylojunction.data.attribute_transition.AttributeTransition.at_speciation" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.attribute_transition.AttributeTransition.attr_label">
-<span class="sig-name descname"><span class="pre">attr_label</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#phylojunction.data.attribute_transition.AttributeTransition.attr_label" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">attr_label</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#phylojunction.data.attribute_transition.AttributeTransition.attr_label" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.attribute_transition.AttributeTransition.from_state">
-<span class="sig-name descname"><span class="pre">from_state</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#phylojunction.data.attribute_transition.AttributeTransition.from_state" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">from_state</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#phylojunction.data.attribute_transition.AttributeTransition.from_state" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.attribute_transition.AttributeTransition.global_time">
-<span class="sig-name descname"><span class="pre">global_time</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#phylojunction.data.attribute_transition.AttributeTransition.global_time" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">global_time</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#phylojunction.data.attribute_transition.AttributeTransition.global_time" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -140,22 +141,22 @@
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.attribute_transition.AttributeTransition.str_representation">
-<span class="sig-name descname"><span class="pre">str_representation</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#phylojunction.data.attribute_transition.AttributeTransition.str_representation" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">str_representation</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#phylojunction.data.attribute_transition.AttributeTransition.str_representation" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.attribute_transition.AttributeTransition.subtending_or_speciating_node_label">
-<span class="sig-name descname"><span class="pre">subtending_or_speciating_node_label</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#phylojunction.data.attribute_transition.AttributeTransition.subtending_or_speciating_node_label" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">subtending_or_speciating_node_label</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#phylojunction.data.attribute_transition.AttributeTransition.subtending_or_speciating_node_label" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.attribute_transition.AttributeTransition.to_state">
-<span class="sig-name descname"><span class="pre">to_state</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#phylojunction.data.attribute_transition.AttributeTransition.to_state" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">to_state</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#phylojunction.data.attribute_transition.AttributeTransition.to_state" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.attribute_transition.AttributeTransition.to_state2">
-<span class="sig-name descname"><span class="pre">to_state2</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#phylojunction.data.attribute_transition.AttributeTransition.to_state2" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">to_state2</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#phylojunction.data.attribute_transition.AttributeTransition.to_state2" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -170,41 +171,41 @@
 <span id="phylojunction-data-sampled-ancestor-module"></span><h2>phylojunction.data.sampled_ancestor module<a class="headerlink" href="#module-phylojunction.data.sampled_ancestor" title="Link to this heading"></a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="phylojunction.data.sampled_ancestor.SampledAncestor">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">phylojunction.data.sampled_ancestor.</span></span><span class="sig-name descname"><span class="pre">SampledAncestor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lineage_node_label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">global_time</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">age</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_to_lineage_node</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#phylojunction.data.sampled_ancestor.SampledAncestor" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">phylojunction.data.sampled_ancestor.</span></span><span class="sig-name descname"><span class="pre">SampledAncestor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lineage_node_label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">global_time</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">age</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_to_lineage_node</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#phylojunction.data.sampled_ancestor.SampledAncestor" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.sampled_ancestor.SampledAncestor.age">
-<span class="sig-name descname"><span class="pre">age</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#phylojunction.data.sampled_ancestor.SampledAncestor.age" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">age</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#phylojunction.data.sampled_ancestor.SampledAncestor.age" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.sampled_ancestor.SampledAncestor.global_time">
-<span class="sig-name descname"><span class="pre">global_time</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#phylojunction.data.sampled_ancestor.SampledAncestor.global_time" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">global_time</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#phylojunction.data.sampled_ancestor.SampledAncestor.global_time" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.sampled_ancestor.SampledAncestor.label">
-<span class="sig-name descname"><span class="pre">label</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#phylojunction.data.sampled_ancestor.SampledAncestor.label" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">label</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#phylojunction.data.sampled_ancestor.SampledAncestor.label" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.sampled_ancestor.SampledAncestor.lineage_node_label">
-<span class="sig-name descname"><span class="pre">lineage_node_label</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#phylojunction.data.sampled_ancestor.SampledAncestor.lineage_node_label" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">lineage_node_label</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#phylojunction.data.sampled_ancestor.SampledAncestor.lineage_node_label" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.sampled_ancestor.SampledAncestor.state">
-<span class="sig-name descname"><span class="pre">state</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#phylojunction.data.sampled_ancestor.SampledAncestor.state" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">state</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#phylojunction.data.sampled_ancestor.SampledAncestor.state" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.sampled_ancestor.SampledAncestor.str_representation">
-<span class="sig-name descname"><span class="pre">str_representation</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#phylojunction.data.sampled_ancestor.SampledAncestor.str_representation" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">str_representation</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#phylojunction.data.sampled_ancestor.SampledAncestor.str_representation" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.sampled_ancestor.SampledAncestor.time_to_lineage_node">
-<span class="sig-name descname"><span class="pre">time_to_lineage_node</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#phylojunction.data.sampled_ancestor.SampledAncestor.time_to_lineage_node" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">time_to_lineage_node</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#phylojunction.data.sampled_ancestor.SampledAncestor.time_to_lineage_node" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 </dd></dl>
@@ -214,7 +215,7 @@
 <span id="phylojunction-data-tree-module"></span><h2>phylojunction.data.tree module<a class="headerlink" href="#module-phylojunction.data.tree" title="Link to this heading"></a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">phylojunction.data.tree.</span></span><span class="sig-name descname"><span class="pre">AnnotatedTree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a_tree</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tree</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">total_state_count</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_at_origin</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alternative_root_label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">condition_on_obs_both_sides_root</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_age</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slice_t_ends</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slice_age_ends</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sa_lineage_dict</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#phylojunction.data.sampled_ancestor.SampledAncestor" title="phylojunction.data.sampled_ancestor.SampledAncestor"><span class="pre">SampledAncestor</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">at_dict</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#phylojunction.data.attribute_transition.AttributeTransition" title="phylojunction.data.attribute_transition.AttributeTransition"><span class="pre">AttributeTransition</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clado_at_dict</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#phylojunction.data.attribute_transition.AttributeTransition" title="phylojunction.data.attribute_transition.AttributeTransition"><span class="pre">AttributeTransition</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tree_died</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tree_invalid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">read_as_newick_string</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1e-12</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">phylojunction.data.tree.</span></span><span class="sig-name descname"><span class="pre">AnnotatedTree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a_tree</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tree</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">total_state_count</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_at_origin</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alternative_root_label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">condition_on_obs_both_sides_root</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_age</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slice_t_ends</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slice_age_ends</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sa_lineage_dict</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#phylojunction.data.sampled_ancestor.SampledAncestor" title="phylojunction.data.sampled_ancestor.SampledAncestor"><span class="pre">SampledAncestor</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">at_dict</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#phylojunction.data.attribute_transition.AttributeTransition" title="phylojunction.data.attribute_transition.AttributeTransition"><span class="pre">AttributeTransition</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clado_at_dict</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#phylojunction.data.attribute_transition.AttributeTransition" title="phylojunction.data.attribute_transition.AttributeTransition"><span class="pre">AttributeTransition</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tree_died</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tree_invalid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">read_as_newick_string</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1e-12</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Tree</span></code></p>
 <p>Tree annotated with discrete states.</p>
 <dl class="field-list simple">
@@ -321,7 +322,7 @@ sampled terminal nodes.</p></li>
 <li><p><strong>n_sa_nodes</strong> (<em>int</em>) – Count of direct (sampled) ancestors. These
 are nodes that are both sampled and observed by
 definition.</p></li>
-<li><p><strong>sa_lineage_dict</strong> (<em>dict</em>) – </p></li>
+<li><p><strong>sa_lineage_dict</strong> (<em>dict</em>)</p></li>
 <li><p><strong>at_dict</strong> (<em>dict</em><em>, </em><em>optional</em>) – Dictionary holding a list of
 AttributeTransition instances for each branch (subtending an
 internal node) along which state transitions happened.
@@ -355,62 +356,67 @@ defaults to 1e-12.</p></li>
 </dl>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.alternative_root_label">
-<span class="sig-name descname"><span class="pre">alternative_root_label</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.alternative_root_label" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">alternative_root_label</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.alternative_root_label" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.at_dict">
-<span class="sig-name descname"><span class="pre">at_dict</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#phylojunction.data.attribute_transition.AttributeTransition" title="phylojunction.data.attribute_transition.AttributeTransition"><span class="pre">AttributeTransition</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.at_dict" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">at_dict</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#phylojunction.data.attribute_transition.AttributeTransition" title="phylojunction.data.attribute_transition.AttributeTransition"><span class="pre">AttributeTransition</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.at_dict" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.brosc_node">
-<span class="sig-name descname"><span class="pre">brosc_node</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Node</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.brosc_node" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">brosc_node</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Node</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.brosc_node" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.clado_at_dict">
-<span class="sig-name descname"><span class="pre">clado_at_dict</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#phylojunction.data.attribute_transition.AttributeTransition" title="phylojunction.data.attribute_transition.AttributeTransition"><span class="pre">AttributeTransition</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.clado_at_dict" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">clado_at_dict</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#phylojunction.data.attribute_transition.AttributeTransition" title="phylojunction.data.attribute_transition.AttributeTransition"><span class="pre">AttributeTransition</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.clado_at_dict" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.condition_on_obs_both_sides_root">
-<span class="sig-name descname"><span class="pre">condition_on_obs_both_sides_root</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.condition_on_obs_both_sides_root" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">condition_on_obs_both_sides_root</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.condition_on_obs_both_sides_root" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.epsilon">
-<span class="sig-name descname"><span class="pre">epsilon</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.epsilon" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">epsilon</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.epsilon" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.extant_sampled_terminal_nodes_labels">
-<span class="sig-name descname"><span class="pre">extant_sampled_terminal_nodes_labels</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.extant_sampled_terminal_nodes_labels" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">extant_sampled_terminal_nodes_labels</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.extant_sampled_terminal_nodes_labels" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.extant_terminal_nodes_labels">
-<span class="sig-name descname"><span class="pre">extant_terminal_nodes_labels</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.extant_terminal_nodes_labels" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">extant_terminal_nodes_labels</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.extant_terminal_nodes_labels" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.extant_terminal_sampled_state_count_dict">
-<span class="sig-name descname"><span class="pre">extant_terminal_sampled_state_count_dict</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.extant_terminal_sampled_state_count_dict" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">extant_terminal_sampled_state_count_dict</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.extant_terminal_sampled_state_count_dict" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.extant_terminal_state_count_dict">
-<span class="sig-name descname"><span class="pre">extant_terminal_state_count_dict</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.extant_terminal_state_count_dict" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">extant_terminal_state_count_dict</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.extant_terminal_state_count_dict" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.extinct_sampled_terminal_nodes_labels">
+<span class="sig-name descname"><span class="pre">extinct_sampled_terminal_nodes_labels</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.extinct_sampled_terminal_nodes_labels" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.extinct_terminal_nodes_labels">
-<span class="sig-name descname"><span class="pre">extinct_terminal_nodes_labels</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.extinct_terminal_nodes_labels" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">extinct_terminal_nodes_labels</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.extinct_terminal_nodes_labels" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.extinct_terminal_state_count_dict">
-<span class="sig-name descname"><span class="pre">extinct_terminal_state_count_dict</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.extinct_terminal_state_count_dict" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">extinct_terminal_state_count_dict</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.extinct_terminal_state_count_dict" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -467,6 +473,18 @@ instance owning the method call.</p>
 <dd><p>Get dictionary with AnnotatedTree’s summary stats.</p>
 <p>This method is required whenever the user asks for a DAG node
 to be summarized.</p>
+<p>A tree whose ‘self.clock_model_attr_name’ is set was annotated
+by a clock model (e.g., ‘gamma_spike_clock’) – such a node
+exists to represent its reconstructed topology (its
+phylogram), not the complete tree, so its stats summarize
+‘self.tree_reconstructed’ itself. ‘clock_model_attr_name’ is
+set generically by ‘calculation.clock_model.ClockModel.generate()’
+for every clock model, regardless of which attribute name
+(e.g., “mutation_rate”, “morph_rate”) that particular model’s
+caller chose – see that attribute’s own docstring. This is
+the same detection ‘pgm.DeterministicNodeDAG.plot_node’ uses
+to decide whether to draw the (monochromatic) phylogram
+instead of the complete chronogram.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>Dictionary with summary statistic names as keys
@@ -504,12 +522,12 @@ represented as bit patterns (e.g., ‘A’ -&gt; ‘10’, ‘B’ -&gt;
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.have_updated_rec_tr_at_dict">
-<span class="sig-name descname"><span class="pre">have_updated_rec_tr_at_dict</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.have_updated_rec_tr_at_dict" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">have_updated_rec_tr_at_dict</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.have_updated_rec_tr_at_dict" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.have_updated_rec_tr_clado_at_dict">
-<span class="sig-name descname"><span class="pre">have_updated_rec_tr_clado_at_dict</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.have_updated_rec_tr_clado_at_dict" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">have_updated_rec_tr_clado_at_dict</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.have_updated_rec_tr_clado_at_dict" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -540,62 +558,87 @@ root node.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.max_age">
-<span class="sig-name descname"><span class="pre">max_age</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.max_age" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">max_age</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.max_age" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.n_extant_sampled_terminal_nodes">
-<span class="sig-name descname"><span class="pre">n_extant_sampled_terminal_nodes</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.n_extant_sampled_terminal_nodes" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">n_extant_sampled_terminal_nodes</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.n_extant_sampled_terminal_nodes" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.n_extant_terminal_nodes">
-<span class="sig-name descname"><span class="pre">n_extant_terminal_nodes</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.n_extant_terminal_nodes" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">n_extant_terminal_nodes</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.n_extant_terminal_nodes" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.n_extinct_sampled_terminal_nodes">
-<span class="sig-name descname"><span class="pre">n_extinct_sampled_terminal_nodes</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.n_extinct_sampled_terminal_nodes" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">n_extinct_sampled_terminal_nodes</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.n_extinct_sampled_terminal_nodes" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.n_extinct_terminal_nodes">
-<span class="sig-name descname"><span class="pre">n_extinct_terminal_nodes</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.n_extinct_terminal_nodes" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">n_extinct_terminal_nodes</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.n_extinct_terminal_nodes" title="Link to this definition"></a></dt>
 <dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.n_rec_branches">
+<span class="sig-name descname"><span class="pre">n_rec_branches</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.n_rec_branches" title="Link to this definition"></a></dt>
+<dd><p>Return the number of real branches in the reconstructed tree.</p>
+<p>Counts every node of ‘self.tree_reconstructed’ whose incoming
+edge is a real branch (see ‘is_real_branch’, module-level,
+for exactly which ones that excludes – notably, a lineage
+bisected by a sampled ancestor contributes two real branches,
+not one, as long as both segments have non-zero length).</p>
+<p>Always operates on the reconstructed tree (extracting it
+first, if not already done) – unlike the complete tree, the
+reconstructed tree is what every per-branch, clock-model-style
+quantity in PhyloJunction (stub counts, Gamma-spike rates) is
+defined over, so “number of branches” is tied to the same
+tree for consistency.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Number of real branches in the reconstructed tree.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>(int)</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.n_sa_nodes">
-<span class="sig-name descname"><span class="pre">n_sa_nodes</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.n_sa_nodes" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">n_sa_nodes</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.n_sa_nodes" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.node_ages_dict">
-<span class="sig-name descname"><span class="pre">node_ages_dict</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.node_ages_dict" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">node_ages_dict</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.node_ages_dict" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.node_attr_dict">
-<span class="sig-name descname"><span class="pre">node_attr_dict</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.node_attr_dict" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">node_attr_dict</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.node_attr_dict" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.node_heights_dict">
-<span class="sig-name descname"><span class="pre">node_heights_dict</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.node_heights_dict" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">node_heights_dict</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.node_heights_dict" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.origin_age">
-<span class="sig-name descname"><span class="pre">origin_age</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.origin_age" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">origin_age</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.origin_age" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.origin_edge_length">
-<span class="sig-name descname"><span class="pre">origin_edge_length</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.origin_edge_length" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">origin_edge_length</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.origin_edge_length" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.origin_node">
-<span class="sig-name descname"><span class="pre">origin_node</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Node</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.origin_node" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">origin_node</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Node</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.origin_node" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -618,6 +661,84 @@ Defaults to ‘False’.</p></li>
 </ul>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.plot_node_continuous_attr">
+<span class="sig-name descname"><span class="pre">plot_node_continuous_attr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">axes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Axes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_attr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'mutation_rate'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_age</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cmap_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'inferno'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">draw_reconstructed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.plot_node_continuous_attr" title="Link to this definition"></a></dt>
+<dd><p>Draw tree on provided Axes, colored by a continuous attribute.</p>
+<p>This is the ‘colored chronogram’ visualization (branch
+lengths remain in time units; see ‘plot_ann_tree_continuous_attr’
+for details). Not currently PhyloJunction’s GUI default for a
+clock-model-annotated tree node (see ‘plot_node_phylogram’
+below, and ‘pgm.DeterministicNodeDAG.plot_node’); still
+available for direct use.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>axes</strong> (<em>matplotlib.pyplot.Axes</em>) – Axes object where we are
+drawing the tree.</p></li>
+<li><p><strong>node_attr</strong> (<em>str</em>) – Name of the per-branch attribute to
+color branches by. Defaults to ‘mutation_rate’
+(currently the only such attribute; letting the user
+choose among several is future work).</p></li>
+<li><p><strong>use_age</strong> (<em>bool</em>) – Flag specifying if age or time is being
+used. Defaults to ‘False’.</p></li>
+<li><p><strong>cmap_name</strong> (<em>str</em>) – Name of a Matplotlib sequential colormap.
+Defaults to ‘inferno’.</p></li>
+<li><p><strong>draw_reconstructed</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether we are
+drawing the reconstructed tree instead of the
+complete tree. Defaults to ‘False’.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.plot_node_phylogram">
+<span class="sig-name descname"><span class="pre">plot_node_phylogram</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">axes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Axes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_attr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'mutation_rate'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">draw_reconstructed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'black'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.plot_node_phylogram" title="Link to this definition"></a></dt>
+<dd><p>Draw tree on provided Axes as a monochromatic phylogram.</p>
+<p>Branch lengths are rescaled by ‘node_attr’ instead of being
+in time units; see ‘plot_ann_tree_phylogram’ for details.
+This is the default way PhyloJunction’s GUI draws a
+deterministic tree node whose branches carry a continuous,
+clock-model-populated attribute (see
+‘pgm.DeterministicNodeDAG.plot_node’).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>axes</strong> (<em>matplotlib.pyplot.Axes</em>) – Axes object where we are
+drawing the tree.</p></li>
+<li><p><strong>node_attr</strong> (<em>str</em>) – Name of the per-branch attribute to
+scale branch lengths by. Defaults to ‘mutation_rate’.</p></li>
+<li><p><strong>draw_reconstructed</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether we are
+drawing the reconstructed tree instead of the
+complete tree. Defaults to ‘False’.</p></li>
+<li><p><strong>color</strong> (<em>str</em>) – Color every branch is drawn in. Defaults to
+‘black’.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.populate_n_stubs_on_branches_of_rec_tr">
+<span class="sig-name descname"><span class="pre">populate_n_stubs_on_branches_of_rec_tr</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.populate_n_stubs_on_branches_of_rec_tr" title="Link to this definition"></a></dt>
+<dd><p>Populate n_stub for branches of the reconstructed tree.</p>
+<p>This method is not called upon initialization of class,
+but rather when information about branches’ stubs is required,
+e.g., when a Gamma-spike clock model is used somewhere in the
+DAG.</p>
+<p>The reconstructed tree’s root/seed node always ends up with
+‘n_stub == 0’ here – not as a special case, but because the
+root has no reconstructed parent for the accumulation loop
+below to walk up from in the first place (see ‘is_real_branch’,
+module-level, for the full reasoning on why this is
+structural, not a convention, and why it holds even when the
+root is reached via a chain of direct ancestors above it).</p>
+<p>There is no return and only a side-effect (each node in the
+reconstructed tree has a member ‘n_stub’ initialized and
+populated.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -652,107 +773,107 @@ or during tree initialization.</p></li>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.rec_tr_at_dict">
-<span class="sig-name descname"><span class="pre">rec_tr_at_dict</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#phylojunction.data.attribute_transition.AttributeTransition" title="phylojunction.data.attribute_transition.AttributeTransition"><span class="pre">AttributeTransition</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.rec_tr_at_dict" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">rec_tr_at_dict</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#phylojunction.data.attribute_transition.AttributeTransition" title="phylojunction.data.attribute_transition.AttributeTransition"><span class="pre">AttributeTransition</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.rec_tr_at_dict" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.rec_tr_clado_at_dict">
-<span class="sig-name descname"><span class="pre">rec_tr_clado_at_dict</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#phylojunction.data.attribute_transition.AttributeTransition" title="phylojunction.data.attribute_transition.AttributeTransition"><span class="pre">AttributeTransition</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.rec_tr_clado_at_dict" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">rec_tr_clado_at_dict</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#phylojunction.data.attribute_transition.AttributeTransition" title="phylojunction.data.attribute_transition.AttributeTransition"><span class="pre">AttributeTransition</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.rec_tr_clado_at_dict" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.rec_tr_node_ages_dict">
-<span class="sig-name descname"><span class="pre">rec_tr_node_ages_dict</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.rec_tr_node_ages_dict" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">rec_tr_node_ages_dict</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.rec_tr_node_ages_dict" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.rec_tr_node_heights_dict">
-<span class="sig-name descname"><span class="pre">rec_tr_node_heights_dict</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.rec_tr_node_heights_dict" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">rec_tr_node_heights_dict</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.rec_tr_node_heights_dict" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.rec_tr_root_age">
-<span class="sig-name descname"><span class="pre">rec_tr_root_age</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.rec_tr_root_age" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">rec_tr_root_age</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.rec_tr_root_age" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.rec_tr_root_node">
-<span class="sig-name descname"><span class="pre">rec_tr_root_node</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Node</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.rec_tr_root_node" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">rec_tr_root_node</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Node</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.rec_tr_root_node" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.rec_tr_sa_lineage_dict">
-<span class="sig-name descname"><span class="pre">rec_tr_sa_lineage_dict</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#phylojunction.data.sampled_ancestor.SampledAncestor" title="phylojunction.data.sampled_ancestor.SampledAncestor"><span class="pre">SampledAncestor</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.rec_tr_sa_lineage_dict" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">rec_tr_sa_lineage_dict</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#phylojunction.data.sampled_ancestor.SampledAncestor" title="phylojunction.data.sampled_ancestor.SampledAncestor"><span class="pre">SampledAncestor</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.rec_tr_sa_lineage_dict" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.root_age">
-<span class="sig-name descname"><span class="pre">root_age</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.root_age" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">root_age</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.root_age" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.root_node">
-<span class="sig-name descname"><span class="pre">root_node</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Node</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.root_node" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">root_node</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Node</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.root_node" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.sa_lineage_dict">
-<span class="sig-name descname"><span class="pre">sa_lineage_dict</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#phylojunction.data.sampled_ancestor.SampledAncestor" title="phylojunction.data.sampled_ancestor.SampledAncestor"><span class="pre">SampledAncestor</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.sa_lineage_dict" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">sa_lineage_dict</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#phylojunction.data.sampled_ancestor.SampledAncestor" title="phylojunction.data.sampled_ancestor.SampledAncestor"><span class="pre">SampledAncestor</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.sa_lineage_dict" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.sa_obs_nodes_labels">
-<span class="sig-name descname"><span class="pre">sa_obs_nodes_labels</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.sa_obs_nodes_labels" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">sa_obs_nodes_labels</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.sa_obs_nodes_labels" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.seed_age">
-<span class="sig-name descname"><span class="pre">seed_age</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.seed_age" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">seed_age</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.seed_age" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.slice_age_ends">
-<span class="sig-name descname"><span class="pre">slice_age_ends</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.slice_age_ends" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">slice_age_ends</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.slice_age_ends" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.slice_t_ends">
-<span class="sig-name descname"><span class="pre">slice_t_ends</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.slice_t_ends" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">slice_t_ends</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.slice_t_ends" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.state_count">
-<span class="sig-name descname"><span class="pre">state_count</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.state_count" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">state_count</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.state_count" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.state_count_dict">
-<span class="sig-name descname"><span class="pre">state_count_dict</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.state_count_dict" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">state_count_dict</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.state_count_dict" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.tree">
-<span class="sig-name descname"><span class="pre">tree</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tree</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.tree" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">tree</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tree</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.tree" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.tree_died">
-<span class="sig-name descname"><span class="pre">tree_died</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.tree_died" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">tree_died</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.tree_died" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.tree_invalid">
-<span class="sig-name descname"><span class="pre">tree_invalid</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.tree_invalid" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">tree_invalid</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.tree_invalid" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.tree_read_as_newick">
-<span class="sig-name descname"><span class="pre">tree_read_as_newick</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.tree_read_as_newick" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">tree_read_as_newick</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.tree_read_as_newick" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.tree_reconstructed">
-<span class="sig-name descname"><span class="pre">tree_reconstructed</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tree</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.tree_reconstructed" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">tree_reconstructed</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tree</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.tree_reconstructed" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -792,9 +913,41 @@ reconstructed tree.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.data.tree.AnnotatedTree.with_origin">
-<span class="sig-name descname"><span class="pre">with_origin</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.with_origin" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">with_origin</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></span><a class="headerlink" href="#phylojunction.data.tree.AnnotatedTree.with_origin" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="phylojunction.data.tree.clear_trait_colorbar">
+<span class="sig-prename descclassname"><span class="pre">phylojunction.data.tree.</span></span><span class="sig-name descname"><span class="pre">clear_trait_colorbar</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">axes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Axes</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#phylojunction.data.tree.clear_trait_colorbar" title="Link to this definition"></a></dt>
+<dd><p>Remove ‘axes’s own colorbar (if any), restoring its position.</p>
+<p>PhyloJunction’s GUI reuses a single Figure/Axes pair across node
+selections and re-draws. ‘plot_ann_tree_continuous_attr’ (below)
+draws its colorbar directly onto ‘axes’ (via ‘fig.colorbar(…,
+ax=axes, …)’), which carves the space for it out of ‘axes’
+itself – a resize that is part of ‘axes’s own position state, so
+it survives ‘axes.cla()’ (which only clears drawn content, not
+geometry). Calling that again (e.g., every time the GUI’s
+‘Re-draw’ button is clicked) would otherwise shrink an
+already-shrunk ‘axes’ further each time, and a colorbar is never
+removed just because a later plot does not itself add one. That
+“later plot” is not limited to tree-plotting functions: a
+completely different, non-tree DAG node (e.g., a scalar like an
+origin-age node, rendered through
+‘pgm.plot_node_histogram’/’pgm.plot_blank’) can be selected right
+after a colored-chronogram one, reusing the very same Axes/Figure,
+so this function is called from there too (not only from every
+‘plot_ann_tree*’ function below) – otherwise a colorbar added for
+a previous tree would be left behind indefinitely, since nothing
+about plotting a histogram or a blank Axes would ever remove it
+on its own.</p>
+<p>The colorbar and ‘axes’s pre-colorbar position are tracked via
+‘_pj_trait_colorbar’/’_pj_trait_position’, two attributes stashed
+directly on ‘axes’ itself (set by ‘plot_ann_tree_continuous_attr’
+right before it draws the colorbar) – there is nothing to do
+here if neither was ever set (no colorbar has been drawn on this
+Axes yet).</p>
 </dd></dl>
 
 <dl class="py function">
@@ -849,6 +1002,53 @@ an exception is raised.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="phylojunction.data.tree.get_x_coord_from_attr_product">
+<span class="sig-prename descclassname"><span class="pre">phylojunction.data.tree.</span></span><span class="sig-name descname"><span class="pre">get_x_coord_from_attr_product</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ann_tr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#phylojunction.data.tree.AnnotatedTree" title="phylojunction.data.tree.AnnotatedTree"><span class="pre">AnnotatedTree</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">attr_of_interest</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'mutation_rate'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">draw_reconstructed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#phylojunction.data.tree.get_x_coord_from_attr_product" title="Link to this definition"></a></dt>
+<dd><p>Return x-coordinates for a phylogram (genetic-distance) layout.</p>
+<p>Unlike ‘get_x_coord_from_nd_heights’ (branch length = time), here
+each node’s x-coordinate is the cumulative sum, from the root (or
+origin), of ‘branch_length * getattr(node, attr_of_interest)’
+along its ancestral path – i.e., distance in units of expected
+character change, not time. A branch whose ‘attr_of_interest’
+value is ‘None’ (e.g., the root, or a sampled-ancestor branch;
+see
+‘calculation.gamma_spike_clock_model.populate_gamma_spike_mol_rates_on_rec_tr_branches’)
+contributes 0.0 (i.e., it is drawn with zero length).</p>
+<p>Note that a clock model currently only populates
+‘attr_of_interest’ on a tree’s <em>reconstructed</em> topology (not its
+complete one; see the clock model’s own documentation for why),
+so calling this with ‘draw_reconstructed=False’ on a tree whose
+complete topology was never annotated returns every node at
+x-coordinate 0.0 (not an error, just an uninformative layout).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ann_tr</strong> (<a class="reference internal" href="#phylojunction.data.tree.AnnotatedTree" title="phylojunction.data.tree.AnnotatedTree"><em>AnnotatedTree</em></a>) – Instance of AnnotatedTree that we
+are drawing.</p></li>
+<li><p><strong>attr_of_interest</strong> (<em>str</em>) – Name of the (per-branch, constant)
+node attribute whose product with branch length gives
+each branch’s contribution to the x-axis. Defaults to
+‘mutation_rate’.</p></li>
+<li><p><strong>draw_reconstructed</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether we are drawing
+the reconstructed tree instead of the complete tree.
+Defaults to ‘False’.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Dictionary with node labels (str) as keys and</dt><dd><p>cumulative genetic-distance x-coordinates (float) as
+values.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="phylojunction.data.tree.get_x_coord_from_nd_heights">
 <span class="sig-prename descclassname"><span class="pre">phylojunction.data.tree.</span></span><span class="sig-name descname"><span class="pre">get_x_coord_from_nd_heights</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ann_tr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#phylojunction.data.tree.AnnotatedTree" title="phylojunction.data.tree.AnnotatedTree"><span class="pre">AnnotatedTree</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_age</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unit_branch_lengths</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">draw_reconstructed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#phylojunction.data.tree.get_x_coord_from_nd_heights" title="Link to this definition"></a></dt>
 <dd><p>Return x-coordinates for all nodes in tree.</p>
@@ -893,6 +1093,69 @@ Defaults to ‘True’.</p></li>
 being drawn is the reconstructed tree or complete tree.
 Defaults to ‘False’.</p></li>
 </ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="phylojunction.data.tree.is_real_branch">
+<span class="sig-prename descclassname"><span class="pre">phylojunction.data.tree.</span></span><span class="sig-name descname"><span class="pre">is_real_branch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nd</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Node</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#phylojunction.data.tree.is_real_branch" title="Link to this definition"></a></dt>
+<dd><p>Return whether ‘nd’s incoming edge is a ‘real’ branch.</p>
+<p>A branch is not “real” (and so is excluded from things like
+per-branch rate draws or branch counts) if it has no parent (the
+root/seed node has no incoming edge at all), or if its length is
+‘None’ or effectively zero (e.g., a sampled-ancestor’s own
+zero-length edge). A lineage bisected by a sampled ancestor is
+represented as two separate edges in the reconstructed tree (the
+dummy parent’s incoming edge, and the ‘is_sa_lineage’ edge
+continuing past it) – both count as separate real branches here,
+as long as each has non-zero length, since each really is a
+distinct branch of the tree.</p>
+<p>On the root/seed node specifically: this exclusion is not a
+special case bolted on for convenience, nor a statement that the
+root “has zero stubs” or “gets no baseline spike” as some kind of
+assumption – it falls out structurally from what the root <em>is</em>.
+The reconstructed tree’s root is, by construction, the oldest
+point for which there is any retained evidence at all (the MRCA
+of every sampled/retained node) – so it has no reconstructed
+parent, and therefore no incoming branch for a stub count or a
+clock-model rate to even be defined <em>along</em>, regardless of
+whether earlier, unobserved branching events might have happened
+further back in the complete tree. (If an earlier branching event
+<em>did</em> have retained descendants on both sides, that event – not
+the current one – would itself be the root; if only one side was
+retained, that event is unifurcation-suppressed away during
+reconstruction and never becomes a distinguishable “stub on the
+root’s own branch”, precisely because the root does not have
+one.) This matches Douglas et al. (2025)’s own treatment: their
+eqn (2.8) explicitly excludes “nodes with branch length zero…
+i.e. sampled ancestors and the root” from the saltative-branching
+proportion, for the same reason – neither has a real, time-
+bearing branch of its own for a rate or a spike to apply to. This
+holds regardless of whether the root happens to be reached via a
+chain of direct ancestors above it (see
+‘calculation.gamma_spike_clock_model’ for why a node that is both
+‘is_sa_lineage’ and a genuine bifurcation, e.g. such a root,
+still correctly gets no baseline “+1” spike on its own incoming
+branch either – same underlying reason, one level down).</p>
+<p>This is shared by every piece of code that needs to agree on
+exactly which branches count (e.g.,
+‘calculation.gamma_spike_clock_model.populate_gamma_spike_mol_rates_on_rec_tr_branches’
+and ‘AnnotatedTree.n_rec_branches’, below) so they can never drift
+apart from one another.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nd</strong> (<em>dendropy.Node</em>) – Node whose incoming edge is being checked.</p></li>
+<li><p><strong>epsilon</strong> (<em>float</em>) – Threshold below which a branch length is
+considered effectively zero (see ‘AnnotatedTree.epsilon’).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Whether ‘nd’s incoming edge counts as a real branch.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(bool)</p>
 </dd>
 </dl>
 </dd></dl>
@@ -960,6 +1223,99 @@ or y-coordinates.</p>
 </dl>
 </dd></dl>
 
+<dl class="py function">
+<dt class="sig sig-object py" id="phylojunction.data.tree.plot_ann_tree_continuous_attr">
+<span class="sig-prename descclassname"><span class="pre">phylojunction.data.tree.</span></span><span class="sig-name descname"><span class="pre">plot_ann_tree_continuous_attr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ann_tr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#phylojunction.data.tree.AnnotatedTree" title="phylojunction.data.tree.AnnotatedTree"><span class="pre">AnnotatedTree</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Axes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">attr_of_interest</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'mutation_rate'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_age</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cmap_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'inferno'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">draw_reconstructed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#phylojunction.data.tree.plot_ann_tree_continuous_attr" title="Link to this definition"></a></dt>
+<dd><p>Plot a chronogram with branches colored by a continuous attribute.</p>
+<p>This is the ‘colored chronogram’ visualization: branch lengths
+remain in units of time (same x-coordinates as ‘plot_ann_tree’),
+and each branch is colored along a sequential (‘cold’ to ‘hot’)
+colormap according to its (constant) value for ‘attr_of_interest’
+(e.g., ‘mutation_rate’, as populated by a ‘calculation.clock_model.ClockModel’).</p>
+<p>Plotting is a side-effect. A colorbar reflecting the attribute’s
+(min, max) range is added alongside the tree.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ann_tr</strong> (<a class="reference internal" href="#phylojunction.data.tree.AnnotatedTree" title="phylojunction.data.tree.AnnotatedTree"><em>AnnotatedTree</em></a>) – Instance of AnnotatedTree that we
+are drawing.</p></li>
+<li><p><strong>axes</strong> (<em>matplotlib.pyplot.Axes</em>) – Axes object where we are
+drawing the tree.</p></li>
+<li><p><strong>attr_of_interest</strong> (<em>str</em>) – Name of the per-branch attribute to
+color branches by. Defaults to ‘mutation_rate’ (currently
+the only continuous, clock-model-populated attribute;
+letting the user choose among several is future work).</p></li>
+<li><p><strong>use_age</strong> (<em>bool</em>) – Flag specifying if age or time is being used.
+Defaults to ‘False’.</p></li>
+<li><p><strong>cmap_name</strong> (<em>str</em>) – Name of a Matplotlib sequential colormap.
+Defaults to ‘inferno’.</p></li>
+<li><p><strong>draw_reconstructed</strong> (<em>bool</em>) – Flag specifying if the
+reconstructed tree is meant to be drawn instead of the
+complete tree. Defaults to ‘False’.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Tuple with two dictionaries (node name -&gt; x- or</dt><dd><p>y-coordinate). This return is used for unit testing
+purposes only.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(tuple)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="phylojunction.data.tree.plot_ann_tree_phylogram">
+<span class="sig-prename descclassname"><span class="pre">phylojunction.data.tree.</span></span><span class="sig-name descname"><span class="pre">plot_ann_tree_phylogram</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ann_tr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#phylojunction.data.tree.AnnotatedTree" title="phylojunction.data.tree.AnnotatedTree"><span class="pre">AnnotatedTree</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Axes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">attr_of_interest</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'mutation_rate'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">draw_reconstructed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'black'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#phylojunction.data.tree.plot_ann_tree_phylogram" title="Link to this definition"></a></dt>
+<dd><p>Plot a monochromatic phylogram (branches scaled by an attribute).</p>
+<p>This is the ‘phylogram’ visualization: unlike ‘plot_ann_tree’ and
+‘plot_ann_tree_continuous_attr’ (both of which place branches by
+time), here each branch’s length is rescaled by its (constant)
+value for ‘attr_of_interest’ (e.g., ‘mutation_rate’) – i.e., the
+x-axis becomes a genetic-distance (expected character change)
+axis instead of a time axis. Branches are drawn in a single,
+neutral color, since the rescaled length already encodes the
+attribute.</p>
+<p>This is PhyloJunction’s GUI default for a deterministic tree node
+whose branches carry a continuous, clock-model-populated attribute
+(see ‘pgm.DeterministicNodeDAG.plot_node’). A manual
+chronogram/phylogram toggle (letting the user switch back to
+‘plot_ann_tree_continuous_attr’ for the same node) is future work.</p>
+<p>Plotting is a side-effect.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ann_tr</strong> (<a class="reference internal" href="#phylojunction.data.tree.AnnotatedTree" title="phylojunction.data.tree.AnnotatedTree"><em>AnnotatedTree</em></a>) – Instance of AnnotatedTree that we
+are drawing.</p></li>
+<li><p><strong>axes</strong> (<em>matplotlib.pyplot.Axes</em>) – Axes object where we are
+drawing the tree.</p></li>
+<li><p><strong>attr_of_interest</strong> (<em>str</em>) – Name of the per-branch attribute to
+scale branch lengths by. Defaults to ‘mutation_rate’.</p></li>
+<li><p><strong>draw_reconstructed</strong> (<em>bool</em>) – Flag specifying if the
+reconstructed tree is meant to be drawn instead of the
+complete tree. Defaults to ‘False’.</p></li>
+<li><p><strong>color</strong> (<em>str</em>) – Color every branch is drawn in. Defaults to
+‘black’.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Tuple with two dictionaries (node name -&gt; x- or</dt><dd><p>y-coordinate). This return is used for unit testing
+purposes only.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(tuple)</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 <section id="module-phylojunction.data">
 <span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-phylojunction.data" title="Link to this heading"></a></h2>
@@ -970,7 +1326,7 @@ or y-coordinates.</p>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="phylojunction.calculation.html" class="btn btn-neutral float-left" title="phylojunction.calculation package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="phylojunction.constant_function.html" class="btn btn-neutral float-left" title="phylojunction.constant_function package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="phylojunction.distribution.html" class="btn btn-neutral float-right" title="phylojunction.distribution package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 

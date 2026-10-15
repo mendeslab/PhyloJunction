@@ -16,6 +16,32 @@ __email__ = "fmendes@lsu.edu"
 
 
 class CtFnTreeReader(pgm.ConstantFn):
+    """Build one or more AnnotatedTree(s) from Newick string(s).
+
+    'n'/'nr' ("number of samples"/"number of replicates") behave in
+    one of exactly two ways, depending on whether the user wrote
+    either of them in the script at all:
+
+    (i) neither 'n' nor 'nr' is given: every tree string found (a
+        'string' argument is always exactly one tree; a 'file_path'
+        argument may hold any number of them, one per line) goes
+        straight into 'n_samples' -- never into 'n_repl' -- so, e.g.,
+        a 5-line file becomes 5 samples, 1 replicate each, with no
+        further input needed from the user; or
+
+    (ii) 'n' and/or 'nr' is given explicitly (even if the value
+         written happens to be '1'): that value is taken completely
+         literally, and checked -- via 'init_check_vectorize_sample_size'
+         -- against how many tree strings were actually found
+         ('n_samples * n_repl' must equal that count exactly).
+         Mismatches raise 'exception_classes.ObjInitIncorrectDimensionError'
+         rather than being silently reconciled one way or another.
+
+    There is deliberately no third, in-between behavior (e.g., "read
+    only the first tree of a multi-tree file") -- the whole file is
+    always consumed, and 'n'/'nr' only ever either describe its
+    exact shape (case ii) or get inferred from it outright (case i).
+    """
 
     CT_FN_NAME = "read_tree"
 
@@ -29,6 +55,10 @@ class CtFnTreeReader(pgm.ConstantFn):
     in_file: bool
     total_tr_count: int
     tr_str_list: ty.List[str]
+    is_complete: bool
+    keep_unsampled_alive: bool
+    n_provided: bool
+    nr_provided: bool
 
     # validation of pars happens in phylojunction_grammar
     def __init__(self,
@@ -37,12 +67,20 @@ class CtFnTreeReader(pgm.ConstantFn):
                  tr_fp_or_str: str,
                  node_name_attr: str,
                  in_file: bool,
-                 list_time_slice_age_ends: ty.Optional[ty.List[float]] = None) -> None:
+                 list_time_slice_age_ends: ty.Optional[ty.List[float]] = None,
+                 is_complete: bool = False,
+                 keep_unsampled_alive: bool = False,
+                 n_provided: bool = False,
+                 nr_provided: bool = False) -> None:
 
         self.n_samples = n_samples
         self.n_repl = n_repl
         self.node_name_attr = node_name_attr
         self.in_file = in_file
+        self.is_complete = is_complete
+        self.keep_unsampled_alive = keep_unsampled_alive
+        self.n_provided = n_provided
+        self.nr_provided = nr_provided
 
         self.slice_t_ends = None
         self.slice_age_ends = list_time_slice_age_ends
@@ -67,30 +105,44 @@ class CtFnTreeReader(pgm.ConstantFn):
 
         self.total_tr_count = len(self.tr_str_list)
 
-        # if n_samples and n_repl are not provided, but there is more
-        # than one tree, we update self.n_samples, and assume trees are
-        # not replicates, but different simulations (samples)
-        if self.n_samples == 1 and self.n_repl == 1 and \
-                self.total_tr_count > 1:
+        # 'n'/'nr' are either both respected literally (whatever the
+        # user wrote, even "n=1"/"nr=1"), or neither is given at all,
+        # in which case every tree string found goes straight into
+        # 'n_samples' (never 'n_repl') -- there is no silent middle
+        # ground where a user-written "n=1" gets reinterpreted as
+        # something else just because the file happens to hold more
+        # than one tree. 'n_provided'/'nr_provided' (set in
+        # 'interface.grammar.ct_fn_treereader_makers.make_tree_reader',
+        # the only place that can actually tell "the user wrote this"
+        # apart from "this is just the default") are what make that
+        # distinction possible here.
+        if not self.n_provided and not self.nr_provided:
             self.n_samples = self.total_tr_count
 
         self.init_check_vectorize_sample_size()
 
     def init_check_vectorize_sample_size(self) -> None:
-        """Check provided tree strings and count members match"""
+        """Check provided tree strings and count members match.
 
-        arg: str = "string" 
+        Always enforced -- when neither 'n' nor 'nr' was provided (see
+        '__init__' above), 'n_samples' was already set to match
+        'total_tr_count' exactly, so this can never raise in that
+        case; it only ever does when the user gave an explicit 'n'
+        and/or 'nr' that does not actually match how many tree strings
+        were found.
+        """
+
+        arg: str = "string"
         if self.in_file:
             arg = "file_path"
 
-        if (self.n_samples != 1 or self.n_repl != 1) and \
-            (self.n_samples * self.n_repl) != self.total_tr_count:
-                raise ec.ObjInitIncorrectDimensionError(
-                        "CtFnTreeReader",
-                        arg,
-                        self.total_tr_count,
-                        exp_len=self.n_samples * self.n_repl
-                    )
+        if (self.n_samples * self.n_repl) != self.total_tr_count:
+            raise ec.ObjInitIncorrectDimensionError(
+                    "CtFnTreeReader",
+                    arg,
+                    self.total_tr_count,
+                    exp_len=self.n_samples * self.n_repl
+                )
 
     def _update_ann_trs_time_slice_ends(self,
                                         generated_values:
@@ -138,7 +190,9 @@ class CtFnTreeReader(pgm.ConstantFn):
                 ann_tr = pjr.read_nwk_tree_str(
                     tr_str,
                     in_file=False,
-                    node_names_attribute=self.node_name_attr)
+                    node_names_attribute=self.node_name_attr,
+                    is_complete=self.is_complete,
+                    keep_unsampled_alive=self.keep_unsampled_alive)
                 
                 generated_values.append(ann_tr)
 
