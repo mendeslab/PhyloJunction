@@ -633,8 +633,18 @@ def prep_data_df(
         n_repl = node_dag.repl_size
 
         # if stochastic node is constant and at least one value was indeed
-        # saved in list
-        if isinstance(node_dag, pgm.StochasticNodeDAG) and node_val:
+        # saved in list; tree-valued deterministic (':=') nodes are
+        # included here too (e.g., 'gamma_spike_clock's 'phylo'), so they
+        # get written just like stochastic/constant-function tree nodes
+        # do -- scalar deterministic nodes are left out, since the scalar
+        # branches below assume no replication structure (see "no support
+        # for replication via 2D-lists yet" a few lines down), which does
+        # not hold for most deterministic scalar outputs
+        if node_val and (
+                isinstance(node_dag, pgm.StochasticNodeDAG)
+                or (isinstance(node_dag, pgm.DeterministicNodeDAG)
+                    and isinstance(node_val, list)
+                    and isinstance(node_val[0], AnnotatedTree))):
             ################################
             # Fixed-value stochastic nodes #
             ################################
