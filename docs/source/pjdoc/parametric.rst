@@ -1,9 +1,24 @@
-|pj| ships with a (growing) number of parametric distributions.
-Distribution constructors accept scalar literals or model expressions. A constructor returns a
-distribution object; ``~`` draws from it. Use ``iid`` for vectors and ``--runs`` for complete
-model executions. List arguments to scalar parameters vectorize over one level, sharing scalar
-arguments and strictly pairing lists of equal length. Comprehensions express nested mappings.
-On this page you will find examples of how to invoke the available distributions (using the *phylojunction* language) when building a model.
+|pj| provides the following parametric distributions for use in model scripts.
+
+Distribution objects and IID vectors
+------------------------------------
+
+Construct a distribution with ``:=`` and draw from it with ``~``. Use ``iid`` for repeated
+independent draws with the same parameters:
+
+.. code-block:: text
+
+    d := normal(0, 1)
+    x ~ d
+    y ~ iid(3, d)
+    z ~ iid(2, iid(3, d))
+    selected <- z[2][1]
+
+Here ``x`` is a scalar, ``y`` has three elements, and ``z`` contains two three-element lists.
+``iid(n, distribution)`` requires a nonnegative integer length; zero produces an empty list.
+Indices start at one and must be integer-valued and within bounds.
+Use :ref:`complete executions <executions>` to redraw the whole model, or
+:ref:`vectorization and comprehensions <vectorization>` to vary parameters between elements.
 
 Uniform
 -------
@@ -88,35 +103,10 @@ The function for assigning a categorical (``categorical``) distribution to a ran
 Beta
 ----
 
-``beta(alpha, beta)`` draws a value between zero and one. Both shape parameters must be
-finite and strictly positive. The mean is ``alpha / (alpha + beta)``.
+``beta(alpha, beta)`` constructs a distribution on values between zero and one.
+Both shape parameters must be finite and strictly positive. The mean is ``alpha / (alpha + beta)``.
 
 .. code-block:: text
 
     prior := beta(alpha=2, beta=5)
     probability ~ prior
-
-Distribution objects and IID vectors
-------------------------------------
-
-The same constructor is used for named distributions, direct sampling, and distribution-valued
-arguments. For example:
-
-.. code-block:: text
-
-    d := normal(0, 1)
-    x ~ d
-    y ~ iid(3, d)
-    z ~ iid(2, iid(3, normal(0, 1)))
-    selected <- z[2][1]
-
-``iid(n, distribution)`` requires a nonnegative integer length. Zero produces an empty list.
-Nested IID draws remain nested lists. Indexing is one-based, accepts integer-valued expressions,
-and rejects out-of-range indices. An indexed expression depends on both its vector and its
-index variables. Elements do not create separate DAG nodes.
-
-In Python, use ``distribution.draw()`` for one value and ``distribution.draw_many(count)``
-for repeated draws from the same parameters. For complete model executions, use
-``compile_model(source).execute(runs=10, random_seed=42)``. The resulting ``ExecutionResults``
-holds values separately from the shared graph; ``results.value("x", 0)`` selects the first
-execution (Python execution indices are zero-based).

@@ -128,8 +128,8 @@ Here is what a series of those commands would look like if written as a *phyloju
     :caption: **Example script 1.** Script written in *phylojunction* specifying a time-homogenous birth-death model.
 
     # hyperprior
-    m <- 0.0 # mean of log-normal below
-    sd <- 0.1 # standard deviation of log-normal below
+    m <- 0.0 # mean of log birth rate
+    sd <- 0.1 # standard deviation of log birth rate
     
     # rate values
     d <- 1.0 # death
@@ -153,7 +153,7 @@ Every command string consists of an assignment operator (e.g., ``<-``, ``:=``, `
 We can look at some of these commands individually:
 
 * ``d <- 1.0`` creates a variable ``d`` (the death rate) that is then passed and henceforth stores constant value ``1.0``. We use ``<-`` when we know the value of a random variable and want to create a constant node in the DAG;
-* ``b ~ lognormal(meanlog=m, sdlog=sd)`` creates a variable ``b`` (the birth rate) that will store a random value drawn from a user-specified distribution. Here, that distribution is a log-normal with mean `m` and standard deviation `sd`.
+* ``b ~ lognormal(meanlog=m, sdlog=sd)`` creates a variable ``b`` (the birth rate) that will store a random value drawn from a user-specified distribution. The logarithm of the birth rate is normal with mean ``m`` and standard deviation ``sd``.
 * ``dr := sse_rate(name="death_rate", value=d, event="extinction")`` calls deterministic function ``sse_rate``, which creates variable ``dr`` from the value stored in ``d`` and some other user input. There is no stochasticity to deterministic assignments; they help make explicit steps where variables are transformed, annotated or combined with others.
 
 And this is the DAG such script instantiates:
@@ -168,15 +168,17 @@ And this is the DAG such script instantiates:
 Note how this DAG has a factor node characterized by a different type of function: deterministic function ``sse_rate``.
 Such functions are denoted by filled diamonds instead of filled squares (those represent distributions), and will have their output enclosed in a hollow diamond.
 
+.. _executions:
+
 Complete executions and IID vectors
 -----------------------------------
 
 A complete execution evaluates the model once, in statement order. Repeat the entire model
-with ``pjcli model.pj --runs 10``, or set **Executions** in GUI Settings. Each execution has
-the same named dependency graph and its own values. All stochastic parent parameters are drawn
-again on each execution.
+with ``pjcli model.pj --runs 10``, or set **Executions** in GUI Settings before loading a script.
+Each execution draws fresh values for the stochastic variables.
 
-Within a model, ``iid`` draws a vector using the same distribution parameters:
+Within an execution, ``iid`` draws independent observations with shared distribution parameters,
+as in the plated node in figure 1:
 
 .. code-block:: text
     :caption: **Example script 2.** Five IID observations per complete execution.
@@ -185,26 +187,30 @@ Within a model, ``iid`` draws a vector using the same distribution parameters:
     m ~ normal(mean=0.0, sd=1.0)
     d ~ iid(5, normal(mean=m, sd=sd))
 
-Running this script ten times produces ten independently drawn pairs of ``m`` and ``sd``,
-each with five observations. To hold parameters fixed, assign constants instead. Vectors are
-not flattened: ``x[i][j]`` uses one-based indices at both levels.
+Ten executions produce ten pairs of ``m`` and ``sd``, each with five observations in ``d``.
+Assign constants to ``m`` and ``sd`` to hold the parameters fixed across executions.
+Within a script, ``d[1]`` selects the first observation; indices start at one.
+Nested vectors retain their structure: ``x[i][j]`` selects element ``j`` of vector ``x[i]``.
 
-Distribution objects can also be named: ``prior := normal(0, 1)`` followed by ``x ~ prior``.
-Assignments are sequential: reassigning a name affects later statements, but does not recompute
-existing descendants. A complete rerun evaluates the whole sequence again. Interactive additions
-are evaluated for every existing execution and committed together only if all succeed.
+Assignments and named distributions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Summaries average across complete executions, never across entries of a vector within one
-execution. Equal-shaped numeric vectors receive componentwise summaries. Ragged vectors have
-no automatic aggregate summary. A selected tree retains its individual tree statistics.
+A distribution can be named and reused: ``prior := normal(0, 1)`` constructs it, and
+``x ~ prior`` draws a value. Construction alone draws nothing.
+Reassigning a name affects later statements without recomputing earlier values.
+A complete rerun evaluates the whole script again.
+Commands entered interactively apply to every existing execution; if any execution fails,
+the command leaves the model and its values unchanged.
+
+.. _vectorization:
 
 Vectorization and comprehensions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A function expecting a scalar argument can instead receive a list, producing one result per
 entry. Scalar arguments are shared; multiple list arguments are paired and must have equal
-lengths. A one-element list is not a scalar. Functions that already accept lists consume them
-intact: for example, ``categorical([1,2], [1,1])`` constructs one distribution.
+lengths. A one-element list is not a scalar. Functions that accept lists consume them intact:
+for example, ``categorical([1,2], [1,1])`` constructs one distribution.
 
 .. code-block:: text
 
@@ -214,29 +220,26 @@ intact: for example, ``categorical([1,2], [1,1])`` constructs one distribution.
     xs ~ distributions
     ys ~ [normal(mu,sd) for (mu,sd) in zip_strict(mus,sds)]
 
-Both sampling statements describe the same conditional distribution, but perform separate
-draws. Constructing a distribution draws nothing. ``~`` recursively samples lists of
-distributions, preserving their nesting. A distribution's returned value is already a value
-and is not recursively sampled again.
+Both ``xs`` and ``ys`` contain two independent normal draws, with means 0 and 2 and standard
+deviations 1 and 3, respectively. The two statements make separate draws.
+``zip_strict`` pairs corresponding entries and rejects unequal lengths.
 
-Implicit vectorization handles one level only. Use nested comprehensions to express additional
-levels or ambiguous mappings:
+Vectorization handles one level. Use nested comprehensions for nested lists:
 
 .. code-block:: text
 
     means <- [[0],[1,2]]
-    trees_of_values ~ [[normal(mu,1) for mu in row] for row in means]
+    values ~ [[normal(mu,1) for mu in row] for row in means]
 
-Comprehensions have local names, accept list iterables, and support simple names or flat tuple
-unpacking. ``zip_strict`` rejects unequal lengths. Filters and multiple ``for`` clauses in a
-single comprehension are not supported; nest comprehensions instead. Statements remain on
-one line. Local bindings do not become named DAG nodes.
+Here ``values`` contains a one-element list followed by a two-element list.
+``~`` samples each distribution in a nested list, preserving the nesting.
+Lists used with ``~`` must contain only distributions or lists of distributions.
 
-Lists have compatible element types and nesting; numeric integers and reals may mix, and inner
-lists may have different lengths. Distribution objects may mix families: checking their draw
-types is deferred. Ordinary values cannot be mixed with distributions under ``~``.
-Empty lists are allowed in PJ. Empty vectorized calls validate argument binding and shapes,
-but make no function calls and therefore do not check unused numerical parameter values.
+Comprehensions accept list iterables and bind local names, including flat tuple unpacking as
+above. Use nested comprehensions for multiple levels; filters and multiple ``for`` clauses in
+one comprehension are not supported. Each statement must occupy one line.
+Ordinary lists must have compatible element types and nesting; integers and reals may mix,
+and inner lists may differ in length. Empty lists are allowed.
 
 RevBayes inference export
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -308,9 +311,12 @@ Model building commands can be revisited by going into the menu's "Command log" 
     The warning message can be seen by visiting the "Warnings" tab.
 
 Given a model, DAG node values can be navigated as a plot, text string, or both (Fig. 3, numbers 3 and 4).
-Users can select complete executions and nested vector elements, and examine individual tree
-statistics or summaries across executions. The older screenshot uses the previous control labels.
-Node-value summaries include the mean and standard deviation for scalar variables, and statistics like the root age and number of tips for phylogenetic trees.
+Users can select an execution and a vector element to inspect its value or plot.
+A selected tree shows its individual statistics, such as root age and tip count.
+Across executions, numeric values and tree statistics receive means and standard deviations.
+Vector summaries compare corresponding elements across executions; they do not average elements
+within a vector. Vectors whose shapes vary between executions have no aggregate summary.
+The screenshot uses older control labels.
 
 After a model is specified, saving the main plot (from the "Model" tab) to disk can be done by clicking "Save plot as".
 Simulated data tables, or the model itself, in turn, can be saved to disk by clicking the application menu (top menu), and clicking "File > Save data as" or "File > Save model as".
