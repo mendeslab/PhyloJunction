@@ -33,6 +33,26 @@ class TestInferenceRevBayesParametricDn(unittest.TestCase):
                         self.assertEqual(dag.get_node_dag_by_name("x").sampling_dn.get_rev_inference_spec_info(),
                                          [template.format(rate) for rate in rates])
 
+    # Legacy string checks do not exercise distribution aliases, nested IID, or clamping
+    # per execution. These contracts remain required by the shared-graph exporter.
+    def test_execution_export(self):
+        from phylojunction.inference.revbayes.execution import execution_to_rev
+        source = ('a ~ normal(0,1)\nd := normal(a,1)\nx ~ iid(2,iid(2,d),clamp=true)'
+                  '\na <- 5\nb ~ normal(a,1)\np ~ beta(2,3)')
+        results = cmdp.compile_model(source).execute(2, 42)
+        models, logging, _ = execution_to_rev(results, 'results', 10)
+        self.assertEqual(len(models), 2)
+        for i, model in enumerate(models):
+            self.assertIn('a__definition1 ~ dnNormal(mean=0, sd=1)', model)
+            self.assertIn('x[2][2] ~ dnNormal(mean=a__definition1, sd=1)', model)
+            self.assertIn(f'x[2][2].clamp({results.value("x", i)[1][1]})', model)
+            self.assertIn('b ~ dnNormal(mean=a, sd=1)', model)
+            self.assertIn('dnBeta(alpha=2, beta=3)', model)
+            self.assertIn('model(a__definition1, x[1][1], x[1][2], x[2][1], x[2][2], b, p)', logging[i])
+        for source in ('x ~ iid(0,normal(0,1))', 'b := quasse_constant(1)\nx ~ quasse(b,b,"age",1)'):
+            with self.assertRaises(ValueError):
+                execution_to_rev(cmdp.compile_model(source).execute(), 'results')
+
     def test_pj2rb_uniform(self):
         """
         Test if PJ -> .Rev conversion functionality is correct for

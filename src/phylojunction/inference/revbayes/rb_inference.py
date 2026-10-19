@@ -77,6 +77,11 @@ def dag_obj_to_rev_inference_spec(
             printed to files (2) and directory names (1).
     """
     
+    from phylojunction.pgm.execution import ExecutionResults
+    if isinstance(dag_obj, ExecutionResults):
+        from phylojunction.inference.revbayes.execution import execution_to_rev
+        return execution_to_rev(dag_obj, inference_root_dir, mcmc_chain_length, prefix)
+
     all_nodes_all_sims_spec_list: ty.List[ty.List[str]] = []
     all_nodes_moves_str: str = str()
     sorted_node_dag_list: ty.List[pgm.NodeDAG] = dag_obj.get_sorted_node_dag_list()

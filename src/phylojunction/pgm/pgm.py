@@ -74,6 +74,19 @@ class DirectedAcyclicGraph():
         if statement is None:
             return
         name, operator, expression = statement
+        # Clamping is observation metadata, not a parameter of the distribution object.
+        import ast
+        clamped = False
+        if operator == '~' and isinstance(expression, ast.Call):
+            clamp = next((item for item in expression.keywords if item.arg == 'clamp'), None)
+            if clamp is not None:
+                from phylojunction.interface.grammar.constructors import flag
+                if isinstance(clamp.value, ast.Name) and clamp.value.id in ("true", "false"):
+                    clamp.value = ast.Constant(clamp.value.id == "true")
+                if not isinstance(clamp.value, ast.Constant):
+                    raise ValueError("clamp must be a literal true/false flag.")
+                clamped = flag(clamp.value.value)
+                expression.keywords.remove(clamp)
         names = list(dict.fromkeys(variable_names(expression)))
         missing = [name for name in names if name not in self.name_node_dict]
         if missing:
@@ -88,6 +101,7 @@ class DirectedAcyclicGraph():
         node.source = source
         node.bindings = {name: self.name_node_dict[name].definition_id for name in names}
         node.is_sampled = operator == '~'
+        node.is_clamped = clamped
         self.definitions.append(node)
         self.name_node_dict[name] = node
         self.n_nodes = len(self.definitions)
