@@ -19,7 +19,7 @@ SSE rates are added to a DAG by passing deterministic function ``sse_rate`` a st
 .. code-block:: 
     :caption: **Script excerpt 1.** Command in *phylojunction* to add a birth rate (deterministic node) to the DAG.
 
-    birth_rate ~ exponential(n=2, nr=2, rate=1.0)
+    birth_rate ~ exponential(rate=1.0)
 
     det_birth_rate := sse_rate(name="lambda", value=birth_rate, event="speciation")
     
@@ -93,10 +93,8 @@ The limits of each "piece" of that function are given by the argument to ``epoch
 We have seen how to add to the DAG a series of ingredients required by the ``discrete_sse`` distribution.
 The parameters of this function are:
 
-    | ``n`` (integer, optional): Number of samples to draw (samples are i.i.d.). Defaults to 1.
-    | ``nr`` (integer, optional): Number of replicates to draw per sample. Defaults to 1.
     | ``stash`` (string, required): Name of DAG node holding the object created by ``sse_stash``.
-    | ``start_state`` (positive integer vector starting at 0, required): State at which the process starts for each sample.
+    | ``start_state`` (nonnegative integer, optional): State at which each tree starts. Defaults to 0.
     | ``stop`` (string, required): String specifying the simulation stopping condition. If set to ``"age"``, the simulation will stop when the origin or root's age (see parameter ``origin``) reaches the value provided in ``stop_value``. If set to ``"size"``, the simulation will stop when the tree has the number of sampled nodes provided in ``stop_value``.
     | ``stop_value`` (positive numeric, required): The stopping condition threshold. If ``stop="age"``, this can be any positive real number. If ``stop="size"``, this can be any positive integer.
     | ``origin`` (string boolean, required): Flag specifying if process starts at origin node (as opposed to the root node). Defaults to "true".
@@ -106,7 +104,7 @@ The parameters of this function are:
     | ``min_rec_taxa`` (positive integer, optional): Minimum number of sampled (extant and sampled ancestors) nodes the tree should have. Defaults to 0.
     | ``max_rec_taxa`` (positive integer, optional): Maximum number of sampled (extant and sampled ancestors) nodes the tree should have. Defaults to 1e12.
     | ``abort_at_alive_count`` (positive integer, optional): The count of a tree's living nodes (irrespective of node sampling) at which point the tree is considered too large for simulation to continue. Trees can grow out of control when ``stop="age"`` and one of the rates allows it to grow too big before the stopping condition is met. This parameter can be used to throw away such trees and preventing PhyloJunction from crashing. Defaults to 1e12.
-    | ``runtime_limit`` (positive integer, optional): Maximum number of seconds to wait until all samples are drawn. Sampling is aborted at this point. Defaults to 300.
+    | ``runtime_limit`` (positive integer, optional): Maximum number of seconds to obtain one accepted tree. Sampling is aborted at this point. Defaults to 300.
     | ``max_n_attempts`` (positive integer, optional): Maximum number of (failed) attempts before sampling is aborted. Defaults to 200.
 
 Below, an example of assigning a discrete SSE to a stochastic DAG node representing phylogenetic tree samples:
@@ -119,7 +117,7 @@ Below, an example of assigning a discrete SSE to a stochastic DAG node represent
 
     stash := sse_stash(flat_rate_mat=[det_birth_rate1, det_birth_rate2], n_epochs=2, seed_age=2.0, epoch_age_ends=[1.0])
     
-    trs ~ discrete_sse(n=2, stash=stash, start_state=[0,0], stop="age", stop_value=2.0, origin="true")
+    trs ~ discrete_sse(stash=stash, start_state=0, stop="age", stop_value=2.0, origin="true")
 
 :underline:`Special cases of discrete SSE tree models`
 
@@ -133,3 +131,21 @@ Below, an example of assigning a discrete SSE to a stochastic DAG node represent
     8. `Time-heterogeneous geographic state-dependent speciation and extinction <https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/geosse_timehet.pj>`_ (skyline GeoSSE) model;
 
 .. include:: quasse.rst
+
+Reading trees and selecting elements
+------------------------------------
+
+``read_tree`` always returns a list, even when the input contains one tree. Select a scalar
+tree explicitly with ``[1]``. ``map_attr`` accepts either a tree or nested lists of trees and
+preserves their shape:
+
+.. code-block:: text
+
+    trees <- read_tree(string="((A:1,B:1):1,C:2);")
+    first <- trees[1]
+
+Tree distributions describe one tree. ``trees ~ iid(2, discrete_sse(...))`` draws two trees
+with the same parameters in each execution, while the GUI **Executions** setting or CLI
+``--runs 10`` repeats the complete model ten times. Different per-tree parameters require
+explicit indexed expressions rather than automatic broadcasting. Each tree has its own
+runtime and failed-attempt allowance, including any rejected attempts for that tree.

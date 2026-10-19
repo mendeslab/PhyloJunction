@@ -11,10 +11,10 @@ With PhyloJunction installed, run these commands from the repository root (where
 
 .. code-block:: bash
 
-   pjcli examples/quasse.pj -d -f 'trees;1-2' -r 42 -o /tmp/quasse-output
-   pjcli examples/quasse_size.pj -d -r 42 -o /tmp/quasse-size
-   pjcli examples/quasse_conditioned.pj -d -r 42 -o /tmp/quasse-conditioned
-   pjcli examples/quasse_local_thinning.pj -d -r 42 -o /tmp/quasse-local
+   pjcli --runs 2 examples/quasse.pj -d -f 'trees;1-2' -r 42 -o /tmp/quasse-output
+   pjcli --runs 2 examples/quasse_size.pj -d -r 42 -o /tmp/quasse-size
+   pjcli --runs 2 examples/quasse_conditioned.pj -d -r 42 -o /tmp/quasse-conditioned
+   pjcli --runs 2 examples/quasse_local_thinning.pj -d -r 42 -o /tmp/quasse-local
 
 
 Each ``.pj`` statement must occupy one line. ``-d`` writes data; ``-f`` selects figures.
@@ -70,8 +70,7 @@ and ``amplitude`` are not generally its peak position and height; ``skew=0`` giv
 Gaussian peak. All constructor parameters are constant through time within a simulation.
 
 Every constructor accepts optional ``cap``: the evaluated rate is min(cap, f(x)). The cap must
-be finite and nonnegative, may be below the baseline, and may be zero. It broadcasts with the
-other parameters. Without it, linear, quadratic and absolute-value rates remain unbounded
+be finite and nonnegative, may be below the baseline, and may be zero. It is a scalar, like the other rate parameters. Without it, linear, quadratic and absolute-value rates remain unbounded
 when their slope or strength is nonzero. There is no hidden upper truncation.
 
 An explicit cap changes the biological model; computational resource limits do not cap rates.
@@ -88,14 +87,15 @@ Zero diffusion is supported.
 Each tree starts with one lineage at the origin. Daughters inherit the parent's trait and
 then evolve independently. Optional ``fossil_rate`` supplies a rate object for non-destructive
 sampling along each lineage, in observations per lineage per unit time. It defaults to zero
-(``None`` in Python), accepts every rate family, and broadcasts at length one or ``n``.
+(``None`` in Python) and accepts every rate family.
 Fossils record the exact trait at sampling; they do not remove the lineage or reset its trait.
 Sampling at death, removal probabilities and measurement error are not supported.
 
-Rate-constructor parameters broadcast to a common vector length. Distribution model
-parameters, rate objects, ``stop_value``, and ``sampling_prob`` have length one or ``n``.
-Each of the ``n`` samples has ``nr`` independent replicates using the same parameter values;
-output ordering is sample first, then replicate. Rejected trees do not resample DAG parents.
+Rate-constructor and distribution parameters are scalar within a draw. Use ``iid`` to draw
+several trees with the same parameters and external executions to redraw the complete model.
+Rejected trees do not resample DAG parents. A ``start_distribution`` is instead drawn inside
+the tree sampler for each biological attempt; a numerical restart retains that starting trait.
+For example, ``start_distribution=normal(0, 1)`` passes a distribution object directly.
 
 Diversitree method and stopping
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -166,8 +166,9 @@ for accuracy. Local thinning does not use ``dt_max`` or ``k``: a supplied ``dt_m
 nondefault ``k`` is rejected; the inherited default ``k=500`` is ignored.
 
 ``bridge_error`` defaults to ``1e-8`` and must be finite and strictly between zero and one.
-It budgets excursions outside the likely trait regions across a complete ``generate()``
-call, including every sample, replicate, biological rejection and numerical restart.
+It budgets excursions outside the likely trait regions for one accepted-tree ``draw()``,
+including its biological rejections and numerical restarts. Every tree in an IID vector gets
+its own runtime limit, failed-attempt limit and bridge-error allowance.
 Block j receives probability allowance δ/[j(j+1)], whose infinite sum is δ.
 A direct ``simulate()`` call gets its own budget. Separate calls start new budgets.
 All existing rate families are supported, including uncapped linear, quadratic and
@@ -298,13 +299,13 @@ line. The same reference appears in complete and reconstructed views and in save
 Plotting uses no randomness. An empty reconstructed tree displays ``No sampled tips``.
 
 Data output includes complete/reconstructed Newick tables, annotated variants, generic tree
-summaries, and ``<node>_traits.tsv``. The trait table has columns ``sample``, ``replicate``, ``node``,
-``trait``, ``alive``, and ``sampled``; sample and replicate indices start at one. It includes internal
+summaries, and ``<node>_traits.tsv``. The trait table has columns ``@execution``, ``@element``, ``node``,
+``trait``, ``alive``, and ``sampled``; execution indices and element-path components start at one. It includes internal
 nodes and the origin as well as living and extinct tips. Discrete state tables and discrete
 NEXUS character matrices are not generated for these trees.
 
-``<node>_fossils.tsv`` contains ``sample``, ``replicate``, ``node``, ``time``, ``age``, ``trait``.
-Indices are one-based, ``time`` is forward from the origin, and ``age`` is relative to the
+``<node>_fossils.tsv`` contains ``@execution``, ``@element``, ``node``, ``time``, ``age``, ``trait``.
+Execution indices and element-path components are one-based, ``time`` is forward from the origin, and ``age`` is relative to the
 simulation horizon. There is one row per fossil in the complete tree, or a header-only table
 when none occur. Annotated Newick identifies fossils with ``is_sa`` and sampling nodes with
 ``is_sa_dummy_parent``. The generic ``Direct ancestor count`` counts all fossil observations,
@@ -318,21 +319,24 @@ Python interface
 
 .. code-block:: python
 
+   import numpy as np
    from phylojunction.calculation.continuous_sse import LogisticRate
    from phylojunction.distribution.dn_quasse import DnQuaSSE
    
+   np.random.seed(42)
    simulator = DnQuaSSE(
        birth_rate=LogisticRate(0.4, 0.8, 0.0, 2.0),
        death_rate=LogisticRate(0.02, 0.1, 1.0, 2.0),
-       stop="size", stop_value=10, diffusion=0.1, rng_seed=42,
+       stop="size", stop_value=10, diffusion=0.1,
    )
-   trees = simulator.generate()
+   tree = simulator.draw()
+   trees = simulator.draw_many(2)
 
 
-``generate()`` applies conditions and returns a list. ``simulate(sample_idx=0)`` returns one
-attempt after observation sampling, without rejection conditioning. The Python constructor's
-``rng_seed`` and CLI ``-r`` use NumPy's existing global random stream; instances do not own
-independent random generators.
+``draw()`` applies conditions and returns one tree. ``simulate()`` returns one attempt after
+observation sampling, without rejection conditioning. ``draw_many(2)`` draws two trees with
+independent resource allowances. Model execution's ``random_seed`` and CLI ``-r`` seed both
+Python and NumPy's global random streams; distribution objects do not own RNG seeds.
 
 The Python rate classes are ``ConstantRate``, ``LogisticRate``, ``GaussianRate``, ``StepRate``,
 ``LinearRate``, ``SkewGaussianRate``, ``QuadraticRate`` and ``AbsoluteRate``, all in

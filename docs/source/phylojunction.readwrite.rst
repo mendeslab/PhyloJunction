@@ -20,6 +20,14 @@ phylojunction.readwrite.pj\_write module
    :undoc-members:
    :show-inheritance:
 
+phylojunction.readwrite.execution_export module
+-----------------------------------------------
+
+.. automodule:: phylojunction.readwrite.execution_export
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 

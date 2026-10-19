@@ -28,6 +28,14 @@ phylojunction.distribution.dn\_quasse module
    :undoc-members:
    :show-inheritance:
 
+phylojunction.distribution.dn_iid module
+----------------------------------------
+
+.. automodule:: phylojunction.distribution.dn_iid
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 

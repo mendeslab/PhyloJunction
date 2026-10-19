@@ -133,7 +133,7 @@ Here is what a series of those commands would look like if written as a *phyloju
     
     # rate values
     d <- 1.0 # death
-    b ~ lognormal(mean=m, sd=sd) # birth
+    b ~ lognormal(meanlog=m, sdlog=sd) # birth
     
     # deterministic rate containers
     dr := sse_rate(name="death_rate", value=d, event="extinction")
@@ -153,7 +153,7 @@ Every command string consists of an assignment operator (e.g., ``<-``, ``:=``, `
 We can look at some of these commands individually:
 
 * ``d <- 1.0`` creates a variable ``d`` (the death rate) that is then passed and henceforth stores constant value ``1.0``. We use ``<-`` when we know the value of a random variable and want to create a constant node in the DAG;
-* ``b ~ lognormal(mean=m, sd=sd)`` creates a variable ``b`` (the birth rate) that will store a random value drawn from a user-specified distribution. Here, that distribution is a log-normal with mean `m` and standard deviation `sd`.
+* ``b ~ lognormal(meanlog=m, sdlog=sd)`` creates a variable ``b`` (the birth rate) that will store a random value drawn from a user-specified distribution. Here, that distribution is a log-normal with mean `m` and standard deviation `sd`.
 * ``dr := sse_rate(name="death_rate", value=d, event="extinction")`` calls deterministic function ``sse_rate``, which creates variable ``dr`` from the value stored in ``d`` and some other user input. There is no stochasticity to deterministic assignments; they help make explicit steps where variables are transformed, annotated or combined with others.
 
 And this is the DAG such script instantiates:
@@ -168,46 +168,55 @@ And this is the DAG such script instantiates:
 Note how this DAG has a factor node characterized by a different type of function: deterministic function ``sse_rate``.
 Such functions are denoted by filled diamonds instead of filled squares (those represent distributions), and will have their output enclosed in a hollow diamond.
 
-Multiple samples and replicates
--------------------------------
+Complete executions and IID vectors
+-----------------------------------
 
-Unlike other probabilistic programming languages, in *phylojunction* the output of every function is immutable and depends exclusively on that function's input.
-Initialized variables cannot be altered by mutator methods or side-effects.
+A complete execution evaluates the model once, in statement order. Repeat the entire model
+with ``pjcli model.pj --runs 10``, or set **Executions** in GUI Settings. Each execution has
+the same named dependency graph and its own values. All stochastic parent parameters are drawn
+again on each execution.
 
-An important consequence of variable immutability is that it precludes loop control structures (e.g., *for* and *while* loops).
-A reasonable question is then: *How does one have the model be sampled (i.e., simulated) multiple times?*
+Within a model, ``iid`` draws a vector using the same distribution parameters:
 
-Let us look at the simple model shown in figure 1.
-Ten independent samples of that model can be obtained with following *phylojunction* script:
+.. code-block:: text
+    :caption: **Example script 2.** Five IID observations per complete execution.
 
-.. code-block::
-    :caption: **Example script 2.** Script written in *phylojunction* specifying the simple model in figure 1 and sampling (i.e., simulating) it ten times.
+    sd ~ exponential(rate=1)
+    m ~ normal(mean=0.0, sd=1.0)
+    d ~ iid(5, normal(mean=m, sd=sd))
 
-    sd ~ exponential(rate=1) # this value will be vectorized
-    m ~ normal(mean=0.0, sd=1.0) # ... and so will this!
-    d ~ normal(n=10, nr=5, mean=m, sd=sd)
+Running this script ten times produces ten independently drawn pairs of ``m`` and ``sd``,
+each with five observations. To hold parameters fixed, assign constants instead. There is no
+implicit expansion of scalar parameters or flattening of vectors. Nested vectors are supported;
+``x[i][j]`` uses one-based indices at both levels.
 
-As can be seen from the last line in script 2, all it took was providing argument ``n=10`` to the function call of a distribution.
-But note how the first and second lines in script 2 do not set ``n=10``.
-There is just a single value being drawn from exponential and standard normal distributions; implicitly, those commands are setting ``n=1``.
+Distribution objects can also be named: ``prior := normal(0, 1)`` followed by ``x ~ prior``.
+Assignments are sequential: reassigning a name affects later statements, but does not recompute
+existing descendants. A complete rerun evaluates the whole sequence again. Interactive additions
+are evaluated for every existing execution and committed together only if all succeed.
 
-|pj| deals with this discrepancy in the requested number of samples by **vectorizing** the single values stored in :math:`sd` and :math:`m`.
-For example, if the sampled value of :math:`m` is 0.1, under the hood |pj| converts :math:`m=1.0` into :math:`\boldsymbol{m}=\{0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1\}`.
-In such case, all ten samples requested by command ``d ~ normal(n=10, nr=5, mean=m, sd=sd)`` would thus come from normal distributions with the same mean of 0.1.
+Summaries average across complete executions, never across entries of a vector within one
+execution. Equal-shaped numeric vectors receive componentwise summaries. Ragged vectors have
+no automatic aggregate summary. A selected tree retains its individual tree statistics.
 
-.. warning::
-    |pj| will raise an error if the number of samples ``n`` specified in two commands are both different and greater than 1.
-    In other words, vectorization can only be applied on variables holding a single value.
-    (This type of behavior should be familiar to R users.)
+Output formats
+^^^^^^^^^^^^^^
 
-----
+The CLI ``--output-format`` option and GUI output selector offer:
 
-In addition to simulating an entire model multiple times as explained above, it is also possible to specify a model with multiple i.i.d. random variables, alternatively referred to as **replicates**.
-Multiple replicates can be specified by providing an additional argument ``nr`` to distribution calls, e.g., ``nr=5`` as in the last line of script 2.
+* ``separate-csv`` — **Separate files (CSV)**, one file per variable. Rows identify the
+  one-based ``@execution`` and nested ``@element`` path.
+* ``combined-csv`` — **Combined (CSV)**, one execution per row with columns such as
+  ``x[1]`` and ``x[2][1]``. Every variable must have the same full shape across executions;
+  otherwise export fails with guidance to use JSON. Empty vectors are preserved as ``[]``.
+* ``json`` — **JSON (MCON)**, a ``.mcon`` file with an MCON 0.2 header and one JSON object
+  per execution. Nested vectors and changing lengths are preserved. Record order identifies
+  the execution, without introducing a synthetic model variable.
 
-In a DAG, i.i.d. random variables can be collectively represented by a single plated node (Fig. 1), or each be represented by an individual node.
-There are in principle no constraints on the number of replicates a plated node may represent.
-Errors will be thrown only if such nodes are used as input for a function, and the replicate count somehow violates that function's signature.
+Distribution and other model-construction objects are omitted from observation exports.
+Trees are annotated Newick strings in these formats; dedicated tree, trait, fossil and
+stochastic-map files remain available. Existing pickled models from the older value-bearing
+DAG format are not supported. Reload their scripts instead.
 
 ------------------------------
 Graphical user interface (GUI)
@@ -233,7 +242,8 @@ Model building commands can be revisited by going into the menu's "Command log" 
     The warning message can be seen by visiting the "Warnings" tab.
 
 Given a model, DAG node values can be navigated as a plot, text string, or both (Fig. 3, numbers 3 and 4).
-Users can cycle through replicated simulations (Fig. 3, number 5), and examine node-value summaries computed for individual simulations or across replicates (Fig. 3, number 6).
+Users can select complete executions and nested vector elements, and examine individual tree
+statistics or summaries across executions. The older screenshot uses the previous control labels.
 Node-value summaries include the mean and standard deviation for scalar variables, and statistics like the root age and number of tips for phylogenetic trees.
 
 After a model is specified, saving the main plot (from the "Model" tab) to disk can be done by clicking "Save plot as".
@@ -371,7 +381,7 @@ Each example is wrapped within its own function, like so:
     import phylojunction.pgm.pgm as pgm
     ...
 
-    def run_example_yule_string() -> pgm.DirectedAcyclicGraph:
+    def run_example_yule_string():
         """Run example 1.
     
         This example sets up a simple Yule model with two samples,
@@ -379,14 +389,14 @@ Each example is wrapped within its own function, like so:
         """
 
         yule_model_str = \
-            ('n_sim <- 2\nn_rep <- 2\nbirth_rate <- 1.0\n'
+            ('n_rep <- 2\nbirth_rate <- 1.0\n'
              'det_birth_rate := sse_rate(name="lambda", value=birth_rate,'
              ' event="speciation")\n'
              'stash := sse_stash(flat_rate_mat=[det_birth_rate])\n'
-             'trs ~ discrete_sse(n=n_sim, nr=n_rep, stash=stash, start_state=[0],'
-             ' stop="size", stop_value=10.0, origin="false")\n')
+             'trs ~ iid(n_rep, discrete_sse(stash=stash, start_state=0,'
+             ' stop="size", stop_value=10.0, origin="false"))\n')
     
-        dag_obj = cmdp.script2dag(yule_model_str, in_pj_file=False)
+        dag_obj = cmdp.script2dag(yule_model_str, in_pj_file=False, runs=2)
 
         return dag_obj
 
@@ -395,7 +405,7 @@ The example above is then invoked later in ``pj_sandbox.py``:
     .. code-block:: python
         :caption: **Calling example 1 in pj_sandbox.py.** Which example to execute can be specified in the script main body.
 
-        dag_obj: pgm.DirectedAcyclicGraph = pgm.DirectedAcyclicGraph()
+        # dag_obj below is an ExecutionResults object, containing the shared model and its values.
 
         ...
 

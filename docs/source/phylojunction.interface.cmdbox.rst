@@ -12,10 +12,10 @@ phylojunction.interface.cmdbox.cmd\_parse module
    :undoc-members:
    :show-inheritance:
 
-phylojunction.interface.cmdbox.cmd\_parse\_utils module
--------------------------------------------------------
+phylojunction.interface.cmdbox.expressions module
+-------------------------------------------------
 
-.. automodule:: phylojunction.interface.cmdbox.cmd_parse_utils
+.. automodule:: phylojunction.interface.cmdbox.expressions
    :members:
    :undoc-members:
    :show-inheritance:
