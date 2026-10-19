@@ -132,11 +132,40 @@ def make_mapped_ann_tree(det_fn_name: str,
 
             geosse = True if val[0] == '"true"' else False
 
+    return map_attr(mapped_ann_tr_list, mapping_function.strip('"'),
+                    tip_attr_file_path, maps_file_path, n_regions=n_regions, geo=geosse)
+
+
+# Map copied tree values while preserving collection shape. A scalar tree stays scalar;
+# a read_tree list stays a list, including when it contains only one tree.
+def map_attr(tree, fun, tip_attr_file_path='', maps_file_path='', attr_name=None,
+             n_regions=1, geo=False):
+    from phylojunction.interface.grammar.constructors import flag, integer
+    geosse, n_regions = flag(geo), integer(n_regions, 1)
+    if fun != 'smap':
+        raise ValueError("map_attr currently supports fun='smap'.")
+    for path in (tip_attr_file_path, maps_file_path):
+        if path and not os.path.isfile(path):
+            raise ec.PJIOFileDoesNotExistError('map_attr', path)
+    mapped = copy.deepcopy(tree)
+    mapped_ann_tr_list = []
+
+    # Gather tree leaves for the existing collection mapper without flattening the result.
+    def collect(value):
+        if isinstance(value, list):
+            for item in value:
+                collect(item)
+        elif isinstance(value, pjtr.AnnotatedTree):
+            mapped_ann_tr_list.append(value)
+        else:
+            raise TypeError("map_attr requires a tree or a nested list of trees.")
+
+    collect(mapped)
     ################################
     # Setting up stoch map parsing #
     ################################
 
-    if mapping_function == '"smap"':
+    if fun == 'smap':
         n_states_per_char = 2 if geosse else -1
         state2bit_lookup = pjbio.State2BitLookup(n_regions, n_states_per_char, geosse=geosse)
 
@@ -153,6 +182,6 @@ def make_mapped_ann_tree(det_fn_name: str,
                                              mapped_ann_tr_list,
                                              state2bit_lookup,
                                              node_states_file_path=tip_attr_file_path,
-                                             stoch_map_attr_name=None)
+                                             stoch_map_attr_name=attr_name)
 
-        return mapped_ann_tr_list
+        return mapped
