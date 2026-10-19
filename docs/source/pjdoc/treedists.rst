@@ -136,8 +136,7 @@ Reading trees and selecting elements
 ------------------------------------
 
 ``read_tree`` always returns a list, even when the input contains one tree. Select a scalar
-tree explicitly with ``[1]``. ``map_attr`` accepts either a tree or nested lists of trees and
-preserves their shape:
+tree explicitly with ``[1]``:
 
 .. code-block:: text
 
@@ -146,6 +145,24 @@ preserves their shape:
 
 Tree distributions describe one tree. ``trees ~ iid(2, discrete_sse(...))`` draws two trees
 with the same parameters in each execution, while the GUI **Executions** setting or CLI
-``--runs 10`` repeats the complete model ten times. Different per-tree parameters require
-explicit indexed expressions rather than automatic broadcasting. Each tree has its own
+``--runs 10`` repeats the complete model ten times. Different per-tree parameters can be supplied through vectorization or comprehensions. Each tree has its own
 runtime and failed-attempt allowance, including any rejected attempts for that tree.
+
+
+Reading and applying stochastic histories
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Read map records independently of trees, then apply one history to one tree:
+
+.. code-block:: text
+
+    trees := read_tree(file_path="examples/trees_maps_files/geosse_dummy_tree1.tre", node_name_attr="index")
+    histories := read_maps(file_path="examples/trees_maps_files/geosse_dummy_tree1_maps.tsv", tip_attr_file_path="examples/trees_maps_files/geosse_dummy_tree1_tip_states.tsv", n_regions=2, geo=true)
+    mapped := map_attr(tree=trees[1], history=histories, attr_name="state")
+
+``read_maps`` returns one history per iteration identifier in first-appearance order.
+``map_attr`` copies its tree before attaching the selected history. A scalar tree is shared
+across a vector of histories; equally sized tree and history lists pair elementwise. Singleton
+lists are not expanded: ``trees[1]`` selects the one tree explicitly. Both operations also work
+inside comprehensions. Incompatible node identifiers report the history iteration and node.
+The previous file-reading arguments to ``map_attr`` are replaced by ``read_maps``.

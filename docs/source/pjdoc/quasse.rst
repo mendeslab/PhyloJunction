@@ -93,6 +93,8 @@ Sampling at death, removal probabilities and measurement error are not supported
 
 Rate-constructor and distribution parameters are scalar within a draw. Use ``iid`` to draw
 several trees with the same parameters and external executions to redraw the complete model.
+In PJ expressions, list arguments to scalar parameters construct lists of distributions through
+one-level vectorization; comprehensions give explicit control over nested collections.
 Rejected trees do not resample DAG parents. A ``start_distribution`` is instead drawn inside
 the tree sampler for each biological attempt; a numerical restart retains that starting trait.
 For example, ``start_distribution=normal(0, 1)`` passes a distribution object directly.

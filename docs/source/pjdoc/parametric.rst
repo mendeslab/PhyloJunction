@@ -1,7 +1,8 @@
 |pj| ships with a (growing) number of parametric distributions.
 Distribution constructors accept scalar literals or model expressions. A constructor returns a
 distribution object; ``~`` draws from it. Use ``iid`` for vectors and ``--runs`` for complete
-model executions. Distribution parameters are not automatically broadcast across vectors.
+model executions. List arguments to scalar parameters vectorize over one level, sharing scalar
+arguments and strictly pairing lists of equal length. Comprehensions express nested mappings.
 On this page you will find examples of how to invoke the available distributions (using the *phylojunction* language) when building a model.
 
 Uniform

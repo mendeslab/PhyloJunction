@@ -186,9 +186,8 @@ Within a model, ``iid`` draws a vector using the same distribution parameters:
     d ~ iid(5, normal(mean=m, sd=sd))
 
 Running this script ten times produces ten independently drawn pairs of ``m`` and ``sd``,
-each with five observations. To hold parameters fixed, assign constants instead. There is no
-implicit expansion of scalar parameters or flattening of vectors. Nested vectors are supported;
-``x[i][j]`` uses one-based indices at both levels.
+each with five observations. To hold parameters fixed, assign constants instead. Vectors are
+not flattened: ``x[i][j]`` uses one-based indices at both levels.
 
 Distribution objects can also be named: ``prior := normal(0, 1)`` followed by ``x ~ prior``.
 Assignments are sequential: reassigning a name affects later statements, but does not recompute
@@ -198,6 +197,73 @@ are evaluated for every existing execution and committed together only if all su
 Summaries average across complete executions, never across entries of a vector within one
 execution. Equal-shaped numeric vectors receive componentwise summaries. Ragged vectors have
 no automatic aggregate summary. A selected tree retains its individual tree statistics.
+
+Vectorization and comprehensions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A function expecting a scalar argument can instead receive a list, producing one result per
+entry. Scalar arguments are shared; multiple list arguments are paired and must have equal
+lengths. A one-element list is not a scalar. Functions that already accept lists consume them
+intact: for example, ``categorical([1,2], [1,1])`` constructs one distribution.
+
+.. code-block:: text
+
+    mus <- [0,2]
+    sds <- [1,3]
+    distributions := normal(mus,sds)
+    xs ~ distributions
+    ys ~ [normal(mu,sd) for (mu,sd) in zip_strict(mus,sds)]
+
+Both sampling statements describe the same conditional distribution, but perform separate
+draws. Constructing a distribution draws nothing. ``~`` recursively samples lists of
+distributions, preserving their nesting. A distribution's returned value is already a value
+and is not recursively sampled again.
+
+Implicit vectorization handles one level only. Use nested comprehensions to express additional
+levels or ambiguous mappings:
+
+.. code-block:: text
+
+    means <- [[0],[1,2]]
+    trees_of_values ~ [[normal(mu,1) for mu in row] for row in means]
+
+Comprehensions have local names, accept list iterables, and support simple names or flat tuple
+unpacking. ``zip_strict`` rejects unequal lengths. Filters and multiple ``for`` clauses in a
+single comprehension are not supported; nest comprehensions instead. Statements remain on
+one line. Local bindings do not become named DAG nodes.
+
+Lists have compatible element types and nesting; numeric integers and reals may mix, and inner
+lists may have different lengths. Distribution objects may mix families: checking their draw
+types is deferred. Ordinary values cannot be mixed with distributions under ``~``.
+Empty lists are allowed in PJ. Empty vectorized calls validate argument binding and shapes,
+but make no function calls and therefore do not check unused numerical parameter values.
+
+RevBayes inference export
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The exporter supports Normal, Lognormal, Uniform, Exponential, Gamma and Beta distributions,
+including aliases, vectorization, comprehensions, nested distribution lists and ``iid``.
+Distribution objects remain symbolic Rev objects, preserving dependencies on random parameters.
+Literal lists can produce direct element sampling statements; other collections use sampling
+loops where possible. Unequal inner lengths are allowed when structure is fixed during inference.
+
+``clamp=true`` on the outer call of a sampling statement treats every sampled leaf as observed
+at its simulated value for that execution. It does not clamp to the Boolean value ``true``:
+
+.. code-block:: text
+
+    mu ~ normal(0,1)
+    observations ~ normal([mu,mu],1,clamp=true)
+
+Inner clamping flags are rejected. Comprehension and alias right-hand sides have no clamping
+syntax yet. Distribution objects themselves carry no observation metadata.
+
+Export rejects the untyped literal ``[]``. Typed empty ``iid`` draws can be represented;
+other empty collections without a known Rev element type are rejected. Stochastic dimensions,
+stochastic selection of distributions or subcollections, and stochastic parameterization
+switches are not silently fixed to their simulated values. Unsupported domain functions and
+tree distributions produce explicit export errors. At least one movable numeric stochastic
+value is required for the generated MCMC script.
 
 Output formats
 ^^^^^^^^^^^^^^
