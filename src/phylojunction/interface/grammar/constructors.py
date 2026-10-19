@@ -261,3 +261,31 @@ def construct(constructor_name, /, *args, **kwargs):
     return [invoke({key: value[index] if key in traversed else value
                     for key, value in bound.arguments.items()})
             for index in range(len(bound.arguments[traversed[0]]))]
+
+
+if __name__ == "__main__":
+    # python -m phylojunction.interface.grammar.constructors
+    # Signature validation now lives in the registry, including rejection of unknown arguments.
+    arguments = dict(name="lambda0", value=0.5, event="w_speciation", states=[0, 0, 0])
+    print(bind_call('sse_rate', (), arguments))
+    try:
+        bind_call('sse_rate', (), dict(arguments, cloud=True))
+    except TypeError as error:
+        print('Expected invalid argument:', error)
+
+    # BiSSE: retain the two states' speciation, extinction, and transition parameters.
+    # The stash groups rates by epoch; no value-carrying DAG wrapper is needed here.
+    rates_t0_s0 = [
+        sse_rate("lambda0", 0.5, "w_speciation", [0, 0, 0]),
+        sse_rate("mu0", 0.25, "extinction", [0]),
+        sse_rate("q01", 0.75, "transition", [0, 1]),
+    ]
+    rates_t0_s1 = [
+        sse_rate("lambda1", 1.5, "w_speciation", [1, 1, 1]),
+        sse_rate("mu1", 0.25, "extinction", [1]),
+        sse_rate("q10", 0.75, "transition", [1, 0]),
+    ]
+    stash = sse_stash(rates_t0_s0 + rates_t0_s1, n_states=2)
+    distribution = discrete_sse(stash, stop="size", stop_value=10, start_state=0,
+                                origin=True, cond_spn=False, cond_surv=True)
+    print(distribution.DN_NAME)

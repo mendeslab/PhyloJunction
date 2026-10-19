@@ -337,3 +337,15 @@ class DnCategorical(DistrForSampling):
 
         return random.choices(cats_param, weights=probs_param, k=n_samples)
 
+
+
+if __name__ == "__main__":
+    # python -m phylojunction.distribution.dn_parametric
+    # Different parameter pairs describe different distributions; draw_many repeats
+    # one distribution. Neither operation introduces a model-execution dimension.
+    distributions = [DnLogNormal(mean, sd) for mean, sd in
+                     zip([-2, -2.1, -2.2], [0.1, 0.2, 0.15])]
+    print([distribution.draw() for distribution in distributions])
+    distribution = DnLogNormal(-2, 0.1)
+    print(distribution.draw_many(3))
+    print(distribution.draw_many(3))

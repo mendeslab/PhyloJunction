@@ -197,3 +197,12 @@ def merge_types(left, right):
     if left[0] == right[0] == 'record' and len(left[1]) == len(right[1]):
         return ('record', tuple(merge_types(a, b) for a, b in zip(left[1], right[1])))
     raise TypeError("List elements must have compatible types and nesting; lengths may differ.")
+
+
+if __name__ == "__main__":
+    # python -m phylojunction.interface.cmdbox.expressions
+    # Inspect the parsed call and its dependencies without constructing or sampling it.
+    source = 'a <- sse_rate(name="lambda0",value=rate,event="w_speciation",states=[0,0,0])'
+    name, operator, expression = parse_statement(source)
+    print(name, operator, ast.dump(expression, indent=2))
+    print('Dependencies:', list(variable_names(expression)))
