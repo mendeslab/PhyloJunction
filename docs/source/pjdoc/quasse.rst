@@ -70,7 +70,8 @@ and ``amplitude`` are not generally its peak position and height; ``skew=0`` giv
 Gaussian peak. All constructor parameters are constant through time within a simulation.
 
 Every constructor accepts optional ``cap``: the evaluated rate is min(cap, f(x)). The cap must
-be finite and nonnegative, may be below the baseline, and may be zero. It is a scalar, like the other rate parameters. Without it, linear, quadratic and absolute-value rates remain unbounded
+be finite and nonnegative, may be below the baseline, and may be zero. Without it, linear,
+quadratic and absolute-value rates remain unbounded
 when their slope or strength is nonzero. There is no hidden upper truncation.
 
 An explicit cap changes the biological model; computational resource limits do not cap rates.
@@ -92,7 +93,7 @@ Fossils record the exact trait at sampling; they do not remove the lineage or re
 Sampling at death, removal probabilities and measurement error are not supported.
 
 Rate-constructor and distribution parameters are scalar within a draw. Use ``iid`` to draw
-several trees with the same parameters and external executions to redraw the complete model.
+several trees with the same parameters and complete executions to redraw the whole model.
 In PJ expressions, list arguments to scalar parameters construct lists of distributions through
 one-level vectorization; comprehensions give explicit control over nested collections.
 Rejected trees do not resample DAG parents. A ``start_distribution`` is instead drawn inside
@@ -250,10 +251,10 @@ impossible conditions can exhaust the rejection budget. Limits are:
      - Scope
    * - ``max_n_attempts``
      - 200
-     - Total rejected attempts across one ``generate()`` call
+     - Failed attempts allowed while obtaining one tree with ``draw()``
    * - ``runtime_limit``
      - 300 seconds
-     - Entire ``generate()`` call, including retries
+     - One ``draw()`` call, including retries
    * - ``max_steps``
      - 1,000,000
      - Diversitree steps or local queue actions per attempt, shared across numerical restarts
@@ -302,12 +303,14 @@ Plotting uses no randomness. An empty reconstructed tree displays ``No sampled t
 
 Data output includes complete/reconstructed Newick tables, annotated variants, generic tree
 summaries, and ``<node>_traits.tsv``. The trait table has columns ``@execution``, ``@element``, ``node``,
-``trait``, ``alive``, and ``sampled``; execution indices and element-path components start at one. It includes internal
+``trait``, ``alive``, and ``sampled``; execution indices and element-path components start at one.
+It includes internal
 nodes and the origin as well as living and extinct tips. Discrete state tables and discrete
 NEXUS character matrices are not generated for these trees.
 
 ``<node>_fossils.tsv`` contains ``@execution``, ``@element``, ``node``, ``time``, ``age``, ``trait``.
-Execution indices and element-path components are one-based, ``time`` is forward from the origin, and ``age`` is relative to the
+Execution indices and element-path components are one-based.
+``time`` is forward from the origin, and ``age`` is relative to the
 simulation horizon. There is one row per fossil in the complete tree, or a header-only table
 when none occur. Annotated Newick identifies fossils with ``is_sa`` and sampling nodes with
 ``is_sa_dummy_parent``. The generic ``Direct ancestor count`` counts all fossil observations,

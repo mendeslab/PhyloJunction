@@ -438,69 +438,32 @@ Sandbox: Bypassing the interfaces
 
 .. _bypass:
 
-Users and developers who wish to bypass |pj|'s standalone interfaces to explore the code base can do so by using ``pj_sandbox.py``.
-Of course, some familiarity with Python is required.
-
-
-The ``pj_sandbox.py`` `script <https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/src/phylojunction/interface/pj_sandbox.py>`_ contains a few examples of how |pj| can be imported as a module and used for different purposes.
-Each example is wrapped within its own function, like so:
+Python callers can execute scripts and inspect their results directly. From the repository
+root, this example draws two Yule trees in each of two executions:
 
 .. code-block:: python
-    :caption: **Example 1 in pj_sandbox.py.** The first example in the sandbox script demonstrates how one can build a simple DAG with a (Yule) tree stochastic node.
 
-    # pj imports
-    import phylojunction.interface.cmdbox.cmd_parse as cmdp
-    import phylojunction.pgm.pgm as pgm
-    ...
+    from phylojunction.interface.cmdbox.cmd_parse import compile_model
 
-    def run_example_yule_string():
-        """Run example 1.
-    
-        This example sets up a simple Yule model with two samples,
-        and two Yule tree replicates per sample.
-        """
+    source = """birth := sse_rate(name="lambda", value=1.0, event="speciation")
+    stash := sse_stash(flat_rate_mat=[birth])
+    trees ~ iid(2, discrete_sse(stash=stash, stop="size", stop_value=10))
+    """
+    results = compile_model(source).execute(runs=2, random_seed=42)
+    trees = results.value("trees", 0)
+    first_tree = trees[0]
+    print(first_tree.get_stats_dict())
 
-        yule_model_str = \
-            ('n_rep <- 2\nbirth_rate <- 1.0\n'
-             'det_birth_rate := sse_rate(name="lambda", value=birth_rate,'
-             ' event="speciation")\n'
-             'stash := sse_stash(flat_rate_mat=[det_birth_rate])\n'
-             'trs ~ iid(n_rep, discrete_sse(stash=stash, start_state=0,'
-             ' stop="size", stop_value=10.0, origin="false"))\n')
-    
-        dag_obj = cmdp.script2dag(yule_model_str, in_pj_file=False, runs=2)
+``results.value(name, execution_index)`` returns a variable's value in one execution;
+``results.values(name)`` returns its values across executions. Python indices start at zero,
+including indices into the returned lists. PJ script indices start at one.
 
-        return dag_obj
+For an existing script, pass ``Path("model.pj").read_text()`` to ``compile_model``
+after importing ``Path`` from ``pathlib``. Further runnable examples are in
+``src/phylojunction/interface/pj_sandbox.py``.
 
-The example above is then invoked later in ``pj_sandbox.py``:
-
-    .. code-block:: python
-        :caption: **Calling example 1 in pj_sandbox.py.** Which example to execute can be specified in the script main body.
-
-        # dag_obj below is an ExecutionResults object, containing the shared model and its values.
-
-        ...
-
-        # examples
-        # 1: Yule model string, 2 tree samples, 2 tree replicates per sample
-        # 2: Same as (1), but reading a pre-made .pj script in examples/yule.pj
-        # 3: BiSSE model with incomplete sample, 2 tree samples, 2 tree replicates per sample
-        # 4: Builds discrete SSE tree manually, then prints on screen
-        # 5: Builds discrete SSE tree from newick string, then prints on screen
-        # 6: Read .pj script examples/see_stoch_maps.pj
-
-        example_to_run = 1
-        # example_to_run = 2
-        # example_to_run = 3
-        # example_to_run = 4
-        # example_to_run = 5
-        # example_to_run = 6
-            
-        if example_to_run == 1:
-            dag_obj = run_example_yule_string()
-
-        ...
-
+To sample a Python distribution directly, call ``distribution.draw()`` for one value or
+``distribution.draw_many(count)`` for repeated draws with the same parameters.
 
 Annotated tree traits in Python
 ===============================
@@ -521,14 +484,9 @@ accept an explicit name, such as ``DiscreteTrait(states=2, name="habitat")`` or
 ``ContinuousTrait(name="body_size")``. The named attribute must already exist on the
 nodes; a description does not rename attributes or their Newick annotations.
 
-The descriptions are immutable. To update metadata, replace ``tree.trait``; this does not
-recompute cached counts. Plotting uses the described attribute by default (``None``), while
-an explicit plotting attribute selects that name literally.
-
-This Python interface replaces the constructor's ``total_state_count`` and
-``continuous_trait`` arguments, and the tree's ``state_count`` and ``continuous_trait``
-members. Discrete counts are available as ``tree.trait.states``; both descriptions provide
-``tree.trait.name``. The *phylojunction* scripting language is unchanged.
+Both descriptions provide ``tree.trait.name``; discrete descriptions also provide
+``tree.trait.states``. Plotting uses the described node attribute by default.
+Pass an explicit plotting attribute to display a different node attribute.
 
 -------
 Lexicon

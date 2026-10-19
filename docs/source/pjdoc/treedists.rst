@@ -119,6 +119,11 @@ Below, an example of assigning a discrete SSE to a stochastic DAG node represent
     
     trs ~ discrete_sse(stash=stash, start_state=0, stop="age", stop_value=2.0, origin="true")
 
+Each distribution draws one tree. Use ``iid(2, discrete_sse(...))`` for two trees with the
+same parameters, and **Executions** or ``--runs`` to repeat the complete model.
+Vectorization and comprehensions allow different parameters for each tree.
+Each tree has its own runtime and failed-attempt allowance, including retries.
+
 :underline:`Special cases of discrete SSE tree models`
 
     1. `Yule <https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/yule.pj>`_ (pure-birth) model;
@@ -129,8 +134,6 @@ Below, an example of assigning a discrete SSE to a stochastic DAG node represent
     6. `Time-heterogeneous binary state-dependent speciation and extinction <https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/bisse_timehet.pj>`_ (skyline BiSSE) model;
     7. `Geographic state-dependent speciation and extinction <https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/geosse.pj>`_ (GeoSSE) model;
     8. `Time-heterogeneous geographic state-dependent speciation and extinction <https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/geosse_timehet.pj>`_ (skyline GeoSSE) model;
-
-.. include:: quasse.rst
 
 Reading trees and selecting elements
 ------------------------------------
@@ -143,16 +146,11 @@ tree explicitly with ``[1]``:
     trees <- read_tree(string="((A:1,B:1):1,C:2);")
     first <- trees[1]
 
-Tree distributions describe one tree. ``trees ~ iid(2, discrete_sse(...))`` draws two trees
-with the same parameters in each execution, while the GUI **Executions** setting or CLI
-``--runs 10`` repeats the complete model ten times. Different per-tree parameters can be supplied through vectorization or comprehensions. Each tree has its own
-runtime and failed-attempt allowance, including any rejected attempts for that tree.
-
-
 Reading and applying stochastic histories
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Read map records independently of trees, then apply one history to one tree:
+A history records the state changes along a tree's branches for one stochastic-map iteration.
+Read the trees and histories, then attach each history to a copy of the corresponding tree:
 
 .. code-block:: text
 
@@ -164,5 +162,7 @@ Read map records independently of trees, then apply one history to one tree:
 ``map_attr`` copies its tree before attaching the selected history. A scalar tree is shared
 across a vector of histories; equally sized tree and history lists pair elementwise. Singleton
 lists are not expanded: ``trees[1]`` selects the one tree explicitly. Both operations also work
-inside comprehensions. Incompatible node identifiers report the history iteration and node.
-The previous file-reading arguments to ``map_attr`` are replaced by ``read_maps``.
+inside comprehensions. History node identifiers must match the tree's ``index`` attributes;
+``node_name_attr="index"`` reads those identifiers from the Newick annotations.
+
+.. include:: quasse.rst
