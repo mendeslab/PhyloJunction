@@ -262,7 +262,7 @@ def parse_variable_assignment(
             a_stoch_node_name,
             sample_size=sample_size,
             replicate_size=replicate_size,
-            value=a_val_obj_list,
+            value=a_ct_fn_obj.generate() if a_ct_fn_obj is not None else a_val_obj_list,
             returned_from=a_ct_fn_obj,
             clamped=True)
 
@@ -382,12 +382,13 @@ def parse_samp_dn_assignment(
             parent_pgm_nodes: ty.List[pgm.NodeDAG],
             clamped: bool):
 
-        # set dn inside rv, then call .sample
+        # Generate before constructing the node, retaining the distribution as provenance.
         stoch_node_dag = pgm.StochasticNodeDAG(
             a_stoch_node_name,
             sample_size=sample_size,
             replicate_size=replicate_size,
             sampled_from=a_dn_obj,
+            value=a_dn_obj.generate(),
             parent_nodes=parent_pgm_nodes,
             clamped=clamped)
 

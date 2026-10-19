@@ -597,7 +597,7 @@ class NodeDAG(ABC):
 
 
 class StochasticNodeDAG(NodeDAG):
-    """Derived DAG node that can generate own value.
+    """DAG node holding a generated or explicitly supplied value.
     
     This class is also used when a value is being specified by a user,
     or parsed from it. In other words, constant nodes in the graph
@@ -630,13 +630,11 @@ class StochasticNodeDAG(NodeDAG):
         self.sampling_dn = sampled_from  # dn object
         self.constant_fn = returned_from  # constant fn object
         self.is_sampled = False
-        # not value checks for both [] and None
-        generated_or_specified_value: ty.List[ty.Any] = \
-            self.generate_value() if not value else value
+        # Evaluators own sampling; constructing a node must not consume random numbers.
         
         super().__init__(node_name,
                          sample_size=sample_size,
-                         value=generated_or_specified_value,
+                         value=value,
                          replicate_size=replicate_size,
                          call_order_idx=call_order_idx,
                          deterministic=deterministic,
@@ -651,19 +649,6 @@ class StochasticNodeDAG(NodeDAG):
         # pgm specs
         if self.sampling_dn:
             self.is_sampled = True  # r.v. value is sampled
-
-    def generate_value(self) -> ty.List[ty.Any]:
-        """Generate value."""
-
-        if self.sampling_dn:
-            return self.sampling_dn.generate()
-        
-        elif self.constant_fn:
-            return self.constant_fn.generate()
-
-        else:
-             raise RuntimeError(("Cannot generate value. No distribution nor "
-                                 "constant function provided."))
 
     def __str__(self) -> str:
         return super().__str__()

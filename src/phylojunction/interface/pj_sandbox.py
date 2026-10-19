@@ -171,6 +171,7 @@ def run_example_manual_incomplete_sampling_bisse() -> pgm.DirectedAcyclicGraph:
         sample_size=sample_size,
         replicate_size=1,
         sampled_from=dist_obj,
+        value=dist_obj.generate(),
         parent_nodes=None,
         clamped=False)
     
