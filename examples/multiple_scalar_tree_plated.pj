@@ -1,4 +1,4 @@
-# Run the complete model with pjcli --runs 10 (or set Executions in Settings).
+# Run the complete model with pjcli --runs 10 (or set Replicates in Settings).
 # stochastic-node constant variables
 rv1 <- [1, 3, 4, 5, 5, 5, 5, 6, 7, 10]
 rv2 <- 3.0
@@ -15,6 +15,6 @@ det_birth_rate := sse_rate(name="lambda", value=1.0, states=[0,0,0], event="w_sp
 # deterministic-node variable ('sse_stash') assignment
 stash := sse_stash(flat_rate_mat=[det_birth_rate], n_states=1, n_epochs=1)
 
-# Stochastic tree variables; both are exported with execution and element coordinates.
+# Stochastic tree variables; both are exported with replicate and element coordinates.
 trs1 ~ discrete_sse(stash=stash, start_state=0, stop='age', stop_value=rv2, origin='true', cond_spn='true')
 trs2 ~ iid(2, discrete_sse(stash=stash, start_state=0, stop='age', stop_value=rv2, origin='true', cond_spn='true'))

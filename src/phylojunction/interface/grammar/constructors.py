@@ -27,7 +27,7 @@ def integer(value, minimum=0):
     return value
 
 
-# Rates hold one scalar value per execution; their states remain genuine vector arguments.
+# Rates hold one scalar value per replicate; their states remain genuine vector arguments.
 def sse_rate(name, value, event, states=None, epoch=1):
     events = {'w_speciation': sse.MacroevolEvent.W_SPECIATION,
               'speciation': sse.MacroevolEvent.W_SPECIATION,
@@ -47,7 +47,7 @@ def sse_prob(name, value, state=0, epoch=1):
 
 
 # Put each parameter in its declared epoch, retaining the managers' domain validation.
-# Epoch counts describe the biological process, not IID vectors or model executions.
+# Epoch counts describe the biological process, not IID vectors or model replicates.
 def sse_stash(flat_rate_mat, n_states=1, n_epochs=1, seed_age=None,
               epoch_age_ends=None, flat_prob_mat=None):
     n_epochs, n_states = integer(n_epochs, 1), integer(n_states, 1)

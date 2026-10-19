@@ -183,7 +183,7 @@ def prep_trees_rb_smap_dfs(value_records,
 
     Args:
         value_records: Tuples of (name, trees, sample count, replicate count).
-            Execution export supplies one tree per coordinate; these ordinals
+            Replicate export supplies one tree per coordinate; these ordinals
             are internal to the established stochastic-map serializer.
         tree_dag_node_name_list (list): List with names of the DAG nodes
             tree random variables along which attributes have
@@ -1097,7 +1097,7 @@ def dump_pgm_data(dir_string: str,
 
     Args:
         dir_string (str): Where to save the files to be written
-        dag_obj (ExecutionResults): Completed model executions whose values are written.
+        dag_obj (ExecutionResults): Completed model replicates whose values are written.
         prefix (str): String to preceed file names.
         write_nex_states (bool): Flag specifying if .nex file should be
             additionally written. Defaults to 'False'.

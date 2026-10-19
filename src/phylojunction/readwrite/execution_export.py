@@ -1,4 +1,4 @@
-"""Export execution values as separate CSV files, combined CSV, or JSON/MCON."""
+"""Export replicate values as separate CSV files, combined CSV, or JSON/MCON."""
 import io
 import json
 import re
@@ -48,8 +48,8 @@ def csv_value(value):
     return json.dumps(value, allow_nan=False) if isinstance(value, list) else value
 
 
-# Reuse the established tree serializers, remapping their row ordinals to execution/path
-# coordinates. No temporary DAG nodes or second per-execution graph are created.
+# Reuse the established tree serializers, remapping their row ordinals to replicate/path
+# coordinates. No temporary DAG nodes or second per-replicate graph are created.
 def tree_files(results, write_nex_states=False, bit_format=False):
     from phylojunction.readwrite.pj_write import prep_data_df, prep_data_filepaths_dfs
     outputs = {}
@@ -78,7 +78,7 @@ def tree_files(results, write_nex_states=False, bit_format=False):
 
 
 # Stage every output in memory before opening files. Combined CSV requires identical
-# complete shapes; MCON records preserve lists and omit synthetic execution variables.
+# complete shapes; MCON records preserve lists and omit synthetic replicate variables.
 def write_results(directory, results, prefix='', output_format='separate-csv',
                   write_nex_states=False, bit_format=False):
     if output_format not in FORMATS:

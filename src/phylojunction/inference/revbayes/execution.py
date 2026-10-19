@@ -1,4 +1,4 @@
-"""RevBayes scripts from shared definitions and execution-specific observations."""
+"""RevBayes scripts from shared definitions and replicate-specific observations."""
 import ast
 import json
 import inspect
@@ -27,7 +27,7 @@ def literal(value):
 class _RevExpression:
     """A symbolic expression and its fixed collection structure, local to the exporter.
 
-    value is an execution exemplar, never a substitute for a random parameter expression.
+    value is an replicate exemplar, never a substitute for a random parameter expression.
     fixed means the value is independent of stochastic nodes. items records list structure;
     inner retains an IID component expression because Rev distribution objects are opaque.
     """
@@ -44,8 +44,8 @@ class _RevExpression:
                        tuple(item.named(f'{code}[{i}]') for i, item in enumerate(self.items, 1)))
 
 
-# Emit separate scripts for executions. Definitions retain symbolic dependencies; only
-# observations and proven fixed dimensions come from an execution's realized values.
+# Emit separate scripts for replicates. Definitions retain symbolic dependencies; only
+# observations and proven fixed dimensions come from a replicate's realized values.
 def execution_to_rev(results, root, mcmc_chain_length=1000, prefix=''):
     if type(mcmc_chain_length) is not int or mcmc_chain_length < 1:
         raise ValueError('MCMC chain length must be a positive integer.')

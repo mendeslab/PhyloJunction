@@ -170,25 +170,26 @@ Such functions are denoted by filled diamonds instead of filled squares (those r
 
 .. _executions:
 
-Complete executions and IID vectors
------------------------------------
+Model replicates and IID vectors
+--------------------------------
 
-A complete execution evaluates the model once, in statement order. Repeat the entire model
-with ``pjcli model.pj --runs 10``, or set **Executions** in GUI Settings before loading a script.
-Each execution draws fresh values for the stochastic variables.
+A replicate is one simulated realization of the complete model. Generate ten replicates
+with ``pjcli model.pj --runs 10``, or set **Replicates** in GUI Settings before loading a script.
+For each replicate, the model is evaluated in statement order, drawing fresh values for
+the stochastic variables.
 
-Within an execution, ``iid`` draws independent observations with shared distribution parameters,
+Within a replicate, ``iid`` draws independent observations with shared distribution parameters,
 as in the plated node in figure 1:
 
 .. code-block:: text
-    :caption: **Example script 2.** Five IID observations per complete execution.
+    :caption: **Example script 2.** Five IID observations per replicate.
 
     sd ~ exponential(rate=1)
     m ~ normal(mean=0.0, sd=1.0)
     d ~ iid(5, normal(mean=m, sd=sd))
 
-Ten executions produce ten pairs of ``m`` and ``sd``, each with five observations in ``d``.
-Assign constants to ``m`` and ``sd`` to hold the parameters fixed across executions.
+Ten replicates produce ten pairs of ``m`` and ``sd``, each with five observations in ``d``.
+Assign constants to ``m`` and ``sd`` to hold the parameters fixed across replicates.
 Within a script, ``d[1]`` selects the first observation; indices start at one.
 Nested vectors retain their structure: ``x[i][j]`` selects element ``j`` of vector ``x[i]``.
 
@@ -199,8 +200,8 @@ A distribution can be named and reused: ``prior := normal(0, 1)`` constructs it,
 ``x ~ prior`` draws a value. Construction alone draws nothing.
 Reassigning a name affects later statements without recomputing earlier values.
 A complete rerun evaluates the whole script again.
-Commands entered interactively apply to every existing execution; if any execution fails,
-the command leaves the model and its values unchanged.
+Commands entered interactively apply to every existing replicate. If executing a command
+fails for any replicate, the command leaves the model and its values unchanged.
 
 .. _vectorization:
 
@@ -266,11 +267,11 @@ Saved models from the older value-bearing DAG format cannot be loaded; load thei
     The warning message can be seen by visiting the "Warnings" tab.
 
 Given a model, DAG node values can be navigated as a plot, text string, or both (Fig. 3, numbers 3 and 4).
-Users can select an execution and a vector element to inspect its value or plot.
+Users can select a replicate and a vector element to inspect its value or plot.
 A selected tree shows its individual statistics, such as root age and tip count.
-Across executions, numeric values and tree statistics receive means and standard deviations.
-Vector summaries compare corresponding elements across executions; they do not average elements
-within a vector. Vectors whose shapes vary between executions have no aggregate summary.
+Across replicates, numeric values and tree statistics receive means and standard deviations.
+Vector summaries compare corresponding elements across replicates; they do not average elements
+within a vector. Vectors whose shapes vary between replicates have no aggregate summary.
 The screenshot uses older control labels.
 
 After a model is specified, saving the main plot (from the "Model" tab) to disk can be done by clicking "Save plot as".
@@ -289,9 +290,9 @@ Students in an evolutionary modeling course may be asked to code their own Yule 
 After Yule trees are obtained, all they need to do is collect summary statistics that are also monitored by |pj| (e.g., the root age), and upload them into the "Compare" tab.
 |pj| then automatically plots the two distributions (one from the student, one from |pj| itself) side by side, revealing if implementations behave similarly.
 
-In **Settings**, set **Executions** to 10, then use **File > Read script** to load
+In **Settings**, set **Replicates** to 10, then use **File > Read script** to load
 ``examples/multiple_scalar_tree_plated.pj``. Its ``rv5`` variable holds two normal observations
-per execution; ``trs2`` holds two trees. Compare one component across executions at a time.
+per replicate; ``trs2`` holds two trees. Compare one component across replicates at a time.
 
 In **Compare**, click **Compare to .csv (...)** and load
 ``examples/compare_files/comparison_multiple_scalar_tree_plated_rv5.csv``.
@@ -332,9 +333,9 @@ in the same directory:
    :language: text
 
 For this model, the posterior of ``mu`` has mean ``y / 2`` and variance ``1 / 2``.
-The CSV contains its mean and 95% HPD limits for each execution, in execution order.
+The CSV contains its mean and 95% HPD limits for each replicate, in replicate order.
 
-1. In **Settings**, set **Executions** to 100 and **Random seed** to 42.
+1. In **Settings**, set **Replicates** to 100 and **Random seed** to 42.
 2. Use **File > Read script** to load ``examples/coverage_files/normal.pj``.
 3. In **Coverage**, select ``mu`` under **Non-det. nodes**.
 4. Click **Read HPDs .csv (...)**, load ``examples/coverage_files/normal.csv``, then click **Draw**.
@@ -349,13 +350,13 @@ The horizontal axis shows true parameter values; the vertical axis shows posteri
 Blue intervals contain the true value and red intervals miss it. The top-right panel gives
 the fraction containing the truth.
 
-For your own analysis, supply one CSV row per execution, in the same order, with columns
+For your own analysis, supply one CSV row per replicate, in the same order, with columns
 ``posterior_mean``, ``lower_95hpd``, and ``higher_95hpd``. Select a scalar parameter or a fixed
-vector component such as ``mu[1]``. Each component contributes one value per execution.
-Changing the model, seed, or execution count requires matching posterior summaries.
+vector component such as ``mu[1]``. Each component contributes one value per replicate.
+Changing the model, seed, or replicate count requires matching posterior summaries.
 
 Alternatively, use **Directory to .log's (...)** to compute summaries from posterior samples.
-Supply one tab-separated ``.log`` file per execution, named in execution order (for example,
+Supply one tab-separated ``.log`` file per replicate, named in replicate order (for example,
 ``run1.log``, ``run2.log``, …). Set **Parameter name in .log** if its column name differs from
 the selected parameter. The GUI uses all rows; remove burn-in samples before loading the files.
 
@@ -374,10 +375,10 @@ The easiest way to see what is possible with the CLI is to call it on the Termin
 
 The help message should list a series of flags, which we expand on below:
 
-    | ``--runs``: Number of complete model executions (default: 1).
+    | ``--runs``: Number of model replicates (default: 1).
     | ``--output-format``: ``separate-csv`` (default), ``combined-csv``, or ``json``; see :ref:`output-formats`.
     | ``-d``: Simulated data tables are written to disk.
-    | ``-f``: Plots for the selected DAG nodes (whose names and execution ranges are passed as arguments) are written to disk. The argument for ``-f`` should be passed within single-quotes, e.g., 'birth_rate,trs;1-2,1-10'.
+    | ``-f``: Plots for the selected DAG nodes (whose names and replicate ranges are passed as arguments) are written to disk. The argument for ``-f`` should be passed within single-quotes, e.g., 'birth_rate,trs;1-2,1-10'.
     | ``-o``: Directory where to place simulated data tables and figures.
     | ``-p``: Prefix to prepend output files with (e.g., "simulation1")
     | ``-nex``: Certain simulated data is written to disk in NEXUS format.
@@ -395,14 +396,14 @@ Exporting data
 Use ``pjcli model.pj --runs 10 -d -o output`` to save simulated values, or select an output
 format in the GUI before saving data. The CLI ``--output-format`` choices are:
 
-* ``separate-csv`` (default): one CSV per variable, with ``@execution`` and ``@element``
-  identifying the execution and vector element. Both use one-based indices; nested element
+* ``separate-csv`` (default): one CSV per variable, with ``@replicate`` and ``@element``
+  identifying the replicate and vector element. Both use one-based indices; nested element
   paths look like ``[2][1]``. Scalars have an empty element path.
-* ``combined-csv``: one execution per row, with columns such as ``x[1]`` and ``x[2][1]``.
-  Each variable must retain its full vector shape across executions. Empty vectors appear
+* ``combined-csv``: one replicate per row, with columns such as ``x[1]`` and ``x[2][1]``.
+  Each variable must retain its full vector shape across replicates. Empty vectors appear
   as ``[]``.
 * ``json``: a ``samples.mcon`` file with an MCON 0.2 header followed by one JSON object per
-  execution, in execution order. This format preserves nested vectors of changing lengths.
+  replicate, in replicate order. This format preserves nested vectors of changing lengths.
 
 The GUI labels these formats **Separate files (CSV)**, **Combined (CSV)**, and **JSON (MCON)**.
 Exports include simulated and assigned values; distributions and other model-construction objects are omitted.
@@ -415,14 +416,14 @@ RevBayes inference export
 
 Export a simulated model to estimate its parameters in RevBayes. Put ``clamp=true`` on the
 outer call of a sampling statement to treat its simulated values as observed data.
-Here ``mu`` is inferred from the observations in each execution:
+Here ``mu`` is inferred from the observations in each replicate:
 
 .. code-block:: text
 
     mu ~ normal(0,1)
     observations ~ iid(5, normal(mu,1), clamp=true)
 
-Save this as ``model.pj``. The following Python code writes one Rev script per execution:
+Save this as ``model.pj``. The following Python code writes one Rev script per replicate:
 
 .. code-block:: python
 
@@ -460,7 +461,7 @@ Sandbox: Bypassing the interfaces
 .. _bypass:
 
 Python callers can execute scripts and inspect their results directly. From the repository
-root, this example draws two Yule trees in each of two executions:
+root, this example draws two Yule trees in each of two replicates:
 
 .. code-block:: python
 
@@ -475,8 +476,8 @@ root, this example draws two Yule trees in each of two executions:
     first_tree = trees[0]
     print(first_tree.get_stats_dict())
 
-``results.value(name, execution_index)`` returns a variable's value in one execution;
-``results.values(name)`` returns its values across executions. Python indices start at zero,
+``results.value(name, execution_index)`` returns a variable's value in one replicate;
+``results.values(name)`` returns its values across replicates. Python indices start at zero,
 including indices into the returned lists. PJ script indices start at one.
 
 For an existing script, pass ``Path("model.pj").read_text()`` to ``compile_model``

@@ -206,7 +206,7 @@ class DnSSE(pgm.DistrForSampling):
         # handling random number generator seeds
         # (this is only ever used if this distribution
         # is called without using cmd_parse.py)
-        # Rates and probabilities belong to this execution; never expand or mutate
+        # Rates and probabilities belong to this replicate; never expand or mutate
         # caller-owned parameter values to manufacture a batch.
         self._check_scalar_parameters()
 
@@ -218,7 +218,7 @@ class DnSSE(pgm.DistrForSampling):
     ##########################
 
     # SSE matrices still describe biological states/epochs. Each entry has one value
-    # for this execution, and is never broadcast over a hidden sample dimension.
+    # for this replicate, and is never broadcast over a hidden sample dimension.
     def _check_scalar_parameters(self):
         matrices = (self.events.sse_rate_manager.matrix_state_dep_params,
                     self.prob_handler.state_dep_prob_manager.matrix_state_dep_params)

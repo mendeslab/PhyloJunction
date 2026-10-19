@@ -17,7 +17,7 @@ independent draws with the same parameters:
 Here ``x`` is a scalar, ``y`` has three elements, and ``z`` contains two three-element lists.
 ``iid(n, distribution)`` requires a nonnegative integer length; zero produces an empty list.
 Indices start at one and must be integer-valued and within bounds.
-Use :ref:`complete executions <executions>` to redraw the whole model, or
+Use :ref:`model replicates <executions>` to redraw the whole model, or
 :ref:`vectorization and comprehensions <vectorization>` to vary parameters between elements.
 
 Uniform

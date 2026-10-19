@@ -147,7 +147,7 @@ class TestModelActions(unittest.TestCase):
 
         w.clean_disable_everything(user_reset=True)
         self.assertFalse(u.resample_model.isEnabled())
-        # An addition is atomic across its commands and executions. Failure preserves
+        # An addition is atomic across its commands and replicates. Failure preserves
         # both values and replayable source; later valid commands can still be appended.
         w.gui_modeling.parse_cmd_update_pgm(['a <- 1', 'invalid'], w, clear_cmd_log_list=True)
         self.assertNotIn('a <- 1', w.gui_modeling.cmd_log_list)

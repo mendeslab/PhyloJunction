@@ -1,8 +1,8 @@
-# Run the complete model with pjcli --runs 2 (or set Executions in Settings).
+# Run the complete model with pjcli --runs 2 (or set Replicates in Settings).
 # number of replicate trees per simulation
 n_rep <- 2
 
-# Two fixed-rate scenarios, each containing two IID trees per execution.
+# Two fixed-rate scenarios, each containing two IID trees per replicate.
 birth_rates <- [0.8, 0.9]
 birth_rate <- birth_rates[1]
 

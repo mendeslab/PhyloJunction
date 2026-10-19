@@ -17,7 +17,7 @@ class TestParametricDns(unittest.TestCase):
         cls.dummy_parent_node_tracker = dict()
 
     # Existing moment checks do not protect nested shape or bulk sampling. This
-    # contract matters while IID vectors are explicit values rather than executions.
+    # contract matters while IID vectors are explicit values rather than model replicates.
     def test_iid_draws(self):
         distribution = dnpar.DnNormal(2.0, 0.5)
         with patch.object(distribution, 'draw_normal', return_value=np.arange(8.0)) as draw:

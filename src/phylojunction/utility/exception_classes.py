@@ -18,7 +18,7 @@ class ScriptEvaluationError(Exception):
         self.variable = variable
         self.execution = execution
 
-    # Compilation has no execution number; runtime errors identify the failing complete run.
+    # Compilation has no replicate number; runtime errors identify the failing complete run.
     def __str__(self):
         context = f"{self.source_name}:{self.line_number}"
         if self.variable is not None:

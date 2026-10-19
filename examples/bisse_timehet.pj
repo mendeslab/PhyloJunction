@@ -1,4 +1,4 @@
-# Run the complete model with pjcli --runs 2 (or set Executions in Settings).
+# Run the complete model with pjcli --runs 2 (or set Replicates in Settings).
 # constant-node variable ('birth_rate0_t0') assignment
 # first epoch (old)
 birth_rate0_t0 <- 0.75

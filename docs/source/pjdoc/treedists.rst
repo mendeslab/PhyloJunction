@@ -120,7 +120,7 @@ Below, an example of assigning a discrete SSE to a stochastic DAG node represent
     trs ~ discrete_sse(stash=stash, start_state=0, stop="age", stop_value=2.0, origin="true")
 
 Each distribution draws one tree. Use ``iid(2, discrete_sse(...))`` for two trees with the
-same parameters, and **Executions** or ``--runs`` to repeat the complete model.
+same parameters, and **Replicates** or ``--runs`` to repeat the complete model.
 Vectorization and comprehensions allow different parameters for each tree.
 Each tree has its own runtime and failed-attempt allowance, including retries.
 

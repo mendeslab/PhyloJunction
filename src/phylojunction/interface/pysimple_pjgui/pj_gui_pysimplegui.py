@@ -73,7 +73,7 @@ def call_gui():
     ###################
     # Inner functions #
     ###################
-    # Publish all new execution values together, preserving prior values on failure.
+    # Publish all new replicate values together, preserving prior values on failure.
     def parse_cmd_lines(cmd_line_list, cmd_line_hist, a_pgm, wdw):
         nonlocal results, dag_obj
         lines = [line.strip() for line in cmd_line_list if line.strip() and not line.strip().startswith('#')]
@@ -164,7 +164,7 @@ def call_gui():
         return dag_obj, ax, comparison_ax, validation_ax
 
 
-    # Keep execution choice separate from the explicit path of a vector element.
+    # Keep replicate choice separate from the explicit path of a vector element.
     def do_selected_node(dag_obj, wdw, fig_obj, node_name, do_all_samples=True):
         rows = results.values(node_name)
         execution = min(max(int(wdw['-ITH-SAMPLE-'].get()) - 1, 0), len(rows) - 1)

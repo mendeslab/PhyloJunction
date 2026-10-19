@@ -1,4 +1,4 @@
-"""Values from complete executions of one shared dependency graph."""
+"""Values from model replicates of one shared dependency graph."""
 from phylojunction.utility.exception_classes import ScriptEvaluationError
 import copy
 import random
@@ -9,11 +9,11 @@ from phylojunction.interface.grammar.constructors import construct
 
 
 class ExecutionResults:
-    """One graph, with values and sampling distributions indexed by execution and definition.
+    """One graph, with values and sampling distributions indexed by replicate and definition.
 
-    Python execution indices are zero-based. Script vector indices are one-based.
+    Python replicate indices are zero-based. Script vector indices are one-based.
     Each result owns its graph, preventing later interactive additions from changing
-    another result. Definitions are shared by all executions within the result.
+    another result. Definitions are shared by all replicates within the result.
     """
 
     # Execute every definition in order for each model run. Failed execution restores
@@ -62,7 +62,7 @@ class ExecutionResults:
                         line_number=node.line_number, variable=node.node_name,
                         execution=execution) from error
 
-    # Reject Python's implicit negative indexing for execution selection as well.
+    # Reject Python's implicit negative indexing for replicate selection as well.
     def value(self, name, execution_index=0):
         if type(execution_index) is not int or not 0 <= execution_index < self.n_executions:
             raise IndexError("Replicate index out of range.")

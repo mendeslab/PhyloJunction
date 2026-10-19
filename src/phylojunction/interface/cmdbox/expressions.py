@@ -104,7 +104,7 @@ def variable_names(expression, local=frozenset()):
             yield from variable_names(child, local)
 
 
-# Evaluate the validated AST against one execution's values. Subscripts are always
+# Evaluate the validated AST against one replicate's values. Subscripts are always
 # one-based language indices; Python negative indexing and slicing are not inherited.
 def evaluate(expression, lookup, construct):
     if isinstance(expression, ast.Constant):

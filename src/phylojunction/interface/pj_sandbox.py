@@ -146,7 +146,7 @@ def run_example_manual_incomplete_sampling_bisse() -> list[pjtr.AnnotatedTree]:
     start_at_origin = True
     start_states_list = [0, 1]
 
-    # Draw each explicit parameter scenario; distributions hold no execution count.
+    # Draw each explicit parameter scenario; distributions hold no replicate count.
     return [distsse.DnSSE(
         sse_stash,
         origin=start_at_origin,

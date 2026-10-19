@@ -656,7 +656,7 @@ class TestSmapWrite(unittest.TestCase):
         node_val1 = [ann_tr1, ann_tr2]
         node_val2 = [ann_tr1, ann_tr2]
 
-        # Exercise both one execution containing two trees and two executions
+        # Exercise both one replicate containing two trees and two replicates
         # containing one tree each, without value-bearing DAG nodes.
         records = [('tr1', node_val1, 1, 2), ('tr2', node_val2, 2, 1)]
         all_nds_df_list_dict, all_nds_df_content_str_list_dict = \

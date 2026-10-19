@@ -117,7 +117,7 @@ class TestVarAssignment(unittest.TestCase):
                           '[&index=4],nd3:2.0[&index=3])nd5[&index=5];'))
 
         # The execution API preserves a tree collection within each run, rather than
-        # interpreting file length as the number of model executions.
+        # interpreting file length as the number of model replicates.
         for source, count in ((cmd_line1, 1), (cmd_line2, 2)):
             results = cmd.compile_model(source + '\nfirst := tr[1]').execute(2)
             self.assertEqual([len(v) for v in results.values('tr')], [count, count])

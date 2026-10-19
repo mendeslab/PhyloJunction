@@ -110,7 +110,7 @@ class TestCommandParseUtils(unittest.TestCase):
             result.append('bad := map_attr(tree=trs, history=histories)')
 
     # Legacy batch tests do not exercise shared definitions or transactional additions.
-    # These invariants remain necessary while executions and IID values are distinct.
+    # These invariants remain necessary while replicates and IID values are distinct.
     def test_model_executions(self):
         model = compile_model('d := normal(1,2)\nx ~ iid(3,iid(2,d))\ni <- 2\ny := x[i][1]')
         result = model.execute(3, 42)

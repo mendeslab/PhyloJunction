@@ -33,7 +33,7 @@ class TestInferenceRevBayesParametricDn(unittest.TestCase):
                             self.assertIn('x ~ ' + expected, model)
 
     # Legacy string checks do not exercise distribution aliases, nested IID, or clamping
-    # per execution. These contracts remain required by the shared-graph exporter.
+    # per replicate. These contracts remain required by the shared-graph exporter.
     def test_execution_export(self):
         from phylojunction.inference.revbayes.execution import execution_to_rev
         source = ('a ~ normal(0,1)\nd := normal(a,1)\nx ~ iid(2,iid(2,d),clamp=true)'

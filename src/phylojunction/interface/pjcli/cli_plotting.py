@@ -46,7 +46,7 @@ def start_fig_and_axes(
     return fig, ax
 
 
-# Export each requested execution and nested element using explicit, one-based paths.
+# Export each requested replicate and nested element using explicit, one-based paths.
 def call_results_plot_cli(fig_dir, results, node_range_dict, fig_obj, fig_axes, prefix=''):
     from pathlib import Path
     from phylojunction.pgm.values import elements, path_text, plot_values

@@ -194,7 +194,7 @@ if __name__ == "__main__":
     model_fp = "examples/multiple_scalar_tree_plated.pj"
     dag_obj = cmdp.script2dag(model_fp, in_pj_file=True)
 
-    # Compare a selected IID element across complete executions.
+    # Compare a selected IID element across model replicates.
     from phylojunction.pgm.values import component_frame
     dag_obj = cmdp.script2dag(model_fp, runs=10)
     comparison = component_frame(dag_obj, "rv5[1]")

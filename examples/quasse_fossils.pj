@@ -1,4 +1,4 @@
-# Run the complete model with pjcli --runs 2 (or set Executions in Settings).
+# Run the complete model with pjcli --runs 2 (or set Replicates in Settings).
 birth := quasse_constant(rate=1.5)
 death := quasse_constant(rate=0.5)
 fossil := quasse_constant(rate=0.5)

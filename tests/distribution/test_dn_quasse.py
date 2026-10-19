@@ -500,7 +500,7 @@ class TestQuaSSE(unittest.TestCase):
         with patch('random.choices', side_effect=[[1], [2]]):
             dag = compile_model(source).execute(2)
 
-        # Keep the low-level serializer's content checks, with explicit execution/IID coordinates.
+        # Keep the low-level serializer's content checks, with explicit replicate/IID coordinates.
         def records(name):
             return [(name, [tree for row in dag.values(name) for tree in row], 2, True, True, 2)]
 

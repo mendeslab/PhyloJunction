@@ -1,4 +1,4 @@
-"""Selection and summaries of values across complete model executions."""
+"""Selection and summaries of values across model replicates."""
 import numbers
 import statistics
 from phylojunction.data.tree import AnnotatedTree
@@ -21,7 +21,7 @@ def shape(value):
     return tuple(shape(item) for item in value) if isinstance(value, list) else None
 
 
-# Summary rows compare the same element across executions, never elements within a run.
+# Summary rows compare the same element across replicates, never elements within a run.
 # Ragged vectors have no automatic correspondence; their values remain displayable/exportable.
 def summaries(values):
     if len(values) < 2 or any(shape(v) != shape(values[0]) for v in values[1:]):
@@ -46,7 +46,7 @@ def summaries(values):
     return rows
 
 
-# Draw one selected tree or numeric observations across executions. Vectors must be
+# Draw one selected tree or numeric observations across replicates. Vectors must be
 # selected explicitly by the caller; they are never silently pooled into a histogram.
 def plot_values(axes, values, reconstructed=False):
     from phylojunction.pgm.pgm import plot_node_histogram, plot_blank
@@ -58,7 +58,7 @@ def plot_values(axes, values, reconstructed=False):
         plot_blank(axes)
 
 
-# Comparison/coverage entries name an explicit component, shared across executions.
+# Comparison/coverage entries name an explicit component, shared across replicates.
 def component_values(results, name):
     from phylojunction.interface.cmdbox.expressions import parse_expression, evaluate
     expression = parse_expression(name)
@@ -66,7 +66,7 @@ def component_values(results, name):
             for i in range(results.n_executions)]
 
 # Preserve tree statistic columns used by comparison plots; numeric values retain
-# one row per execution, including fixed values used in coverage experiments.
+# one row per replicate, including fixed values used in coverage experiments.
 def component_frame(results, name):
     import pandas as pd
     values = component_values(results, name)

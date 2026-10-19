@@ -342,7 +342,7 @@ class DnCategorical(DistrForSampling):
 if __name__ == "__main__":
     # python -m phylojunction.distribution.dn_parametric
     # Different parameter pairs describe different distributions; draw_many repeats
-    # one distribution. Neither operation introduces a model-execution dimension.
+    # one distribution. Neither operation introduces a model-replicate dimension.
     distributions = [DnLogNormal(mean, sd) for mean, sd in
                      zip([-2, -2.1, -2.2], [0.1, 0.2, 0.15])]
     print([distribution.draw() for distribution in distributions])

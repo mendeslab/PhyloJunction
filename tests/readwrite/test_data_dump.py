@@ -21,8 +21,8 @@ __email__ = "fmendes@lsu.edu"
 
 class TestDataDump(unittest.TestCase):
 
-    # Legacy dataframe checks do not cover execution/vector boundaries or MCON nesting.
-    # Retain these contracts while both tabular and nested execution exports are supported.
+    # Legacy dataframe checks do not cover replicate/vector boundaries or MCON nesting.
+    # Retain these contracts while both tabular and nested replicate exports are supported.
     def test_execution_formats(self):
         results = compile_model('x := [row for row in [[1,2],[]]]\ny ~ normal(0,1)').execute(2, 42)
         with tempfile.TemporaryDirectory() as directory:
@@ -202,7 +202,7 @@ class TestDataDump(unittest.TestCase):
 
         trs = []
         for execution in range(n_sim):
-            # Give each execution its own scalar parameters; IID repeats only the tree.
+            # Give each replicate its own scalar parameters; IID repeats only the tree.
             stash = copy.deepcopy(sse_stash)
             for matrix in (stash.meh.sse_rate_manager.matrix_state_dep_params,
                            stash.prob_handler.state_dep_prob_manager.matrix_state_dep_params):
@@ -219,7 +219,7 @@ class TestDataDump(unittest.TestCase):
         cls.trees = trs
 
         # Keep the detailed serializer-content checks below, supplying actual values
-        # rather than constructing nodes that conceal execution and IID dimensions.
+        # rather than constructing nodes that conceal replicate and IID dimensions.
         records = [('l0', l0, 1, True, True, n_sim), ('mu0', mu0, 1, True, True, n_sim),
                    ('trs', trs, n_repl, True, True, n_sim)]
         cls.scalar_output_stash, cls.tree_output_stash = \

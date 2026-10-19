@@ -1,4 +1,4 @@
-# Run the complete model with pjcli --runs 2 (or set Executions in Settings).
+# Run the complete model with pjcli --runs 2 (or set Replicates in Settings).
 # Brownian diffusion is variance per unit time. All commands occupy one line.
 birth := quasse_logistic(y0=0.4, y1=0.8, midpoint=0.0, slope=2.0)
 death := quasse_logistic(y0=0.02, y1=0.1, midpoint=1.0, slope=2.0)

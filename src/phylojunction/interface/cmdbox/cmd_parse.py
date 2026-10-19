@@ -1,7 +1,7 @@
 """Compile PhyloJunction scripts and execute complete models.
 
-Compilation records dependencies without drawing values. Model executions are
-explicit; iid describes vectors within one execution. Interactive additions use
+Compilation records dependencies without drawing values. Model replicates are
+explicit; iid describes vectors within one replicate. Interactive additions use
 ExecutionResults.append and publish the returned result only after success.
 """
 from pathlib import Path
@@ -28,9 +28,9 @@ def script2dag(script_file_path_or_model_spec, in_pj_file=True, random_seed=None
 
 if __name__ == "__main__":
     # Run from the repository or an installed environment:
-    # python -m phylojunction.interface.cmdbox.cmd_parse [example] [executions]
+    # python -m phylojunction.interface.cmdbox.cmd_parse [example] [replicates]
     # These scripts can also be copied into the GUI. Repeated complete models belong
-    # to execute(runs=...); iid makes a vector within one model execution.
+    # to execute(runs=...); iid makes a vector within one model replicate.
     import sys
     import tempfile
     import json
@@ -59,7 +59,7 @@ if __name__ == "__main__":
             'a ~ lognormal(meanlog=m,sdlog=1.0)\n'
             'b ~ normal(m,1.0)'
         ),
-        # Each execution redraws the hyperparameters; its ten observations share those values.
+        # Each replicate redraws the hyperparameters; its ten observations share those values.
         'hierarchical': (
             'rv1 ~ lognormal(0.0,0.25)\n'
             'rv2 ~ lognormal(-1.5,0.25)\n'

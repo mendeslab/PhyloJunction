@@ -1,4 +1,4 @@
-# Run the complete model with pjcli --runs 2 (or set Executions in Settings).
+# Run the complete model with pjcli --runs 2 (or set Replicates in Settings).
 # constant-node variable ('birth_rate', etc.) assignment
 birth_rate <- 1.0
 death_rate <- 0.2

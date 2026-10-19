@@ -366,7 +366,7 @@ class GUIMainWindow(QMainWindow):
         # updating node lists
         self.refresh_node_lists()
 
-    # Select one explicit nested path, keeping the same path when comparing executions.
+    # Select one explicit nested path, keeping the same path when comparing replicates.
     def selected_values(self, node_name, sample_idx, repl_idx, all_executions=False):
         values = self.gui_modeling.results.values(node_name)
         execution = max(0, sample_idx or 0)
@@ -379,7 +379,7 @@ class GUIMainWindow(QMainWindow):
             return values, None
         return [dict(elements(value))[path] for value in values], path
 
-    # Display observations separately from summaries across executions. Tree summaries
+    # Display observations separately from summaries across replicates. Tree summaries
     # remain available for individual trees; vector elements are never averaged together.
     def selected_node_display(self, node_dag, do_all_samples, sample_idx=None,
                               repl_idx=0, repl_size=1, display_reconstructed=False):
@@ -404,7 +404,7 @@ class GUIMainWindow(QMainWindow):
         plot_values(fig_axes, values, draw_reconstructed)
         fig_obj.canvas.draw()
 
-    # The first selector chooses an execution; the second enumerates explicit leaf paths.
+    # The first selector chooses a replicate; the second enumerates explicit leaf paths.
     def selected_node_read(self, node_name):
         results = self.gui_modeling.results
         index = max(0, min(self.ui.ui_pages.sample_idx_spin.value() - 1, results.n_executions - 1))
@@ -483,7 +483,7 @@ class GUIMainWindow(QMainWindow):
     def component_frame(self, name):
         return component_frame(self.gui_modeling.results, name)
 
-    # Compare the chosen component across executions, without within-vector averages.
+    # Compare the chosen component across replicates, without within-vector averages.
     def do_selected_node_compare_page(self):
         u = self.ui.ui_pages
         item = u.compare_node_list.currentItem()
@@ -497,7 +497,7 @@ class GUIMainWindow(QMainWindow):
             u.summary_stats_list.addItems([column for column in self.pj_comparison_df
                                           if column not in ('sample', 'replicate', 'program')])
 
-    # Coverage always compares one numeric component's value per complete execution.
+    # Coverage always compares one numeric component's value per model replicate.
     def do_selected_node_coverage_page(self):
         u = self.ui.ui_pages
         item = u.coverage_node_list.currentItem()
@@ -1083,7 +1083,7 @@ class GUIMainWindow(QMainWindow):
     #####################
 
     # Block selection signals while setting ranges, so layout changes cannot resample
-    # or produce intermediate plots. Trees remain a one-execution display.
+    # or produce intermediate plots. Trees remain a one-replicate display.
     def init_and_refresh_radio_spin(self, node_dag, sample_size, repl_size):
         u = self.ui.ui_pages
         with QSignalBlocker(u.sample_idx_spin), QSignalBlocker(u.repl_idx_spin):

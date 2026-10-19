@@ -13,7 +13,7 @@ __email__ = "fmendes@lsu.edu"
 
 
 class DirectedAcyclicGraph:
-    """Shared, ordered definitions of a model, without execution-specific values.
+    """Shared, ordered definitions of a model, without replicate-specific values.
 
     name_node_dict points to the latest definition of each source name. Every
     definition has a stable position in definitions, so reassignment preserves
@@ -98,7 +98,7 @@ class DistrForSampling(ABC):
     IID distributions explicitly describe vector-valued draws.
     """
 
-    # Validate transient draw counts independently of any model execution count.
+    # Validate transient draw counts independently of any model replicate count.
     @staticmethod
     def validate_draw_count(count):
         if isinstance(count, bool) or not isinstance(count, Integral) or count < 0:
@@ -121,7 +121,7 @@ class DistrForSampling(ABC):
 
 
 class ConstantFn(ABC):
-    """A deterministic reader/constructor, independent of execution counts."""
+    """A deterministic reader/constructor, independent of replicate counts."""
 
     @abstractmethod
     def generate(self):
@@ -129,7 +129,7 @@ class ConstantFn(ABC):
 
 
 class NodeDAG:
-    """A named definition and its bound dependencies, shared by all executions.
+    """A named definition and its bound dependencies, shared by all replicates.
 
     expression is the validated syntax tree; bindings map source names to earlier
     definition IDs. parent_nd_list retains graph edges for graph consumers. Values

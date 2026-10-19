@@ -1,4 +1,4 @@
-"""RevBayes inference export for execution results."""
+"""RevBayes inference export for simulated replicates."""
 from phylojunction.inference.revbayes.execution import execution_to_rev
 
 
@@ -8,7 +8,7 @@ def dag_obj_to_rev_inference_spec(dag_obj, inference_root_dir, mcmc_chain_length
 
     Args:
         dag_obj (ExecutionResults): Shared definitions and the values from
-            complete executions of a script, including interactive additions.
+            replicates generated from a script, including interactive additions.
         mcmc_chain_length (int): Number of MCMC iterations to carry
             out with RevBayes.
         inference_root_dir (str): Directory where scripts and results

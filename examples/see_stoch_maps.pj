@@ -1,4 +1,4 @@
-# Run the complete model with pjcli --runs 1 (or set Executions in Settings).
+# Run the complete model with pjcli --runs 1 (or set Replicates in Settings).
 trs <- read_tree(file_path='examples/trees_maps_files/geosse_dummy_tree1.tre', node_name_attr='index')
 histories := read_maps(file_path="examples/trees_maps_files/geosse_dummy_tree1_maps.tsv", tip_attr_file_path="examples/trees_maps_files/geosse_dummy_tree1_tip_states.tsv", n_regions=2, geo="true")
 mapped_trs := map_attr(tree=trs[1], history=histories, attr_name="state")

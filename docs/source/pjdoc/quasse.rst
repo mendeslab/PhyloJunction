@@ -93,7 +93,7 @@ Fossils record the exact trait at sampling; they do not remove the lineage or re
 Sampling at death, removal probabilities and measurement error are not supported.
 
 Rate-constructor and distribution parameters are scalar within a draw. Use ``iid`` to draw
-several trees with the same parameters and complete executions to redraw the whole model.
+several trees with the same parameters and model replicates to redraw the whole model.
 In PJ expressions, list arguments to scalar parameters construct lists of distributions through
 one-level vectorization; comprehensions give explicit control over nested collections.
 Rejected trees do not resample DAG parents. A ``start_distribution`` is instead drawn inside
@@ -302,14 +302,14 @@ line. The same reference appears in complete and reconstructed views and in save
 Plotting uses no randomness. An empty reconstructed tree displays ``No sampled tips``.
 
 Data output includes complete/reconstructed Newick tables, annotated variants, generic tree
-summaries, and ``<node>_traits.tsv``. The trait table has columns ``@execution``, ``@element``, ``node``,
-``trait``, ``alive``, and ``sampled``; execution indices and element-path components start at one.
+summaries, and ``<node>_traits.tsv``. The trait table has columns ``@replicate``, ``@element``, ``node``,
+``trait``, ``alive``, and ``sampled``; replicate indices and element-path components start at one.
 It includes internal
 nodes and the origin as well as living and extinct tips. Discrete state tables and discrete
 NEXUS character matrices are not generated for these trees.
 
-``<node>_fossils.tsv`` contains ``@execution``, ``@element``, ``node``, ``time``, ``age``, ``trait``.
-Execution indices and element-path components are one-based.
+``<node>_fossils.tsv`` contains ``@replicate``, ``@element``, ``node``, ``time``, ``age``, ``trait``.
+Replicate indices and element-path components are one-based.
 ``time`` is forward from the origin, and ``age`` is relative to the
 simulation horizon. There is one row per fossil in the complete tree, or a header-only table
 when none occur. Annotated Newick identifies fossils with ``is_sa`` and sampling nodes with
@@ -340,7 +340,7 @@ Python interface
 
 ``draw()`` applies conditions and returns one tree. ``simulate()`` returns one attempt after
 observation sampling, without rejection conditioning. ``draw_many(2)`` draws two trees with
-independent resource allowances. Model execution's ``random_seed`` and CLI ``-r`` seed both
+independent resource allowances. The ``random_seed`` argument to ``execute()`` and CLI ``-r`` seed both
 Python and NumPy's global random streams; distribution objects do not own RNG seeds.
 
 The Python rate classes are ``ConstantRate``, ``LogisticRate``, ``GaussianRate``, ``StepRate``,
