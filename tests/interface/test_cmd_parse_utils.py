@@ -46,7 +46,7 @@ class TestCommandParseUtils(unittest.TestCase):
     def test_nested_expressions(self):
         _, _, expression = expressions.parse_statement('x ~ iid(n,normal(matrix[i][j],1))')
         self.assertEqual(list(expressions.variable_names(expression)), ['n', 'matrix', 'i', 'j'])
-        for source in ('x.real', '__import__("os").system("pwd")', '[x for x in y]', 'x[1:2]'):
+        for source in ('x.real', '__import__("os").system("pwd")', '[x for x in y if true]', 'x[1:2]'):
             with self.assertRaises(ValueError):
                 expressions.parse_expression(source)
         call = expressions.parse_expression('f(name="a b", value=[1, 2])')
@@ -67,6 +67,24 @@ class TestCommandParseUtils(unittest.TestCase):
                 construct('normal', *args)
         with self.assertRaises(TypeError):
             construct('normal', [], bogus=1)
+
+    # End-to-end comparisons protect local scope and recursive sampling, which scalar
+    # constructor tests cannot check. Retain while both implicit and explicit mapping exist.
+    def test_comprehensions_and_joint(self):
+        prefix = 'mu <- 99\nmus <- [0,2]\nsds <- [1,3]\n'
+        a = compile_model(prefix + 'xs ~ normal(mus,sds)').execute(2, 42)
+        b = compile_model(prefix + 'xs ~ [normal(mu,sd) for (mu,sd) in zip_strict(mus,sds)]').execute(2,42)
+        self.assertEqual(a.values('xs'), b.values('xs'))
+        self.assertEqual(b.model.name_node_dict['xs'].bindings, {'mus': 1, 'sds': 2})
+        nested = compile_model('rows <- [[0],[1,2]]\nx ~ [[normal(mu,1) for mu in row] for row in rows]').execute(1,42)
+        self.assertEqual([len(row) for row in nested.value('x')], [1,2])
+        self.assertEqual(compile_model('xs ~ normal([], -1)').execute().value('xs'), [])
+        self.assertEqual(compile_model('xs <- [1,2.5]').execute().value('xs'), [1,2.5])
+        for source in ('x <- [1,"a"]', 'x <- [1,[2]]', 'x ~ [normal(0,1),2]',
+                       'x := [a for (a,b) in [[1]]]', 'x := zip_strict([1],[1,2])',
+                       'x ~ [[normal(0,1,clamp=true)]]'):
+            with self.assertRaises((TypeError, ValueError)):
+                compile_model(source).execute()
 
     # Legacy batch tests do not exercise shared definitions or transactional additions.
     # These invariants remain necessary while executions and IID values are distinct.

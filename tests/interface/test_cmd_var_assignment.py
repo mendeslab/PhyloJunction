@@ -33,10 +33,10 @@ class TestVarAssignment(unittest.TestCase):
         self.assertEqual(result.value('a'), 1)
         self.assertEqual(result.value('b'), [1,2,3])
         self.assertEqual(result.model.n_nodes, 2)
-        result = result.append('a <- [1]\nc <- b\nd <- [c,4,5,6]')
+        result = result.append('a <- [1]\nc <- b\nd <- [c,[4],[5],[6]]')
         self.assertEqual(result.value('a'), [1])
         self.assertEqual(result.value('c'), [1,2,3])
-        self.assertEqual(result.value('d'), [[1,2,3],4,5,6])
+        self.assertEqual(result.value('d'), [[1,2,3],[4],[5],[6]])
         self.assertEqual(result.model.n_nodes, 5)
         self.assertEqual(len(result.model.name_node_dict), 4)
 

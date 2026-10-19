@@ -3,7 +3,7 @@ import copy
 import random
 import numpy as np
 from phylojunction.pgm.pgm import DistrForSampling
-from phylojunction.interface.cmdbox.expressions import evaluate
+from phylojunction.interface.cmdbox.expressions import evaluate, value_type
 from phylojunction.interface.grammar.constructors import construct
 
 
@@ -46,10 +46,10 @@ class ExecutionResults:
                 value = evaluate(node.expression, lambda name: row[node.bindings[name]], construct)
                 distribution = None
                 if node.operator == '~':
-                    if not isinstance(value, DistrForSampling):
-                        raise TypeError(f"{node.node_name}: ~ requires a distribution object.")
+                    validate_distributions(value)
                     distribution = value
-                    value = distribution.draw()
+                    value = draw_distributions(distribution)
+                    value_type(value)
                 row.append(value)
                 sampled.append(distribution)
 
@@ -77,3 +77,19 @@ class ExecutionResults:
             np.random.set_state(state[1])
             raise
         return candidate
+
+
+# Check all leaves before sampling, so an invalid later element never starts partial draws.
+def validate_distributions(value):
+    if isinstance(value, list):
+        for item in value:
+            validate_distributions(item)
+    elif not isinstance(value, DistrForSampling):
+        raise TypeError("~ requires a distribution or nested lists of distributions, without ordinary values.")
+
+
+# Recursion applies to specifications only: a distribution's draw is already a value.
+def draw_distributions(value):
+    if isinstance(value, list):
+        return [draw_distributions(item) for item in value]
+    return value.draw()
