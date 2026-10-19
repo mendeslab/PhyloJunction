@@ -56,7 +56,7 @@ def call_results_plot_cli(fig_dir, results, node_range_dict, fig_obj, fig_axes, 
         start = bounds[0] if bounds else 1
         end = bounds[-1] if bounds else results.n_executions
         if not 1 <= start <= end <= results.n_executions:
-            raise ValueError('Execution range is out of bounds.')
+            raise ValueError('Replicate range is out of bounds.')
         for execution in range(start, end + 1):
             for path, value in elements(results.value(name, execution - 1)):
                 plot_values(fig_axes, [value])

@@ -17,6 +17,10 @@ class TestModelActions(unittest.TestCase):
         self.addCleanup(self.window.close)
         self.controls = self.window.ui.ui_pages
         self.controls.execution_count.setValue(3)
+        # Selection labels identify statistical replicates; internal widget names stay stable.
+        self.assertEqual(self.controls.sample_idx_spin.prefix(), 'Replicate #')
+        self.assertEqual(self.controls.one_sample_radio.text(), 'One replicate')
+        self.assertEqual(self.controls.all_samples_radio.text(), 'All replicates')
 
     # Use real commands so the controls exercise the same node types as a loaded script.
     def enter(self, text):

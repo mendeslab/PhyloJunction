@@ -158,7 +158,7 @@ class TestCommandParseUtils(unittest.TestCase):
         self.assertEqual((error.variable, error.execution), ('x', 2))
         self.assertEqual(error.source, 'x ~ normal(0,1)')
         self.assertIsInstance(error.__cause__, ValueError)
-        self.assertIn('draw failed', str(error))
+        self.assertIn("variable 'x', replicate 2: draw failed", str(error))
         with self.assertRaises(ScriptEvaluationError) as caught:
             compile_model('# comment\n\nx := missing', 'broken.pj')
         self.assertEqual(caught.exception.line_number, 3)

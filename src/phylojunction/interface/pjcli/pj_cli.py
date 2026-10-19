@@ -230,7 +230,7 @@ def call_cli() -> None:
         default=None,
         help="Name of the attribute being stochastically mapped (e.g., 'state').")
 
-    parser.add_argument('--runs', type=int, default=1, help='Number of complete model executions')
+    parser.add_argument('--runs', type=int, default=1, help='Number of model replicates')
     parser.add_argument('--output-format', choices=tuple(FORMATS), default='separate-csv',
                         help='Separate files (CSV), Combined (CSV), or JSON (MCON)')
 

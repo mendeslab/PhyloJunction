@@ -268,9 +268,9 @@ def call_gui():
  
                     sg.Column(
                         layout = [
-                            [ sg.Radio("All executions", "-WHICH-SAMPLES-", key="-ALL-SAMPLES-", default=True, enable_events=True, disabled=True, font=("helvetica 14")) ],
-                            [ sg.Radio("One execution", "-WHICH-SAMPLES-", key="-ONE-SAMPLE-", default=False, enable_events=True, disabled=True, font=("helvetica 14")) ],
-                            [ sg.Text("Execution #", font=("helvetica 14")) ],
+                            [ sg.Radio("All replicates", "-WHICH-SAMPLES-", key="-ALL-SAMPLES-", default=True, enable_events=True, disabled=True, font=("helvetica 14")) ],
+                            [ sg.Radio("One replicate", "-WHICH-SAMPLES-", key="-ONE-SAMPLE-", default=False, enable_events=True, disabled=True, font=("helvetica 14")) ],
+                            [ sg.Text("Replicate #", font=("helvetica 14")) ],
                             [ sg.Spin([1], initial_value=1, key="-ITH-SAMPLE-", enable_events=True, readonly=True, disabled=True, font=("helvetica 14"), size=(8,1)) ],
                             [ sg.Text("Element #", font=("helvetica 14"), size=(9,1)) ],
                             [ sg.Spin([1], initial_value=1, key="-ITH-REPL-", enable_events=True, readonly=True, disabled=True, font=("helvetica 14"), size=(8,1)) ]
@@ -569,7 +569,7 @@ def call_gui():
     #####################
     layout_save = [
         [
-            sg.Text("Executions"), sg.Input("1", key="-RUNS-", size=(6,1)),
+            sg.Text("Replicates"), sg.Input("1", key="-RUNS-", size=(6,1)),
             sg.Text("Seed"), sg.Input("", key="-SEED-", size=(10,1)),
             sg.Combo(list(FORMATS.values()), default_value=FORMATS["separate-csv"], readonly=True, key="-FORMAT-"),
             sg.Text("Save with prefix", font=("Helvetica", 14)), sg.Input(size=(10, 1), font=("Helvetica", 14), key="-PREFIX-")

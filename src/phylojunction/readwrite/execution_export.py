@@ -89,7 +89,7 @@ def write_results(directory, results, prefix='', output_format='separate-csv',
         rows = []
         for name, values in columns.items():
             if any(shape(v) != shape(values[0]) for v in values[1:]):
-                raise ValueError(f'{name} changes vector shape between executions; use JSON (MCON).')
+                raise ValueError(f'{name} changes vector shape between replicates; use JSON (MCON).')
         for i in range(results.n_executions):
             row = {'@execution': i + 1}
             for name, values in columns.items():
@@ -141,7 +141,7 @@ def write_maps(directory, results, names, attribute, prefix=''):
         for i, vector in enumerate(results.values(name), 1):
             for path, value in elements(vector):
                 if not isinstance(value, AnnotatedTree):
-                    raise TypeError(f'{name}{path_text(path)}, execution {i}, is not a tree.')
+                    raise TypeError(f'{name}{path_text(path)}, replicate {i}, is not a tree.')
                 key = f'{name}_execution{i}{path_text(path)}'
                 if key in record_names:
                     raise ValueError(f'Conflicting map export identifier {key!r}.')

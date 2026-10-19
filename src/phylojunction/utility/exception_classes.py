@@ -24,7 +24,7 @@ class ScriptEvaluationError(Exception):
         if self.variable is not None:
             context += f", variable {self.variable!r}"
         if self.execution is not None:
-            context += f", execution {self.execution}"
+            context += f", replicate {self.execution}"
         return f"{context}: {super().__str__()}\n    {self.source.strip()}"
 
 

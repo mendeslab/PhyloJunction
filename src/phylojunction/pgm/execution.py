@@ -20,7 +20,7 @@ class ExecutionResults:
     # both RNGs; successful execution advances them, including when no seed is specified.
     def __init__(self, model, runs=1, random_seed=None):
         if type(runs) is not int or runs < 1:
-            raise ValueError("The number of model executions must be a positive integer.")
+            raise ValueError("The number of replicates must be a positive integer.")
         self.model = copy.deepcopy(model)
         self.random_seed = random_seed
         self._values = [[] for _ in range(runs)]
@@ -65,7 +65,7 @@ class ExecutionResults:
     # Reject Python's implicit negative indexing for execution selection as well.
     def value(self, name, execution_index=0):
         if type(execution_index) is not int or not 0 <= execution_index < self.n_executions:
-            raise IndexError("Execution index out of range.")
+            raise IndexError("Replicate index out of range.")
         return self._values[execution_index][self.model.name_node_dict[name].definition_id]
 
     def values(self, name):
