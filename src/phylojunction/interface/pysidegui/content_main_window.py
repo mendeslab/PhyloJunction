@@ -10,6 +10,8 @@ from PySide6.QtWidgets import QStackedWidget  # type: ignore
 from PySide6.QtWidgets import QLabel  # type: ignore
 from PySide6.QtWidgets import QSpacerItem  # type: ignore
 from PySide6.QtWidgets import QSizePolicy  # type: ignore
+from PySide6.QtWidgets import QSpinBox, QComboBox
+from phylojunction.readwrite.execution_export import FORMATS
 from PySide6.QtWidgets import QMessageBox  # type: ignore
 
 from superqt import QFlowLayout
@@ -255,6 +257,31 @@ class ContentGUIMainWindow(object):
                        controls.reconstructed_tree_check, controls.sample_idx_spin,
                        controls.repl_idx_spin, controls.save_pgm_node_plot):
             flow.addWidget(widget)
+
+        # Execution controls belong to the application, not individual distribution nodes.
+        grid = controls.settings_page_grid_layout
+        positions = [(grid.itemAt(i), grid.getItemPosition(i)) for i in range(grid.count())]
+        for item, (row, column, rowspan, colspan) in positions:
+            if row >= 2:
+                if item.widget() is not None:
+                    grid.addWidget(item.widget(), row + (2 if row >= 4 else 1), column, rowspan, colspan)
+        grid.removeItem(controls.settings_vert_spacer)
+        grid.addItem(controls.settings_vert_spacer, 9, 0)
+        controls.execution_count = QSpinBox(controls.settings_page)
+        controls.execution_count.setRange(1, 1000000)
+        controls.execution_count.setToolTip('Complete model executions on the next load or rerun.')
+        controls.output_format = QComboBox(controls.settings_page)
+        for code, label in FORMATS.items():
+            controls.output_format.addItem(label, code)
+        grid.addWidget(QLabel('Model executions:', controls.settings_page), 2, 0)
+        grid.addWidget(controls.execution_count, 2, 1)
+        grid.addWidget(QLabel('Data output format:', controls.settings_page), 5, 0)
+        grid.addWidget(controls.output_format, 5, 1)
+        controls.sample_idx_spin.setPrefix('Execution #')
+        controls.repl_idx_spin.setPrefix('Element #')
+        controls.one_sample_radio.setText('One execution')
+        controls.all_samples_radio.setText('All executions')
+        controls.avg_replicate_check_button.hide()
 
         self.ui_pages.sample_idx_spin.setDisabled(True)
         self.ui_pages.repl_idx_spin.setDisabled(True)

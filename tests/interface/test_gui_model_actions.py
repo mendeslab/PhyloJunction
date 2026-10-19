@@ -16,6 +16,7 @@ class TestModelActions(unittest.TestCase):
         self.window = GUIMainWindow()
         self.addCleanup(self.window.close)
         self.controls = self.window.ui.ui_pages
+        self.controls.execution_count.setValue(3)
 
     # Use real commands so the controls exercise the same node types as a loaded script.
     def enter(self, text):
@@ -23,11 +24,11 @@ class TestModelActions(unittest.TestCase):
         self.window.parse_cmd_update_gui()
 
     def test_display_controls_redraw_without_sampling(self):
-        self.enter('x ~ normal(n=3, nr=2, mean=0, sd=1)')
-        self.enter('y ~ normal(n=3, nr=2, mean=0, sd=1)')
+        self.enter('x ~ iid(2,normal(mean=0, sd=1))')
+        self.enter('y ~ iid(2,normal(mean=0, sd=1))')
         w, u = self.window, self.controls
         dag = w.gui_modeling.dag_obj
-        values = list(dag.name_node_dict['x'].value)
+        values = list(w.gui_modeling.results.values('x'))
         with patch.object(w, 'selected_node_plot', wraps=w.selected_node_plot) as draw:
             u.node_list.setCurrentRow(0)
             self.assertEqual(draw.call_count, 1)
@@ -47,12 +48,12 @@ class TestModelActions(unittest.TestCase):
             self.assertEqual(draw.call_count, 7)
             self.assertEqual(u.sample_idx_spin.value(), 2)
         self.assertIs(w.gui_modeling.dag_obj, dag)
-        self.assertEqual(dag.name_node_dict['x'].value, values)
+        self.assertEqual(w.gui_modeling.results.values('x'), values)
 
         self.enter('birth := quasse_constant(rate=0)')
         self.enter('death := quasse_constant(rate=0)')
-        self.enter('tr ~ quasse(n=3,nr=2,birth_rate=birth,death_rate=death,'
-                   'stop="age",stop_value=.1,diffusion=.1)')
+        self.enter('tr ~ iid(2,quasse(birth_rate=birth,death_rate=death,'
+                   'stop="age",stop_value=.1,diffusion=.1))')
         u.node_list.setCurrentRow(u.node_list.count() - 1)
         with patch.object(w, 'selected_node_plot', wraps=w.selected_node_plot) as draw:
             u.sample_idx_spin.setValue(3)
@@ -70,7 +71,7 @@ class TestModelActions(unittest.TestCase):
         from phylojunction.interface.pysidegui.pj_gui import cmdp
 
         w, u = self.window, self.controls
-        commands = ['x ~ normal(n=3, nr=2, mean=0, sd=1)', 'z <- 2']
+        commands = ['x ~ iid(2,normal(mean=0, sd=1))', 'z <- 2']
         # Exercise the same script-load path as File > Read script, followed by prompt input.
         with patch('phylojunction.interface.pysidegui.pj_gui.QFileDialog.getOpenFileName',
                    return_value=('model.pj', '')), \
@@ -87,7 +88,7 @@ class TestModelActions(unittest.TestCase):
         old_text = u.values_content.toPlainText()
         self.assertEqual(w.gui_modeling.active_script_lines, commands)
         with patch('phylojunction.interface.pysidegui.pj_gui.QMessageBox.warning') as warning, \
-                patch.object(cmdp, 'script2dag', wraps=cmdp.script2dag) as execute:
+                patch.object(cmdp, 'compile_model', wraps=cmdp.compile_model) as execute:
             python_state, numpy_state = random.getstate(), np.random.get_state()
             u.random_seed_prefix_textbox.setText('invalid')
             u.resample_model.click()
@@ -99,9 +100,9 @@ class TestModelActions(unittest.TestCase):
             np.testing.assert_equal(np.random.get_state(), numpy_state)
             u.random_seed_prefix_textbox.setText('12')
             u.resample_model.click()
-            seeded_values = list(w.gui_modeling.dag_obj.name_node_dict['x'].value)
+            seeded_values = list(w.gui_modeling.results.values('x'))
             u.resample_model.click()
-            self.assertEqual(w.gui_modeling.dag_obj.name_node_dict['x'].value, seeded_values)
+            self.assertEqual(w.gui_modeling.results.values('x'), seeded_values)
             self.assertIn('Completed with seed 12', w.ui.bottom_label_left.text())
             self.assertEqual(warning.call_count, 1)  # Only the invalid input warns.
             execute.reset_mock()
@@ -112,7 +113,7 @@ class TestModelActions(unittest.TestCase):
                     numpy_seed.assert_not_called()
                     python_seed.assert_not_called()
                 self.assertEqual(draw.call_count, 1)
-            execute.assert_called_once_with('\n'.join(commands), in_pj_file=False, random_seed=None)
+            execute.assert_called_once_with('\n'.join(commands))
         self.assertIsNot(w.gui_modeling.dag_obj, dag)
         self.assertEqual(u.node_list.currentItem().text(), 'x')
         self.assertEqual(u.sample_idx_spin.value(), 2)
@@ -130,7 +131,7 @@ class TestModelActions(unittest.TestCase):
         dag = w.gui_modeling.dag_obj
         old_text = u.values_content.toPlainText()
         old_artists = list(u.pgm_page_matplotlib_widget.axes.get_children())
-        with patch.object(cmdp, 'script2dag', side_effect=ValueError('simulation failed')):
+        with patch.object(cmdp, 'compile_model', side_effect=ValueError('simulation failed')):
             u.resample_model.click()
         self.assertIs(w.gui_modeling.dag_obj, dag)
         self.assertEqual(u.values_content.toPlainText(), old_text)
@@ -142,13 +143,13 @@ class TestModelActions(unittest.TestCase):
 
         w.clean_disable_everything(user_reset=True)
         self.assertFalse(u.resample_model.isEnabled())
-        # A failure following a valid command must neither duplicate that command nor allow
-        # replay of a possibly partially changed DAG. Later successes cannot repair the source.
+        # An addition is atomic across its commands and executions. Failure preserves
+        # both values and replayable source; later valid commands can still be appended.
         w.gui_modeling.parse_cmd_update_pgm(['a <- 1', 'invalid'], w, clear_cmd_log_list=True)
-        self.assertEqual(w.gui_modeling.cmd_log_list, ['a <- 1'])
-        self.assertIsNone(w.gui_modeling.active_script_lines)
+        self.assertNotIn('a <- 1', w.gui_modeling.cmd_log_list)
+        self.assertEqual(w.gui_modeling.active_script_lines, [])
         self.enter('b <- 2')
-        self.assertFalse(u.resample_model.isEnabled())
+        self.assertTrue(u.resample_model.isEnabled())
 
     # Settings commit only configuration; actual execution validates before destroying results.
     # These interactions are not covered by parser or layout tests.
@@ -177,7 +178,7 @@ class TestModelActions(unittest.TestCase):
             with self.assertRaises(ValueError):
                 w._read_seed()
         u.random_seed_prefix_textbox.setText('123')
-        commands = ['c <- 2', 'x ~ normal(n=3, nr=2, mean=0, sd=1)']
+        commands = ['c <- 2', 'x ~ iid(2,normal(mean=0, sd=1))']
         with patch('phylojunction.interface.pysidegui.pj_gui.QFileDialog.getOpenFileName',
                    return_value=('model.pj', '')), \
                 patch('phylojunction.interface.pysidegui.pj_gui.pjread.read_text_file',
@@ -187,11 +188,11 @@ class TestModelActions(unittest.TestCase):
                 self.assertEqual(draw.call_count, 1)
             self.assertIs(w.ui.pages.currentWidget(), u.pgm_page)
             self.assertEqual(u.node_list.currentItem().text(), 'x')
-            values = list(w.gui_modeling.dag_obj.name_node_dict['x'].value)
+            values = list(w.gui_modeling.results.values('x'))
             u.node_list.setCurrentRow(0)
             w.read_execute_script()
             self.assertEqual(u.node_list.currentItem().text(), 'c')
-            self.assertEqual(w.gui_modeling.dag_obj.name_node_dict['x'].value, values)
+            self.assertEqual(w.gui_modeling.results.values('x'), values)
             dag = w.gui_modeling.dag_obj
             with patch('phylojunction.interface.pysidegui.pj_gui.QMessageBox.warning') as warning:
                 u.random_seed_prefix_textbox.setText('bad')
@@ -209,8 +210,9 @@ class TestModelActions(unittest.TestCase):
             w.read_execute_script()
             self.assertIn('no model nodes', w.ui.bottom_label_left.text())
             read.return_value = ['a <- 1', 'invalid']
-            w.read_execute_script()
-            self.assertIn('Script reported errors', w.ui.bottom_label_left.text())
+            with patch('phylojunction.interface.pysidegui.pj_gui.QMessageBox.warning'):
+                w.read_execute_script()
+            self.assertIn('Script failed', w.ui.bottom_label_left.text())
             self.assertFalse(u.resample_model.isEnabled())
         w.clean_disable_everything()
         u.random_seed_prefix_textbox.setText('bad')
