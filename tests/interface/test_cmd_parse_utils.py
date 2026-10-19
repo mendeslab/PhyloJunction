@@ -1,3 +1,4 @@
+from phylojunction.utility.exception_classes import ScriptEvaluationError
 import unittest
 import ast
 import random
@@ -83,7 +84,7 @@ class TestCommandParseUtils(unittest.TestCase):
         for source in ('x <- [1,"a"]', 'x <- [1,[2]]', 'x ~ [normal(0,1),2]',
                        'x := [a for (a,b) in [[1]]]', 'x := zip_strict([1],[1,2])',
                        'x ~ [[normal(0,1,clamp=true)]]'):
-            with self.assertRaises((TypeError, ValueError)):
+            with self.assertRaises(ScriptEvaluationError):
                 compile_model(source).execute()
 
     # The collection mapper can expand histories without the PJ wrapper returning them.
@@ -105,7 +106,7 @@ class TestCommandParseUtils(unittest.TestCase):
         self.assertNotEqual(original.at_dict, result.value('mapped_trs')[0].at_dict)
         paired = result.append('two := map_attr(tree=[trs[1],trs[1]], history=[histories[1],histories[2]])')
         self.assertEqual(len(paired.value('two')), 2)
-        with self.assertRaisesRegex(ValueError, 'equal lengths'):
+        with self.assertRaisesRegex(ScriptEvaluationError, 'equal lengths'):
             result.append('bad := map_attr(tree=trs, history=histories)')
 
     # Legacy batch tests do not exercise shared definitions or transactional additions.
@@ -127,17 +128,42 @@ class TestCommandParseUtils(unittest.TestCase):
         model.add_definition('extra <- 0')
         self.assertNotIn('extra', result.model.name_node_dict)
         for source in ('v := x[0]', 'v := x[4]', 'v := x[1.0]', 'v := x[true]', 'v ~ 2'):
-            with self.assertRaises((IndexError, TypeError)):
+            with self.assertRaises(ScriptEvaluationError):
                 result.append(source)
         before_py, before_np = random.getstate(), np.random.get_state()
-        with self.assertRaises(IndexError):
+        with self.assertRaises(ScriptEvaluationError) as failure:
             result.append('new ~ normal(0,1)\nv := x[4]')
+        self.assertIsInstance(failure.exception.__cause__, IndexError)
+        self.assertEqual(failure.exception.source_name, '<interactive>')
+        self.assertEqual(failure.exception.line_number, 2)
+        self.assertEqual(failure.exception.variable, 'v')
+        self.assertEqual(failure.exception.execution, 1)
         self.assertEqual(before_py, random.getstate())
         after_np = np.random.get_state()
         np.testing.assert_array_equal(before_np[1], after_np[1])
         self.assertEqual(before_np[2:], after_np[2:])
-        with self.assertRaisesRegex(ValueError, 'iid'):
+        with self.assertRaisesRegex(ScriptEvaluationError, 'iid'):
             compile_model('x ~ normal(n=2, mean=0, sd=1)').execute()
+
+    # Source diagnostics and RNG rollback cross the compiler/runtime boundary; direct parser
+    # tests cannot protect these. Retain while scripts execute through this boundary.
+    def test_script_error_context(self):
+        from unittest.mock import patch
+        source = '# heading\n\nx ~ normal(0,1)'
+        with patch('phylojunction.pgm.execution.draw_distributions',
+                   side_effect=[1, ValueError('draw failed')]):
+            with self.assertRaisesRegex(ScriptEvaluationError, 'experiment.pj:3') as caught:
+                compile_model(source, 'experiment.pj').execute(2, 42)
+        error = caught.exception
+        self.assertEqual((error.variable, error.execution), ('x', 2))
+        self.assertEqual(error.source, 'x ~ normal(0,1)')
+        self.assertIsInstance(error.__cause__, ValueError)
+        self.assertIn('draw failed', str(error))
+        with self.assertRaises(ScriptEvaluationError) as caught:
+            compile_model('# comment\n\nx := missing', 'broken.pj')
+        self.assertEqual(caught.exception.line_number, 3)
+        self.assertIsNone(caught.exception.execution)
+        self.assertIn('Undefined variable', str(caught.exception))
 
 
 if __name__ == "__main__":

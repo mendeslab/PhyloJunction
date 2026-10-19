@@ -1,3 +1,4 @@
+from phylojunction.utility.exception_classes import ScriptEvaluationError
 import unittest
 import re
 from pathlib import Path
@@ -134,7 +135,7 @@ class TestVarAssignment(unittest.TestCase):
 
         
         
-        with self.assertRaises(ValueError) as exc:
+        with self.assertRaises(ScriptEvaluationError) as exc:
             dag_obj = dag_obj.append(cmd_line1)
 
         self.assertIn('iid', str(exc.exception))
@@ -146,7 +147,7 @@ class TestVarAssignment(unittest.TestCase):
 
         
 
-        with self.assertRaisesRegex(ValueError, 'exactly one'):
+        with self.assertRaisesRegex(ScriptEvaluationError, 'exactly one'):
             dag_obj.append(cmd_line2)
 
     def test_var_assignment_read_tree_file_exceptions(self):
@@ -160,7 +161,7 @@ class TestVarAssignment(unittest.TestCase):
 
         
 
-        with self.assertRaisesRegex(ValueError, 'iid'):
+        with self.assertRaisesRegex(ScriptEvaluationError, 'iid'):
             dag_obj.append(cmd_line1)
 
         cmd_line2 = ('tr <- read_tree(file_path=\"' +
@@ -174,10 +175,11 @@ class TestVarAssignment(unittest.TestCase):
              "The argument provided to \'node_name_attribute\' was invalid. "
              "The attribute for node names was not in the newick strings.")
         
-        with self.assertRaises(ec.ObjInitInvalidArgError) as exc:
+        with self.assertRaises(ScriptEvaluationError) as exc:
             dag_obj = dag_obj.append(cmd_line2)
 
-        self.assertEqual(str(exc.exception),
+        self.assertIsInstance(exc.exception.__cause__, ec.ObjInitInvalidArgError)
+        self.assertEqual(str(exc.exception.__cause__),
                          expected_exception_message2)
 
 

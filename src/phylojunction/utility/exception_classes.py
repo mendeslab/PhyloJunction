@@ -5,6 +5,29 @@ __author__ = "Fabio K. Mendes"
 __email__ = "fmendes@lsu.edu"
 
 
+class ScriptEvaluationError(Exception):
+    """A script failure with its source location and original exception as cause."""
+
+    # Store context separately so callers can display or inspect a failure without parsing text.
+    def __init__(self, message, *, source='', source_name='<script>', line_number=1,
+                 variable=None, execution=None):
+        super().__init__(message)
+        self.source = source
+        self.source_name = source_name
+        self.line_number = line_number
+        self.variable = variable
+        self.execution = execution
+
+    # Compilation has no execution number; runtime errors identify the failing complete run.
+    def __str__(self):
+        context = f"{self.source_name}:{self.line_number}"
+        if self.variable is not None:
+            context += f", variable {self.variable!r}"
+        if self.execution is not None:
+            context += f", execution {self.execution}"
+        return f"{context}: {super().__str__()}\n    {self.source.strip()}"
+
+
 class ScriptSyntaxError(Exception):
     cmd_line: str
     message: str

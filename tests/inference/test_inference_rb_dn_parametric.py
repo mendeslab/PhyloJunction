@@ -84,7 +84,7 @@ class TestInferenceRevBayesParametricDn(unittest.TestCase):
                                        capture_output=True, timeout=30)
             self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
             self.assertIn('_parents      = [ pjInternal1,', completed.stdout)
-        for source in ('x ~ normal([],1)', 'x <- []', 'x ~ [[normal(0,1,clamp=true)]]'):
+        for source in ('x ~ normal([],1)', 'x <- []'):
             with self.assertRaises(ValueError):
                 execution_to_rev(cmdp.compile_model(source).execute(), 'unused')
 

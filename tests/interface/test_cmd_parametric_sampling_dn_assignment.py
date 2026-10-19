@@ -1,3 +1,4 @@
+from phylojunction.utility.exception_classes import ScriptEvaluationError
 import unittest
 import re
 import math
@@ -199,37 +200,57 @@ class TestParametricSamplingDnAssignment(unittest.TestCase):
         """Test uniform sampling distribution assignment throws exception
 if mandatory parameters are missing"""
         for source in ['u ~ unif(max=1.0)', 'u ~ unif(rate=1.0)', 'u ~ unif()']:
-            with self.subTest(source=source), self.assertRaises((TypeError, ValueError)):
+            with self.subTest(source=source), self.assertRaises(ScriptEvaluationError) as caught:
                 cmdp.compile_model(source).execute()
+            error = caught.exception
+            self.assertEqual((error.source, error.variable, error.execution), (source, source.split()[0], 1))
+            self.assertIn('missing a required argument', str(error))
+            self.assertIsInstance(error.__cause__, TypeError)
 
     def test_exp_misspec(self):
         """Test exponential sampling distribution assignment throws
 exception if mandatory parameters are missing"""
         for source in ['e ~ exponential()', 'e ~ exponential(min=-1)', 'e ~ exponential()']:
-            with self.subTest(source=source), self.assertRaises((TypeError, ValueError)):
+            with self.subTest(source=source), self.assertRaises(ScriptEvaluationError) as caught:
                 cmdp.compile_model(source).execute()
+            error = caught.exception
+            self.assertEqual((error.source, error.variable, error.execution), (source, source.split()[0], 1))
+            self.assertIn('missing a required argument', str(error))
+            self.assertIsInstance(error.__cause__, TypeError)
 
     def test_gamma_misspec(self):
         """Test gamma sampling distribution assignment throws exception
 if mandatory parameters are missing"""
         for source in ['g ~ gamma(shape=0.5)', 'g ~ gamma(rate=0.5)', 'g ~ gamma()']:
-            with self.subTest(source=source), self.assertRaises((TypeError, ValueError)):
+            with self.subTest(source=source), self.assertRaises(ScriptEvaluationError) as caught:
                 cmdp.compile_model(source).execute()
+            error = caught.exception
+            self.assertEqual((error.source, error.variable, error.execution), (source, source.split()[0], 1))
+            self.assertIn('missing a required argument', str(error))
+            self.assertIsInstance(error.__cause__, TypeError)
 
     def test_normal_misspec(self):
         """Test normal sampling distribution assignment throws exception
 if mandatory parameters are missing"""
         for source in ['n ~ normal(sd=0.1)', 'n ~ normal(rate=1.0)', 'n ~ normal()']:
-            with self.subTest(source=source), self.assertRaises((TypeError, ValueError)):
+            with self.subTest(source=source), self.assertRaises(ScriptEvaluationError) as caught:
                 cmdp.compile_model(source).execute()
+            error = caught.exception
+            self.assertEqual((error.source, error.variable, error.execution), (source, source.split()[0], 1))
+            self.assertIn('missing a required argument', str(error))
+            self.assertIsInstance(error.__cause__, TypeError)
 
 
     def test_ln_misspec(self):
         """Test log-normal sampling distribution assignment throws
 exception if mandatory parameters are missing"""
         for source in ['ln ~ lognormal(sdlog=0.25)', 'ln ~ lognormal(rate=1.0)', 'ln ~ lognormal()']:
-            with self.subTest(source=source), self.assertRaises((TypeError, ValueError)):
+            with self.subTest(source=source), self.assertRaises(ScriptEvaluationError) as caught:
                 cmdp.compile_model(source).execute()
+            error = caught.exception
+            self.assertEqual((error.source, error.variable, error.execution), (source, source.split()[0], 1))
+            self.assertIn('missing a required argument', str(error))
+            self.assertIsInstance(error.__cause__, TypeError)
 
 
 if __name__ == "__main__":

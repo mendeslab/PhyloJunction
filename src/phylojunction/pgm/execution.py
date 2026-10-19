@@ -1,4 +1,5 @@
 """Values from complete executions of one shared dependency graph."""
+from phylojunction.utility.exception_classes import ScriptEvaluationError
 import copy
 import random
 import numpy as np
@@ -41,17 +42,25 @@ class ExecutionResults:
 
     # Bind lookup to definition IDs, so a reassigned name cannot change prior expressions.
     def _execute_from(self, start):
-        for row, sampled in zip(self._values, self._sampled_from):
+        for execution, (row, sampled) in enumerate(zip(self._values, self._sampled_from), 1):
             for node in self.model.definitions[start:]:
-                value = evaluate(node.expression, lambda name: row[node.bindings[name]], construct)
-                distribution = None
-                if node.operator == '~':
-                    validate_distributions(value)
-                    distribution = value
-                    value = draw_distributions(distribution)
-                    value_type(value)
-                row.append(value)
-                sampled.append(distribution)
+                try:
+                    value = evaluate(node.expression, lambda name: row[node.bindings[name]], construct)
+                    distribution = None
+                    if node.operator == '~':
+                        validate_distributions(value)
+                        distribution = value
+                        value = draw_distributions(distribution)
+                        value_type(value)
+                    row.append(value)
+                    sampled.append(distribution)
+                except ScriptEvaluationError:
+                    raise
+                except Exception as error:
+                    raise ScriptEvaluationError(
+                        str(error), source=node.source, source_name=node.source_name,
+                        line_number=node.line_number, variable=node.node_name,
+                        execution=execution) from error
 
     # Reject Python's implicit negative indexing for execution selection as well.
     def value(self, name, execution_index=0):
@@ -64,13 +73,13 @@ class ExecutionResults:
 
     # Interactive additions are transactional snapshots, not mutations of a shared graph.
     # Only new definitions run: earlier descendants retain their previously sampled values.
-    def append(self, source):
+    def append(self, source, source_name="<interactive>"):
         candidate = copy.deepcopy(self)
         start = len(candidate.model.definitions)
         state = random.getstate(), np.random.get_state()
         try:
-            for line in source.splitlines():
-                candidate.model.add_definition(line)
+            for number, line in enumerate(source.splitlines(), 1):
+                candidate.model.add_definition(line, source_name, number)
             candidate._execute_from(start)
         except Exception:
             random.setstate(state[0])

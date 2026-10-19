@@ -59,10 +59,10 @@ class GUIModeling():
         try:
             if not self.dag_obj.definitions:
                 seed = gui_main_window_obj._read_seed()
-                candidate = cmdp.compile_model('\n'.join(lines)).execute(
+                candidate = cmdp.compile_model('\n'.join(cmd_line_list), '<interactive>').execute(
                     gui_main_window_obj.ui.ui_pages.execution_count.value(), seed)
             else:
-                candidate = self.results.append('\n'.join(lines))
+                candidate = self.results.append('\n'.join(cmd_line_list))
         except Exception as error:
             gui_main_window_obj.ui.bottom_label_left.setText('Execution failed; previous results retained')
             gui_main_window_obj.ui.ui_pages.warnings_textbox.setText(str(error))
@@ -563,8 +563,8 @@ class GUIMainWindow(QMainWindow):
         selected_name = item.text() if item else None
         try:
             seed = self._read_seed()
-            commands = pjread.read_text_file(script_fp)
-            candidate = cmdp.compile_model('\n'.join(commands)).execute(u.execution_count.value(), seed)
+            commands = pjread.read_text_file(script_fp, keep_empty=True)
+            candidate = cmdp.compile_model('\n'.join(commands), script_fp).execute(u.execution_count.value(), seed)
         except Exception as error:
             self.ui.bottom_label_left.setText("Script failed; previous results retained")
             QMessageBox.warning(self, "Cannot read script", str(error))
@@ -634,7 +634,7 @@ class GUIMainWindow(QMainWindow):
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
             try:
-                candidate = cmdp.compile_model("\n".join(lines)).execute(u.execution_count.value(), seed)
+                candidate = cmdp.compile_model("\n".join(lines), "<rerun>").execute(u.execution_count.value(), seed)
             except Exception as error:
                 self.ui.bottom_label_left.setText("Rerun failed; previous results retained")
                 u.warnings_textbox.setText(str(error))

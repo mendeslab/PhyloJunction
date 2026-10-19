@@ -113,7 +113,7 @@ class TestModelActions(unittest.TestCase):
                     numpy_seed.assert_not_called()
                     python_seed.assert_not_called()
                 self.assertEqual(draw.call_count, 1)
-            execute.assert_called_once_with('\n'.join(commands))
+            execute.assert_called_once_with('\n'.join(commands), '<rerun>')
         self.assertIsNot(w.gui_modeling.dag_obj, dag)
         self.assertEqual(u.node_list.currentItem().text(), 'x')
         self.assertEqual(u.sample_idx_spin.value(), 2)

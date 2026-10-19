@@ -15,7 +15,7 @@ class DirectedAcyclicGraph:
     def __init__(self):
         ...
 
-    def add_definition(self, source):
+    def add_definition(self, source, source_name="<interactive>", line_number=1):
         ...
 
     def execute(self, runs=1, random_seed=None):
@@ -59,6 +59,8 @@ class NodeDAG:
     expression: ty.Any
     operator: str
     source: str
+    source_name: str
+    line_number: int
     is_sampled: bool
     is_deterministic: bool
     is_clamped: bool

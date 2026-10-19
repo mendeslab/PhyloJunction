@@ -1,3 +1,4 @@
+from phylojunction.utility.exception_classes import ScriptEvaluationError
 """Deterministic checks of QuaSSE's numerical and observation contracts."""
 
 import unittest
@@ -175,7 +176,7 @@ class TestQuaSSE(unittest.TestCase):
         self.assertEqual([len(value) for value in vectorized.values('vectorized')], [2, 2])
         for extra in ('block_duration=-1', 'block_duration=.5,bridge_error=0',
                       'block_duration=.5,dt_max=.1'):
-            with self.assertRaises((ValueError, TypeError)):
+            with self.assertRaises(ScriptEvaluationError):
                 dag.append('invalid ~ quasse(birth_rate=b,death_rate=b,stop="age",'
                             'stop_value=1,method="local_thinning",' + extra + ')')
         constructors = ["constant(rate=2", "gaussian(baseline=1,center_rate=3,center=0,width=1",
@@ -192,7 +193,7 @@ class TestQuaSSE(unittest.TestCase):
         self.assertEqual(len(dag.values('u')), 2)
         for spec in ('quasse_constant(rate=[1,2],cap=[1,2,3])', 'quasse_constant(rate=1,cap=-1)',
                      'quasse_gaussian(baseline=1,center_rate=2,center=0)', 'quasse_constant(rate=1,typo=2)'):
-            with self.assertRaises((ValueError, TypeError)):
+            with self.assertRaises(ScriptEvaluationError):
                 dag.append(f'invalid := {spec}')
 
     # Frozen-rate steps must cross zero-rate regions and scale event chance with dt_max.

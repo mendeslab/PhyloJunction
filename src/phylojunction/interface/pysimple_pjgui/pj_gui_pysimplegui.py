@@ -79,10 +79,10 @@ def call_gui():
         lines = [line.strip() for line in cmd_line_list if line.strip() and not line.strip().startswith('#')]
         try:
             if not results.model.definitions:
-                candidate = cmdp.compile_model('\n'.join(lines)).execute(int(wdw['-RUNS-'].get()),
+                candidate = cmdp.compile_model('\n'.join(cmd_line_list), '<interactive>').execute(int(wdw['-RUNS-'].get()),
                     int(wdw['-SEED-'].get()) if wdw['-SEED-'].get().strip() else None)
             else:
-                candidate = results.append('\n'.join(lines))
+                candidate = results.append('\n'.join(cmd_line_list))
         except Exception as error:
             wdw['-ERROR_MSG-'].update(str(error))
             return False
@@ -707,7 +707,7 @@ def call_gui():
         elif event == "Simulate":
             try:
                 source = '\n'.join(node.source for node in dag_obj.definitions)
-                candidate = cmdp.compile_model(source).execute(
+                candidate = cmdp.compile_model(source, "<rerun>").execute(
                     int(values['-RUNS-']), int(values['-SEED-']) if values['-SEED-'].strip() else None)
                 results, dag_obj = candidate, candidate.model
                 refresh_names(window)
@@ -779,8 +779,8 @@ def call_gui():
             
             if script_in_fp:
                 try:
-                    lines = pjread.read_text_file(script_in_fp)
-                    candidate = cmdp.compile_model('\n'.join(lines)).execute(
+                    lines = pjread.read_text_file(script_in_fp, keep_empty=True)
+                    candidate = cmdp.compile_model('\n'.join(lines), script_in_fp).execute(
                         int(values['-RUNS-']), int(values['-SEED-']) if values['-SEED-'].strip() else None)
                 except Exception as error:
                     window['-ERROR_MSG-'].update(str(error))

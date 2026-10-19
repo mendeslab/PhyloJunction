@@ -12,14 +12,15 @@ __email__ = "fmendes@lsu.edu"
 
 
 # Compile expressions without sampling; callers choose the number of whole-model runs.
-def compile_model(source):
+def compile_model(source, source_name="<script>"):
     model = DirectedAcyclicGraph()
-    for line in source.splitlines():
-        model.add_definition(line)
+    for number, line in enumerate(source.splitlines(), 1):
+        model.add_definition(line, source_name, number)
     return model
 
 
 # Read a script (or source text), compile its shared definitions, and execute it.
 def script2dag(script_file_path_or_model_spec, in_pj_file=True, random_seed=None, runs=1):
     source = Path(script_file_path_or_model_spec).read_text() if in_pj_file else script_file_path_or_model_spec
-    return compile_model(source).execute(runs, random_seed)
+    source_name = str(script_file_path_or_model_spec) if in_pj_file else "<script>"
+    return compile_model(source, source_name).execute(runs, random_seed)

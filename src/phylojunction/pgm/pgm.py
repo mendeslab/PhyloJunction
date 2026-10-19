@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import phylojunction.data.tree as pjtr
+from phylojunction.utility.exception_classes import ScriptEvaluationError
 
 __author__ = "Fabio K. Mendes"
 __email__ = "fmendes@lsu.edu"
@@ -27,48 +28,57 @@ class DirectedAcyclicGraph:
 
     # Bind variable references when a statement is appended, preserving sequential
     # reassignment: later definitions cannot alter dependencies of earlier statements.
-    def add_definition(self, source):
+    def add_definition(self, source, source_name="<interactive>", line_number=1):
         from phylojunction.interface.cmdbox.expressions import parse_statement, variable_names
-        statement = parse_statement(source)
-        if statement is None:
-            return
-        name, operator, expression = statement
-        # Clamping is observation metadata, not a parameter of the distribution object.
-        import ast
-        clamped = False
-        if operator == '~' and isinstance(expression, ast.Call):
-            clamp = next((item for item in expression.keywords if item.arg == 'clamp'), None)
-            if clamp is not None:
-                from phylojunction.interface.grammar.constructors import flag
-                if isinstance(clamp.value, ast.Name) and clamp.value.id in ("true", "false"):
-                    clamp.value = ast.Constant(clamp.value.id == "true")
-                if not isinstance(clamp.value, ast.Constant):
-                    raise ValueError("clamp must be a literal true/false flag.")
-                clamped = flag(clamp.value.value)
-                expression.keywords.remove(clamp)
-        # Clamping belongs to the entire sampling statement, never to inner constructors.
-        # Reject nested flags even inside empty comprehensions that will not be evaluated.
-        if any(isinstance(item, ast.Call) and any(kw.arg == 'clamp' for kw in item.keywords)
-               for item in ast.walk(expression)):
-            raise ValueError("clamp is allowed only on the outer call of a sampling statement.")
-        names = list(dict.fromkeys(variable_names(expression)))
-        missing = [name for name in names if name not in self.name_node_dict]
-        if missing:
-            raise ValueError(f"Undefined variable(s): {', '.join(missing)}")
-        parents = [self.name_node_dict[name] for name in names]
-        node_class = DeterministicNodeDAG if operator == ':=' else StochasticNodeDAG
-        node = node_class(name, parent_nodes=parents)
-        node.definition_id = len(self.definitions)
-        node.call_order_idx = node.definition_id
-        node.expression = expression
-        node.operator = operator
-        node.source = source
-        node.bindings = {name: self.name_node_dict[name].definition_id for name in names}
-        node.is_sampled = operator == '~'
-        node.is_clamped = clamped
-        self.definitions.append(node)
-        self.name_node_dict[name] = node
-        self.n_nodes = len(self.definitions)
+        name = None
+        try:
+            statement = parse_statement(source)
+            if statement is None:
+                return
+            name, operator, expression = statement
+            # Clamping is observation metadata, not a parameter of the distribution object.
+            import ast
+            clamped = False
+            if operator == '~' and isinstance(expression, ast.Call):
+                clamp = next((item for item in expression.keywords if item.arg == 'clamp'), None)
+                if clamp is not None:
+                    from phylojunction.interface.grammar.constructors import flag
+                    if isinstance(clamp.value, ast.Name) and clamp.value.id in ("true", "false"):
+                        clamp.value = ast.Constant(clamp.value.id == "true")
+                    if not isinstance(clamp.value, ast.Constant):
+                        raise ValueError("clamp must be a literal true/false flag.")
+                    clamped = flag(clamp.value.value)
+                    expression.keywords.remove(clamp)
+            # Clamping belongs to the entire sampling statement, never to inner constructors.
+            # Reject nested flags even inside empty comprehensions that will not be evaluated.
+            if any(isinstance(item, ast.Call) and any(kw.arg == 'clamp' for kw in item.keywords)
+                   for item in ast.walk(expression)):
+                raise ValueError("clamp is allowed only on the outer call of a sampling statement.")
+            names = list(dict.fromkeys(variable_names(expression)))
+            missing = [name for name in names if name not in self.name_node_dict]
+            if missing:
+                raise ValueError(f"Undefined variable(s): {', '.join(missing)}")
+            parents = [self.name_node_dict[name] for name in names]
+            node_class = DeterministicNodeDAG if operator == ':=' else StochasticNodeDAG
+            node = node_class(name, parent_nodes=parents)
+            node.definition_id = len(self.definitions)
+            node.call_order_idx = node.definition_id
+            node.expression = expression
+            node.operator = operator
+            node.source = source
+            node.source_name = source_name
+            node.line_number = line_number
+            node.bindings = {name: self.name_node_dict[name].definition_id for name in names}
+            node.is_sampled = operator == '~'
+            node.is_clamped = clamped
+            self.definitions.append(node)
+            self.name_node_dict[name] = node
+            self.n_nodes = len(self.definitions)
+        except ScriptEvaluationError:
+            raise
+        except Exception as error:
+            raise ScriptEvaluationError(str(error), source=source, source_name=source_name,
+                                        line_number=line_number, variable=name) from error
 
     def execute(self, runs=1, random_seed=None):
         from phylojunction.pgm.execution import ExecutionResults
@@ -139,6 +149,8 @@ class NodeDAG:
         self.bindings = {}
         self.operator = None
         self.source = None
+        self.source_name = "<interactive>"
+        self.line_number = 1
 
     def __str__(self):
         return self.source or self.node_name

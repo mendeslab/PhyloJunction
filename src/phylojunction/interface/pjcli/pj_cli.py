@@ -60,7 +60,7 @@ def execute_pj_script(
     #################
 
     print("Reading script " + model)
-    results = cmd.compile_model(Path(model).read_text()).execute(runs, random_seed)
+    results = cmd.compile_model(Path(model).read_text(), str(model)).execute(runs, random_seed)
     dag_obj = results.model
     print("    ... done!")
 
