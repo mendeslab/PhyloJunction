@@ -289,37 +289,26 @@ Students in an evolutionary modeling course may be asked to code their own Yule 
 After Yule trees are obtained, all they need to do is collect summary statistics that are also monitored by |pj| (e.g., the root age), and upload them into the "Compare" tab.
 |pj| then automatically plots the two distributions (one from the student, one from |pj| itself) side by side, revealing if implementations behave similarly.
 
-In order to use the functionalities exposed by the "Compare" tab, first one must to build a model in |pj|.
-We can start with the simple model in `examples/multiple_scalar_tree_plated.pj <https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/multiple_scalar_tree_plated.pj>`_.
-As the name suggests, this model has a few different scalar and tree random variables, some of them plated.
-We can load it by clicking "File > Read script" and selecting the aforementioned file.
-By navigating to the "Compare" tab, you will see that |pj| has loaded the DAG nodes that could potentially be compared on the left-hand "Nodes to compare" menu.
+In **Settings**, set **Executions** to 10, then use **File > Read script** to load
+``examples/multiple_scalar_tree_plated.pj``. Its ``rv5`` variable holds two normal observations
+per execution; ``trs2`` holds two trees. Compare one component across executions at a time.
 
-In the "Compare" tab, now click "Compare to .csv (...)".
-This button allows user to input a .csv file containing summary statistics computed from external simulations.
-We will choose file `examples/compare_files/comparison_multiple_scalar_tree_plated_rv5.csv <https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/compare_files/comparison_multiple_scalar_tree_plated_rv5.csv>`_.
-Once the .csv file is loaded, |pj| should display the contents of it in the top window.
+In **Compare**, click **Compare to .csv (...)** and load
+``examples/compare_files/comparison_multiple_scalar_tree_plated_rv5.csv``.
+Select ``rv5[1]`` from **Node to compare**, then click **Draw**.
+The CSV's value column must match the selected component name, here ``rv5[1]``.
+It also contains ``program``, ``sample``, and ``replicate`` columns identifying the external
+observations. The plot compares the two sets of normal draws; small samples can differ visibly.
 
-..  figure:: ../images/pjgui_compare.png
+.. figure:: ../images/pjgui_compare.png
     :figwidth: 100%
     :align: center
 
-    **Figure 4.** |pj|'s GUI "Compare" tab.
+    **Figure 4.** Comparing a scalar variable in the GUI. This screenshot uses older node labels.
 
-Note the "rv5" column name at header of the table -- these are the variable names that |pj| will try to look up (and compare with) in its own model's list of nodes.
-Accordingly, select "rv5" from the top-left "Node to compare" menu.
-Now we are ready to draw, click "Draw".
-The produced graph (Fig. 4) should indicate that |pj| and the external simulator behave similarly.
-
-Let us now try a different random variable, a tree this time: click on node "trs2" on the "Node to compare" menu.
-Because tree space is complicated (there are both a discrete and a continuous dimensions to it, the topology and branch lengths, respectively), we will need to look at tree summary statistics.
-Different tree statistics should have been listed in the bottom-left "Summary statistics" menu.
-Choose one of them, "root age", for example.
-
-Now we must then load a different .csv file, `examples/compare_files/comparison_multiple_scalar_tree_plated_trs2.csv <https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/compare_files/comparison_multiple_scalar_tree_plated_trs2.csv>`_.
-This file contains tree summary statistics presumably produced by a different external simulator.
-Click "Draw".
-Again, the produced graph suggests the model implemented in both simulators behave similarly.
+To compare trees, select ``trs2[1]`` and choose ``root_age`` under **Summary statistics**.
+Load ``examples/compare_files/comparison_multiple_scalar_tree_plated_trs2.csv`` and click
+**Draw**. For trees, the CSV column must match the selected statistic rather than the node name.
 
 Coverage validation
 ===================

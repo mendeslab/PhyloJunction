@@ -197,7 +197,7 @@ if __name__ == "__main__":
     # Compare a selected IID element across complete executions.
     from phylojunction.pgm.values import component_frame
     dag_obj = cmdp.script2dag(model_fp, runs=10)
-    comparison = component_frame(dag_obj, "rv5[1]").rename(columns={"rv5[1]": "rv5"})
+    comparison = component_frame(dag_obj, "rv5[1]")
     comparison["program"] = "PJ"
 
     # getting dataframe to compare to
@@ -208,10 +208,10 @@ if __name__ == "__main__":
     compare_to_df = pjread.read_csv_into_dataframe(csv_fp)
 
     # try to join dataframes
-    # comparison has data for "rv5",
+    # comparison has data for "rv5[1]",
     # output_df_list[8] has data for "trs2"
     joint_df = join_dataframes(comparison, compare_to_df,
-                               thing_to_compare="rv5",
+                               thing_to_compare="rv5[1]",
                                summaries_avg_over_repl=False)
     # joint_df = join_dataframes(compare_to_df, output_df_list[8],
     #                            value_to_compare="root_age",
