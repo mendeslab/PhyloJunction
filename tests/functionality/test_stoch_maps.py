@@ -1,7 +1,6 @@
 import unittest
 from phylojunction.data.trait import DiscreteTrait
-from phylojunction.pgm.pgm import DeterministicNodeDAG
-from phylojunction.interface.grammar.det_fn_map_attribute import make_mapped_ann_tree
+from phylojunction.interface.grammar.det_fn_map_attribute import map_attr, read_maps
 
 # pj imports
 import phylojunction.readwrite.pj_read as pjr
@@ -54,12 +53,10 @@ class TestStochMaps(unittest.TestCase):
         for nd in tree.tree:
             nd.habitat = nd.state
             del nd.state
-        mapped = make_mapped_ann_tree("map_attr", {
-            "tree": [DeterministicNodeDAG("trees", value=[tree])],
-            "fun": ['"smap"'], "n_regions": ["2"], "geo": ['"true"'],
-            "maps_file_path": ['"examples/trees_maps_files/geosse_dummy_tree2_maps.tsv"'],
-            "tip_attr_file_path": ['"examples/trees_maps_files/geosse_dummy_tree2_tip_states.tsv"'],
-        })
+        histories = read_maps("examples/trees_maps_files/geosse_dummy_tree2_maps.tsv",
+                              "examples/trees_maps_files/geosse_dummy_tree2_tip_states.tsv",
+                              n_regions=2, geo=True)
+        mapped = [map_attr(tree, history) for history in histories]
         self.assertEqual(tree.trait, DiscreteTrait(1, name="habitat"))
         for result in mapped:
             self.assertEqual(result.trait, DiscreteTrait(3, name="habitat"))

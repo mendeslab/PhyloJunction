@@ -1542,12 +1542,13 @@ class TestReconstructedTreePrint(unittest.TestCase):
             ('trs <- read_tree(file_path=\"' +
              TR_FILE_PATH_STR + '\",'
              'node_name_attr="index")\n'
-             'mapped_trs := map_attr(tree=trs, fun="smap", '
-             'maps_file_path=\"' +
+             'histories := read_maps('
+             'file_path=\"' +
              SMAPS_FILE_PATH_STR + '\",'
              'tip_attr_file_path=\"' +
              TIPDATA_FILE_PATH_STR + '\",'
-             'attr_name="state", n_regions=2, geo="true")')
+             'n_regions=2, geo="true")\n'
+             'mapped_trs := map_attr(tree=trs[1], history=histories, attr_name="state")')
 
         dag_obj = cmdp.script2dag(read_smap_str, in_pj_file=False)
 

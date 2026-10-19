@@ -4,7 +4,7 @@ import inspect
 from phylojunction.calculation import discrete_sse as sse
 from phylojunction.distribution.dn_discrete_sse import DnSSE
 from phylojunction.constant_function.ct_function_read_tree import CtFnTreeReader
-from phylojunction.interface.grammar.det_fn_map_attribute import map_attr
+from phylojunction.interface.grammar.det_fn_map_attribute import map_attr, read_maps
 from phylojunction.distribution import dn_parametric as dn
 from phylojunction.distribution.dn_iid import DnIID
 from phylojunction.distribution.dn_quasse import DnQuaSSE
@@ -151,10 +151,9 @@ CONSTRUCTORS = {
     'read_tree': (read_tree, [{
         'file_path': Scalar, 'string': Scalar, 'node_name_attr': Scalar, 'epoch_age_ends': Vector,
     }]),
-    'map_attr': (map_attr, [{
-        'tree': Scalar, 'fun': Scalar, 'tip_attr_file_path': Scalar, 'maps_file_path': Scalar,
-        'attr_name': Scalar, 'n_regions': Scalar, 'geo': Scalar,
-    }]),
+    'map_attr': (map_attr, [{'tree': Scalar, 'history': Scalar, 'attr_name': Scalar}]),
+    'read_maps': (read_maps, [{'file_path': Scalar, 'tip_attr_file_path': Scalar,
+                             'n_regions': Scalar, 'geo': Scalar}]),
     'quasse_constant': (RATE_CONSTRUCTORS["quasse_constant"][0], [{
         'rate': Scalar, 'cap': Scalar,
     }]),
@@ -182,10 +181,6 @@ CONSTRUCTORS = {
     }]),
 }
 
-# The legacy map API accepts either a tree or a collection until read_maps is separated.
-CONSTRUCTORS["map_attr"][1].append({**CONSTRUCTORS["map_attr"][1][0], "tree": Vector})
-
-
 # Fail at registration if metadata drifts from a callable, rather than guessing missing shapes.
 def validate_registry():
     for name, (function, signatures) in CONSTRUCTORS.items():
@@ -211,6 +206,8 @@ def bind_call(name, args, kwargs):
         raise ValueError("n/nr no longer specify sampling batches. Use iid(n, distribution) or --runs.")
     if 'clamp' in kwargs:
         raise ValueError("clamp is allowed only on the outer call of a sampling statement.")
+    if name == 'map_attr' and any(key in kwargs for key in ('fun', 'maps_file_path', 'tip_attr_file_path', 'geo', 'n_regions')):
+        raise ValueError("Read histories with read_maps(file_path=..., ...) then use map_attr(tree=..., history=...).")
     function, signatures = CONSTRUCTORS[name]
     python_signature = inspect.signature(function)
     bound = python_signature.bind(*args, **kwargs)

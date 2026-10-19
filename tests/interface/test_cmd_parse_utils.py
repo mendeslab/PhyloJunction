@@ -86,6 +86,28 @@ class TestCommandParseUtils(unittest.TestCase):
             with self.assertRaises((TypeError, ValueError)):
                 compile_model(source).execute()
 
+    # The collection mapper can expand histories without the PJ wrapper returning them.
+    # Check the public expression result as well as shared-input immutability.
+    def test_history_values(self):
+        from pathlib import Path
+        source = Path('examples/see_stoch_maps.pj').read_text()
+        result = compile_model(source).execute()
+        self.assertEqual(len(result.value('histories')), 91)
+        self.assertEqual(len(result.value('mapped_trs')), 91)
+        self.assertIsNot(result.value('mapped_trs')[0], result.value('mapped_trs')[1])
+        import tempfile
+        from phylojunction.readwrite.execution_export import write_maps
+        with tempfile.TemporaryDirectory() as directory:
+            write_maps(directory, result, ['mapped_trs'], 'state')
+            self.assertEqual(len(list(Path(directory).glob('*_smaps.tsv'))), 91)
+
+        original = result.value('trs')[0]
+        self.assertNotEqual(original.at_dict, result.value('mapped_trs')[0].at_dict)
+        paired = result.append('two := map_attr(tree=[trs[1],trs[1]], history=[histories[1],histories[2]])')
+        self.assertEqual(len(paired.value('two')), 2)
+        with self.assertRaisesRegex(ValueError, 'equal lengths'):
+            result.append('bad := map_attr(tree=trs, history=histories)')
+
     # Legacy batch tests do not exercise shared definitions or transactional additions.
     # These invariants remain necessary while executions and IID values are distinct.
     def test_model_executions(self):
