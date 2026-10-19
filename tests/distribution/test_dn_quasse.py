@@ -10,6 +10,7 @@ from phylojunction.calculation.continuous_sse import (
 )
 from phylojunction.data.trait import ContinuousTrait
 from phylojunction.distribution.dn_quasse import DnQuaSSE
+from phylojunction.distribution.dn_parametric import DnNormal
 from phylojunction.interface.cmdbox.cmd_parse import cmdline2dag
 from phylojunction.pgm.pgm import DirectedAcyclicGraph
 from phylojunction.utility import exception_classes as ec
@@ -294,6 +295,27 @@ class TestQuaSSE(unittest.TestCase):
             self.assertEqual(len(dn.generate()), 2)
         budgets = [c.kwargs['_block_indices'] for c in simulate.call_args_list]
         self.assertTrue(all(b is budgets[0] for b in budgets))
+        dn.n_repl = 1
+        with patch.object(dn, 'simulate', return_value=result) as simulate, \
+                patch.object(dn, '_is_tree_accepted', side_effect=[False, True, True]):
+            self.assertEqual(len(dn.draw_many(2)), 2)
+        budgets = [c.kwargs['_block_indices'] for c in simulate.call_args_list]
+        self.assertIs(budgets[0], budgets[1])
+        self.assertIsNot(budgets[1], budgets[2])
+        initial = DnNormal(1, 1, [0.0], [1.0], None)
+        dn.start_distribution = initial
+        with patch.object(initial, 'draw', side_effect=[2., 3.]) as draw, \
+                patch.object(dn, '_is_tree_accepted', side_effect=[False, True]), \
+                patch('numpy.random.exponential', return_value=2.):
+            self.assertEqual(dn.draw().origin_node.trait, 3.)
+            self.assertEqual(draw.call_count, 2)
+        with patch.object(initial, 'draw', return_value=4.) as draw, \
+                patch.object(one, 'bound_on_interval', side_effect=[.5, 1.]), \
+                patch('numpy.random.exponential', side_effect=[.25, 2.]):
+            self.assertEqual(dn.draw().origin_node.trait, 4.)
+            draw.assert_called_once()
+        dn.start_distribution = None
+
         with patch('numpy.random.exponential', return_value=2.), \
                 patch.object(dn, '_start_bridge_interval', wraps=dn._start_bridge_interval) as start:
             dn.simulate()

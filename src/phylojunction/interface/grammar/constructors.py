@@ -2,6 +2,7 @@
 import math
 from phylojunction.distribution import dn_parametric as dn
 from phylojunction.distribution.dn_iid import DnIID
+from phylojunction.distribution.dn_quasse import DnQuaSSE
 from phylojunction.interface.grammar.det_fn_quasse_makers import RATE_CONSTRUCTORS
 
 
@@ -75,7 +76,7 @@ def categorical(cats, probs):
 CONSTRUCTORS = {
     'normal': normal, 'lognormal': lognormal, 'exponential': exponential,
     'gamma': gamma, 'unif': unif, 'categorical': categorical,
-    'beta': dn.DnBeta, 'iid': DnIID,
+    'beta': dn.DnBeta, 'iid': DnIID, 'quasse': DnQuaSSE,
     **{name: constructor for name, (constructor, _) in RATE_CONSTRUCTORS.items()},
 }
 

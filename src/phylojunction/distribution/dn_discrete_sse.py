@@ -2156,6 +2156,25 @@ class DnSSE(pgm.DistrForSampling):
 
         return False
 
+    # Each accepted tree owns a fresh retry/runtime allowance; rejected attempts keep
+    # the distribution's parameters fixed. IID invokes this method separately per tree.
+    def draw(self):
+        if self.n_sim != 1 or self.n_repl != 1:
+            raise ValueError("Use iid for multiple tree draws and model executions for parameter draws.")
+        start_time = time.time()
+        failures = 0
+        while True:
+            if time.time() - start_time >= self.runtime_limit:
+                raise ec.RunTimeLimit(self.runtime_limit)
+            tree = self.simulate(self.start_states[0], self.stop_val[0], sample_idx=0)
+            if time.time() - start_time >= self.runtime_limit:
+                raise ec.RunTimeLimit(self.runtime_limit)
+            if self._is_tr_ok(tree, self.stop_val[0]):
+                return tree
+            failures += 1
+            if failures > self.max_n_failed_attempts:
+                raise ec.MaxNFailedAttemptsLimit(failures)
+
     def generate(self) -> ty.List[AnnotatedTree]:
         """
         Generate samples according to distribution.
