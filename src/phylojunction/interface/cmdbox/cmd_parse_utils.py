@@ -1,5 +1,9 @@
 import sys
 import typing as ty
+import ast
+import io
+import tokenize
+from phylojunction.interface.cmdbox.expressions import parse_expression
 import re
 
 # pj imports
@@ -175,105 +179,22 @@ def tokenize_fn_spec(fn_spec_str: str, cmd_line: str) -> ty.Dict[str, str]:
             keys, argument strings as values (e.g., {"mean": "0.0"}).
     """
 
-    stop_token_capture_chs = tuple([']', '='])
-
-    spec_dict = dict()
-    token, last_key_token = str(), str()
-    first_ch: bool = True
-    reading_vector: bool = False
-    reading_string: bool = False
-
-    for ch in fn_spec_str:
-        if first_ch and re.match(cannot_start_with_this_regex, ch):
-            raise ec.ScriptSyntaxError(
-                cmd_line,
-                "Cannot start specification of object with special character.")
-
-        # ignore whitespace
-        if re.match(whitespace_regex, ch): continue
-
-        # finished reading token (could be parameter or argument)
-        elif ch in stop_token_capture_chs:
-            # token was parameter, we make it a key
-            if ch == "=":
-                if not reading_string:
-                    spec_dict[token] = ""
-                    last_key_token = token
-                    reading_string = False
-                    token = str()
-                
-                else:
-                    token += ch
-                    continue
-
-            # character closed a vector, we make it a value
-            elif ch == "]":
-                if not reading_string:
-                    token += ch
-                    spec_dict[last_key_token] = token
-                    reading_vector = False  # matters only when ch == "]"
-                    token = str()
-                
-                else:
-                    token += ch
-                    continue
-
-            # elif ch == '"' and reading_string:
-            #     token += ch
-            #     spec_dict[last_key_token] = token
-            #     reading_string = False
-
-        # if not stopping, keep adding
-        else:
-            if ch == ",":
-                # finished reading a parameter=argument pair
-                if not reading_vector and not reading_string and token:
-                    spec_dict[last_key_token] = token
-                    token = str()
-                    continue
-
-                # reading vector, we care about the comma
-                if reading_vector:
-                    token += ch
-                    continue
-
-                # reading string (e.g., newick), we care about the comma
-                if reading_string:
-                    token += ch
-                    continue
-
-            # keep adding as long as it's not a comma
-            else:
-                if ch == "[" and not reading_string:
-                    if reading_vector:
-                        raise ec.ScriptSyntaxError(
-                            cmd_line,
-                            ("Something went wrong during variable"
-                             " assignment. It appears that a 2D-vector"
-                             " specification was attempted, but phylojunction"
-                             " does not support it. Try flattening the matrix"
-                             ". Exiting."))
-
-                    reading_vector = True
-
-                if ch == '"':
-                    if not reading_string:
-                        reading_string = True
-
-                    else:
-                        reading_string = False
-
-
-                token += ch
-
-            first_ch = False
-
-    # gotta wrap up and add last one, if it wasn't a vector
-    # (vectors add themselves up when they finish no matter what)
-    if token:
-        spec_dict[last_key_token] = token
-
-    return spec_dict
+    # Transitional string arguments for the existing factories. Structural parsing handles
+    # nested delimiters and quoted text; remove this conversion when factories accept values.
+    try:
+        source = "constructor(" + fn_spec_str + ")"
+        call = parse_expression(source)
+        if call.args:
+            raise ValueError("Use named arguments in this legacy entry point.")
+        result = {}
+        for keyword in call.keywords:
+            text = ast.get_source_segment(source, keyword.value)
+            # Strip formatting whitespace without changing whitespace inside quoted strings.
+            result[keyword.arg] = ''.join(token.string for token in
+                tokenize.generate_tokens(io.StringIO(text).readline))
+        return result
+    except (SyntaxError, ValueError) as error:
+        raise ec.ScriptSyntaxError(cmd_line, str(error)) from error
 
 
 if __name__ == "__main__":

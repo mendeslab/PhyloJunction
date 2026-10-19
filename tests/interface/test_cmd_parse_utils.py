@@ -1,4 +1,5 @@
 import unittest
+from phylojunction.interface.cmdbox import expressions
 
 # pj imports
 import phylojunction.interface.cmdbox.cmd_parse_utils as cmdu
@@ -36,6 +37,18 @@ class TestCommandParseUtils(unittest.TestCase):
 
         for k, v in self.tokenizer_exp_dict.items():
             self.assertEqual(v, token_dict3[k])
+
+    # The old flat-token tests cannot protect nested syntax or dependency discovery.
+    # Keep this while expressions are shared by compilation and constructor dispatch.
+    def test_nested_expressions(self):
+        _, _, expression = expressions.parse_statement('x ~ iid(n,normal(matrix[i][j],1))')
+        self.assertEqual(list(expressions.variable_names(expression)), ['n', 'matrix', 'i', 'j'])
+        for source in ('x.real', '__import__("os").system("pwd")', '[x for x in y]', 'x[1:2]'):
+            with self.assertRaises(ValueError):
+                expressions.parse_expression(source)
+        self.assertEqual(cmdu.tokenize_fn_spec('name="a b", value=[1, 2]', ''),
+                         {'name': '"a b"', 'value': '[1,2]'})
+
 
 if __name__ == "__main__":
     # Assuming you opened the PhyloJunction/ (repo root) folder
