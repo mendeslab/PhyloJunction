@@ -19,6 +19,14 @@ __author__ = "Fabio K. Mendes"
 __email__ = "fmendes@lsu.edu"
 
 
+# Compile expressions without sampling; callers choose the number of whole-model runs.
+def compile_model(source):
+    model = pgm.DirectedAcyclicGraph()
+    for line in source.splitlines():
+        model.add_definition(line)
+    return model
+
+
 def script2dag(script_file_path_or_model_spec: str,
                in_pj_file: bool = True,
                random_seed: ty.Optional[int] = None) -> pgm.DirectedAcyclicGraph:

@@ -1,4 +1,7 @@
 import unittest
+import random
+import numpy as np
+from phylojunction.interface.cmdbox.cmd_parse import compile_model
 from phylojunction.interface.cmdbox import expressions
 
 # pj imports
@@ -48,6 +51,37 @@ class TestCommandParseUtils(unittest.TestCase):
                 expressions.parse_expression(source)
         self.assertEqual(cmdu.tokenize_fn_spec('name="a b", value=[1, 2]', ''),
                          {'name': '"a b"', 'value': '[1,2]'})
+
+    # Legacy batch tests do not exercise shared definitions or transactional additions.
+    # These invariants remain necessary while executions and IID values are distinct.
+    def test_model_executions(self):
+        model = compile_model('d := normal(1,2)\nx ~ iid(3,iid(2,d))\ni <- 2\ny := x[i][1]')
+        result = model.execute(3, 42)
+        self.assertEqual(result.n_executions, 3)
+        self.assertEqual(len(result.model.definitions), 4)
+        self.assertEqual(result.model.name_node_dict['y'].bindings, {'x': 1, 'i': 2})
+        for execution in range(3):
+            self.assertEqual(result.value('y', execution), result.value('x', execution)[1][0])
+        self.assertEqual(result.values('x'), model.execute(3, 42).values('x'))
+        other = result.append('x <- 5\nz := x')
+        self.assertEqual(other.values('z'), [5, 5, 5])
+        self.assertEqual(other.values('y'), result.values('y'))
+        self.assertNotIn('z', result.model.name_node_dict)
+        self.assertIsNone(result.model.name_node_dict['x'].value)
+        model.add_definition('extra <- 0')
+        self.assertNotIn('extra', result.model.name_node_dict)
+        for source in ('v := x[0]', 'v := x[4]', 'v := x[1.0]', 'v := x[true]', 'v ~ 2'):
+            with self.assertRaises((IndexError, TypeError)):
+                result.append(source)
+        before_py, before_np = random.getstate(), np.random.get_state()
+        with self.assertRaises(IndexError):
+            result.append('new ~ normal(0,1)\nv := x[4]')
+        self.assertEqual(before_py, random.getstate())
+        after_np = np.random.get_state()
+        np.testing.assert_array_equal(before_np[1], after_np[1])
+        self.assertEqual(before_np[2:], after_np[2:])
+        with self.assertRaisesRegex(ValueError, 'iid'):
+            compile_model('x ~ normal(n=2, mean=0, sd=1)').execute()
 
 
 if __name__ == "__main__":

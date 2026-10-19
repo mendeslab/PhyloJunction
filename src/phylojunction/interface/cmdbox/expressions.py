@@ -70,3 +70,34 @@ def variable_names(expression):
     else:
         for child in ast.iter_child_nodes(expression):
             yield from variable_names(child)
+
+
+# Evaluate the validated AST against one execution's values. Subscripts are always
+# one-based language indices; Python negative indexing and slicing are not inherited.
+def evaluate(expression, lookup, construct):
+    if isinstance(expression, ast.Constant):
+        return expression.value
+    if isinstance(expression, ast.Name):
+        if expression.id in ("true", "false"):
+            return expression.id == "true"
+        return lookup(expression.id)
+    if isinstance(expression, ast.List):
+        return [evaluate(item, lookup, construct) for item in expression.elts]
+    if isinstance(expression, ast.UnaryOp):
+        value = expression.operand.value
+        return -value if isinstance(expression.op, ast.USub) else value
+    if isinstance(expression, ast.Subscript):
+        vector = evaluate(expression.value, lookup, construct)
+        index = evaluate(expression.slice, lookup, construct)
+        if not isinstance(vector, list):
+            raise TypeError("Only vectors can be indexed.")
+        if type(index) is not int:
+            raise TypeError("A vector index must be an integer.")
+        if not 1 <= index <= len(vector):
+            raise IndexError(f"Index {index} is outside the range 1..{len(vector)}.")
+        return vector[index - 1]
+    if isinstance(expression, ast.Call):
+        args = [evaluate(arg, lookup, construct) for arg in expression.args]
+        kwargs = {item.arg: evaluate(item.value, lookup, construct) for item in expression.keywords}
+        return construct(expression.func.id, *args, **kwargs)
+    raise ValueError("Unsupported expression.")

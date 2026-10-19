@@ -62,8 +62,39 @@ class DirectedAcyclicGraph():
         # keys are DAG node names, vals are NodeDAG instances
         self.name_node_dict = dict()
         self.n_nodes = 0
+        self.definitions = []  # shared, ordered definitions; values live in ExecutionResults
         self.sample_size = 0  # how many simulations will be run
         self._random_seed = None
+
+    # Bind variable references when a statement is appended, preserving sequential
+    # reassignment: later definitions cannot alter dependencies of earlier statements.
+    def add_definition(self, source):
+        from phylojunction.interface.cmdbox.expressions import parse_statement, variable_names
+        statement = parse_statement(source)
+        if statement is None:
+            return
+        name, operator, expression = statement
+        names = list(dict.fromkeys(variable_names(expression)))
+        missing = [name for name in names if name not in self.name_node_dict]
+        if missing:
+            raise ValueError(f"Undefined variable(s): {', '.join(missing)}")
+        parents = [self.name_node_dict[name] for name in names]
+        node = StochasticNodeDAG(name, sample_size=None, parent_nodes=parents,
+                                 deterministic=operator == ':=')
+        node.definition_id = len(self.definitions)
+        node.call_order_idx = node.definition_id
+        node.expression = expression
+        node.operator = operator
+        node.source = source
+        node.bindings = {name: self.name_node_dict[name].definition_id for name in names}
+        node.is_sampled = operator == '~'
+        self.definitions.append(node)
+        self.name_node_dict[name] = node
+        self.n_nodes = len(self.definitions)
+
+    def execute(self, runs=1, random_seed=None):
+        from phylojunction.pgm.execution import ExecutionResults
+        return ExecutionResults(self, runs, random_seed)
 
     @property
     def random_seed(self) -> int:
@@ -660,7 +691,8 @@ class StochasticNodeDAG(NodeDAG):
         # used for MCMC #move/operator setup during inference
         self.operator_weight = 0.0
 
-        self.populate_operator_weight()
+        if value is not None:
+            self.populate_operator_weight()
 
         # pgm specs
         if self.sampling_dn:
