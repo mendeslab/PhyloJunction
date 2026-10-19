@@ -1,5 +1,6 @@
 """Construct domain objects from evaluated values, without temporary DAG nodes."""
 import math
+import inspect
 from phylojunction.calculation import discrete_sse as sse
 from phylojunction.distribution.dn_discrete_sse import DnSSE
 from phylojunction.constant_function.ct_function_read_tree import CtFnTreeReader
@@ -95,14 +96,107 @@ def read_tree(file_path=None, string=None, node_name_attr='', epoch_age_ends=Non
                           [] if epoch_age_ends is None else epoch_age_ends).generate()
 
 
+# Shapes describe calling conventions; implementations retain concrete value validation.
+Scalar, Vector = "Scalar", "Vector"
+
 CONSTRUCTORS = {
-    'normal': dn.DnNormal, 'lognormal': dn.DnLogNormal, 'exponential': dn.DnExponential,
-    'gamma': dn.DnGamma, 'unif': dn.DnUnif, 'categorical': dn.DnCategorical,
-    'beta': dn.DnBeta, 'iid': DnIID, 'quasse': DnQuaSSE,
-    'sse_rate': sse_rate, 'sse_prob': sse_prob, 'sse_stash': sse_stash,
-    'discrete_sse': discrete_sse, 'read_tree': read_tree, 'map_attr': map_attr,
-    **{name: constructor for name, (constructor, _) in RATE_CONSTRUCTORS.items()},
+    'normal': (dn.DnNormal, [{
+        'mean': Scalar, 'sd': Scalar,
+    }]),
+    'lognormal': (dn.DnLogNormal, [{
+        'meanlog': Scalar, 'sdlog': Scalar, 'log_space': Scalar,
+    }]),
+    'exponential': (dn.DnExponential, [{
+        'rate': Scalar, 'rate_parameterization': Scalar,
+    }]),
+    'gamma': (dn.DnGamma, [{
+        'shape': Scalar, 'scale': Scalar, 'rate_parameterization': Scalar,
+    }]),
+    'unif': (dn.DnUnif, [{
+        'min': Scalar, 'max': Scalar,
+    }]),
+    'categorical': (dn.DnCategorical, [{
+        'cats': Vector, 'probs': Vector,
+    }]),
+    'beta': (dn.DnBeta, [{
+        'alpha': Scalar, 'beta': Scalar,
+    }]),
+    'iid': (DnIID, [{
+        'n': Scalar, 'distribution': Scalar,
+    }]),
+    'quasse': (DnQuaSSE, [{
+        'birth_rate': Scalar, 'death_rate': Scalar, 'stop': Scalar, 'stop_value': Scalar, 'start_trait': Scalar, 
+        'drift': Scalar, 'diffusion': Scalar, 'method': Scalar, 'k': Scalar, 'runtime_limit': Scalar, 
+        'max_steps': Scalar, 'max_alive': Scalar, 'sampling_prob': Scalar, 'cond_surv': Scalar, 
+        'cond_spn': Scalar, 'cond_obs_both_sides': Scalar, 'min_rec_taxa': Scalar, 'max_rec_taxa': Scalar, 
+        'max_n_attempts': Scalar, 'dt_max': Scalar, 'max_nodes': Scalar, 'block_duration': Scalar, 
+        'bridge_error': Scalar, 'fossil_rate': Scalar, 'start_distribution': Scalar,
+    }]),
+    'sse_rate': (sse_rate, [{
+        'name': Scalar, 'value': Scalar, 'event': Scalar, 'states': Vector, 'epoch': Scalar,
+    }]),
+    'sse_prob': (sse_prob, [{
+        'name': Scalar, 'value': Scalar, 'state': Scalar, 'epoch': Scalar,
+    }]),
+    'sse_stash': (sse_stash, [{
+        'flat_rate_mat': Vector, 'n_states': Scalar, 'n_epochs': Scalar, 'seed_age': Scalar, 
+        'epoch_age_ends': Vector, 'flat_prob_mat': Vector,
+    }]),
+    'discrete_sse': (discrete_sse, [{
+        'stash': Scalar, 'stop': Scalar, 'stop_value': Scalar, 'start_state': Scalar, 'origin': Scalar, 
+        'cond_spn': Scalar, 'cond_surv': Scalar, 'cond_obs_both_sides': Scalar, 'min_rec_taxa': Scalar, 
+        'max_rec_taxa': Scalar, 'abort_at_alive_count': Scalar, 'eps': Scalar, 'runtime_limit': Scalar, 
+        'max_n_attempts': Scalar,
+    }]),
+    'read_tree': (read_tree, [{
+        'file_path': Scalar, 'string': Scalar, 'node_name_attr': Scalar, 'epoch_age_ends': Vector,
+    }]),
+    'map_attr': (map_attr, [{
+        'tree': Scalar, 'fun': Scalar, 'tip_attr_file_path': Scalar, 'maps_file_path': Scalar, 
+        'attr_name': Scalar, 'n_regions': Scalar, 'geo': Scalar,
+    }]),
+    'quasse_constant': (RATE_CONSTRUCTORS["quasse_constant"][0], [{
+        'rate': Scalar, 'cap': Scalar,
+    }]),
+    'quasse_logistic': (RATE_CONSTRUCTORS["quasse_logistic"][0], [{
+        'y0': Scalar, 'y1': Scalar, 'midpoint': Scalar, 'slope': Scalar, 'cap': Scalar,
+    }]),
+    'quasse_gaussian': (RATE_CONSTRUCTORS["quasse_gaussian"][0], [{
+        'baseline': Scalar, 'center_rate': Scalar, 'center': Scalar, 'width': Scalar, 'cap': Scalar,
+    }]),
+    'quasse_step': (RATE_CONSTRUCTORS["quasse_step"][0], [{
+        'left': Scalar, 'right': Scalar, 'threshold': Scalar, 'cap': Scalar,
+    }]),
+    'quasse_linear': (RATE_CONSTRUCTORS["quasse_linear"][0], [{
+        'intercept': Scalar, 'slope': Scalar, 'cap': Scalar,
+    }]),
+    'quasse_skew_gaussian': (RATE_CONSTRUCTORS["quasse_skew_gaussian"][0], [{
+        'baseline': Scalar, 'amplitude': Scalar, 'location': Scalar, 'width': Scalar, 'skew': Scalar, 
+        'cap': Scalar,
+    }]),
+    'quasse_quadratic': (RATE_CONSTRUCTORS["quasse_quadratic"][0], [{
+        'baseline': Scalar, 'strength': Scalar, 'center': Scalar, 'cap': Scalar,
+    }]),
+    'quasse_absolute': (RATE_CONSTRUCTORS["quasse_absolute"][0], [{
+        'baseline': Scalar, 'strength': Scalar, 'center': Scalar, 'cap': Scalar,
+    }]),
 }
+
+# The legacy map API accepts either a tree or a collection until read_maps is separated.
+CONSTRUCTORS["map_attr"][1].append({**CONSTRUCTORS["map_attr"][1][0], "tree": Vector})
+
+
+# Fail at registration if metadata drifts from a callable, rather than guessing missing shapes.
+def validate_registry():
+    for name, (function, signatures) in CONSTRUCTORS.items():
+        parameters = set(inspect.signature(function).parameters)
+        if not signatures or any(set(signature) != parameters for signature in signatures):
+            raise ValueError(f"Incomplete argument shapes for {name}.")
+        if any(shape not in (Scalar, Vector) for signature in signatures for shape in signature.values()):
+            raise ValueError(f"Unknown argument shape for {name}.")
+
+
+validate_registry()
 
 
 # Only registered constructors are callable; Python globals and attributes are inaccessible.
@@ -119,4 +213,4 @@ def construct(constructor_name, /, *args, **kwargs):
         for key in ('cond_surv', 'cond_spn', 'cond_obs_both_sides'):
             if key in kwargs:
                 kwargs[key] = flag(kwargs[key])
-    return CONSTRUCTORS[name](*args, **kwargs)
+    return CONSTRUCTORS[name][0](*args, **kwargs)

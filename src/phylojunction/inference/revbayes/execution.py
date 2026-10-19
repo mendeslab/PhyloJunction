@@ -78,7 +78,7 @@ def execution_to_rev(results, root, mcmc_chain_length=1000, prefix=''):
             supported = {'normal', 'lognormal', 'unif', 'gamma', 'exponential', 'beta'}
             if constructor not in supported:
                 raise ValueError(f'RevBayes export does not support {constructor}.')
-            bound = inspect.signature(CONSTRUCTORS[constructor]).bind(
+            bound = inspect.signature(CONSTRUCTORS[constructor][0]).bind(
                 *expression.args, **{kw.arg: kw.value for kw in expression.keywords})
             bound.apply_defaults()
             args = bound.arguments
