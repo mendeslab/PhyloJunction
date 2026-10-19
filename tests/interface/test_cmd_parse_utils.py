@@ -53,6 +53,21 @@ class TestCommandParseUtils(unittest.TestCase):
         self.assertEqual({kw.arg: ast.literal_eval(kw.value) for kw in call.keywords},
                          {'name': 'a b', 'value': [1, 2]})
 
+    # Shared shape dispatch must distinguish list arguments from parameter mapping.
+    # Scalar constructor tests cannot protect this boundary; retain while mapping is implicit.
+    def test_vectorized_calls(self):
+        from phylojunction.interface.grammar.constructors import construct
+        ds = construct('normal', [0, 2], 1)
+        self.assertEqual([d.mean for d in ds], [0, 2])
+        self.assertEqual(construct('normal', [], -1), [])
+        self.assertEqual(construct('categorical', [1, 2], [1, 1]).cats, [1, 2])
+        self.assertEqual(len(construct('sse_rate', ['a', 'b'], [1, 2], 'speciation', [0, 0, 0])), 2)
+        for args in (([0], [1, 2]), ([[0]], 1)):
+            with self.assertRaisesRegex(ValueError, 'lengths|shapes'):
+                construct('normal', *args)
+        with self.assertRaises(TypeError):
+            construct('normal', [], bogus=1)
+
     # Legacy batch tests do not exercise shared definitions or transactional additions.
     # These invariants remain necessary while executions and IID values are distinct.
     def test_model_executions(self):

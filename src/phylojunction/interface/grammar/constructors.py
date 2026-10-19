@@ -125,11 +125,11 @@ CONSTRUCTORS = {
         'n': Scalar, 'distribution': Scalar,
     }]),
     'quasse': (DnQuaSSE, [{
-        'birth_rate': Scalar, 'death_rate': Scalar, 'stop': Scalar, 'stop_value': Scalar, 'start_trait': Scalar, 
-        'drift': Scalar, 'diffusion': Scalar, 'method': Scalar, 'k': Scalar, 'runtime_limit': Scalar, 
-        'max_steps': Scalar, 'max_alive': Scalar, 'sampling_prob': Scalar, 'cond_surv': Scalar, 
-        'cond_spn': Scalar, 'cond_obs_both_sides': Scalar, 'min_rec_taxa': Scalar, 'max_rec_taxa': Scalar, 
-        'max_n_attempts': Scalar, 'dt_max': Scalar, 'max_nodes': Scalar, 'block_duration': Scalar, 
+        'birth_rate': Scalar, 'death_rate': Scalar, 'stop': Scalar, 'stop_value': Scalar, 'start_trait': Scalar,
+        'drift': Scalar, 'diffusion': Scalar, 'method': Scalar, 'k': Scalar, 'runtime_limit': Scalar,
+        'max_steps': Scalar, 'max_alive': Scalar, 'sampling_prob': Scalar, 'cond_surv': Scalar,
+        'cond_spn': Scalar, 'cond_obs_both_sides': Scalar, 'min_rec_taxa': Scalar, 'max_rec_taxa': Scalar,
+        'max_n_attempts': Scalar, 'dt_max': Scalar, 'max_nodes': Scalar, 'block_duration': Scalar,
         'bridge_error': Scalar, 'fossil_rate': Scalar, 'start_distribution': Scalar,
     }]),
     'sse_rate': (sse_rate, [{
@@ -139,20 +139,20 @@ CONSTRUCTORS = {
         'name': Scalar, 'value': Scalar, 'state': Scalar, 'epoch': Scalar,
     }]),
     'sse_stash': (sse_stash, [{
-        'flat_rate_mat': Vector, 'n_states': Scalar, 'n_epochs': Scalar, 'seed_age': Scalar, 
+        'flat_rate_mat': Vector, 'n_states': Scalar, 'n_epochs': Scalar, 'seed_age': Scalar,
         'epoch_age_ends': Vector, 'flat_prob_mat': Vector,
     }]),
     'discrete_sse': (discrete_sse, [{
-        'stash': Scalar, 'stop': Scalar, 'stop_value': Scalar, 'start_state': Scalar, 'origin': Scalar, 
-        'cond_spn': Scalar, 'cond_surv': Scalar, 'cond_obs_both_sides': Scalar, 'min_rec_taxa': Scalar, 
-        'max_rec_taxa': Scalar, 'abort_at_alive_count': Scalar, 'eps': Scalar, 'runtime_limit': Scalar, 
+        'stash': Scalar, 'stop': Scalar, 'stop_value': Scalar, 'start_state': Scalar, 'origin': Scalar,
+        'cond_spn': Scalar, 'cond_surv': Scalar, 'cond_obs_both_sides': Scalar, 'min_rec_taxa': Scalar,
+        'max_rec_taxa': Scalar, 'abort_at_alive_count': Scalar, 'eps': Scalar, 'runtime_limit': Scalar,
         'max_n_attempts': Scalar,
     }]),
     'read_tree': (read_tree, [{
         'file_path': Scalar, 'string': Scalar, 'node_name_attr': Scalar, 'epoch_age_ends': Vector,
     }]),
     'map_attr': (map_attr, [{
-        'tree': Scalar, 'fun': Scalar, 'tip_attr_file_path': Scalar, 'maps_file_path': Scalar, 
+        'tree': Scalar, 'fun': Scalar, 'tip_attr_file_path': Scalar, 'maps_file_path': Scalar,
         'attr_name': Scalar, 'n_regions': Scalar, 'geo': Scalar,
     }]),
     'quasse_constant': (RATE_CONSTRUCTORS["quasse_constant"][0], [{
@@ -171,7 +171,7 @@ CONSTRUCTORS = {
         'intercept': Scalar, 'slope': Scalar, 'cap': Scalar,
     }]),
     'quasse_skew_gaussian': (RATE_CONSTRUCTORS["quasse_skew_gaussian"][0], [{
-        'baseline': Scalar, 'amplitude': Scalar, 'location': Scalar, 'width': Scalar, 'skew': Scalar, 
+        'baseline': Scalar, 'amplitude': Scalar, 'location': Scalar, 'width': Scalar, 'skew': Scalar,
         'cap': Scalar,
     }]),
     'quasse_quadratic': (RATE_CONSTRUCTORS["quasse_quadratic"][0], [{
@@ -199,18 +199,68 @@ def validate_registry():
 validate_registry()
 
 
-# Only registered constructors are callable; Python globals and attributes are inaccessible.
-def construct(constructor_name, /, *args, **kwargs):
-    name = constructor_name
+# Bind once and choose a unique interpretation before any invocation. The returned names
+# identify traversed arguments; an empty tuple means direct application. Optional None
+# defaults are absence, not scalar inputs supplied to a vector parameter.
+def bind_call(name, args, kwargs):
     if name not in CONSTRUCTORS:
         if name.endswith('_distribution'):
             raise ValueError("Use a distribution constructor such as normal(mean, sd) directly.")
         raise ValueError(f"Unknown constructor: {name}")
     if ('n' in kwargs and name != 'iid') or 'nr' in kwargs:
         raise ValueError("n/nr no longer specify sampling batches. Use iid(n, distribution) or --runs.")
-    # Script booleans historically allow quoted true/false; domain Python APIs use bool.
-    if name == 'quasse':
-        for key in ('cond_surv', 'cond_spn', 'cond_obs_both_sides'):
-            if key in kwargs:
-                kwargs[key] = flag(kwargs[key])
-    return CONSTRUCTORS[name][0](*args, **kwargs)
+    if 'clamp' in kwargs:
+        raise ValueError("clamp is allowed only on the outer call of a sampling statement.")
+    function, signatures = CONSTRUCTORS[name]
+    python_signature = inspect.signature(function)
+    bound = python_signature.bind(*args, **kwargs)
+    bound.apply_defaults()
+    direct, mapped = [], []
+    for signature in signatures:
+        traversed = []
+        for key, value in bound.arguments.items():
+            if signature[key] == Vector:
+                if value is None and python_signature.parameters[key].default is None:
+                    continue
+                if not isinstance(value, list):
+                    break
+            elif isinstance(value, list):
+                if any(isinstance(item, list) for item in value):
+                    break
+                traversed.append(key)
+        else:
+            if traversed:
+                mapped.append(tuple(traversed))
+            else:
+                direct.append(())
+    candidates = direct or mapped
+    if not candidates:
+        raise ValueError(f"{name}: argument shapes do not match; use a comprehension for nested mapping.")
+    if len(candidates) != 1:
+        raise ValueError(f"{name}: ambiguous argument shapes; use a comprehension.")
+    traversed = candidates[0]
+    if len({len(bound.arguments[key]) for key in traversed}) > 1:
+        raise ValueError(f"{name}: vectorized arguments must have equal lengths; singleton lists are not scalars.")
+    return bound, traversed
+
+
+# The dispatcher owns only shape mapping. Each actual call retains its own value checks;
+# zero mapped calls deliberately do no numerical validation and consume no randomness.
+def construct(constructor_name, /, *args, **kwargs):
+    name = constructor_name
+    bound, traversed = bind_call(name, args, kwargs)
+    function = CONSTRUCTORS[name][0]
+
+    # Quoted script flags are accepted by the language, not by the QuaSSE Python API.
+    def invoke(arguments):
+        arguments = dict(arguments)
+        if name == 'quasse':
+            for key in ('cond_surv', 'cond_spn', 'cond_obs_both_sides'):
+                arguments[key] = flag(arguments[key])
+        return function(**arguments)
+
+    if not traversed:
+        return invoke(bound.arguments)
+    return [invoke({key: value[index] if key in traversed else value
+                    for key, value in bound.arguments.items()})
+            for index in range(len(bound.arguments[traversed[0]]))]
