@@ -84,6 +84,43 @@ class TestDataDump(unittest.TestCase):
                     write_maps(destination, result, names, 'state')
                 self.assertFalse(destination.exists())
 
+    # Trait dispatch must be per tree, with original coordinates after filtering.
+    # Homogeneous tests cannot catch first-tree assumptions or subset renumbering.
+    def test_mixed_tree_exports(self):
+        from phylojunction.data.trait import DiscreteTrait
+        source = ('zero := quasse_constant(0)\nc ~ quasse(zero,zero,"age",1,start_trait=2)\n'
+                  'd := read_tree(string="(A:1,B:1);")[1]\n')
+        for order, continuous_path in (('[[c,d,d]]', '[1][1]'), ('[[d,d,c]]', '[1][3]')):
+            result = compile_model(source + 'trees <- ' + order).execute(2,42)
+            for values in result.values('trees'):
+                discrete = [tree for tree in values[0] if isinstance(tree.trait, DiscreteTrait)]
+                # Copies supply two state spaces without adding another simulation to this test.
+                first, second = copy.deepcopy(discrete[0]), copy.deepcopy(discrete[1])
+                first.trait, second.trait = DiscreteTrait(2), DiscreteTrait(3)
+                first.state_count_dict = {0: 2, 1: 0}
+                second.state_count_dict = {0: 2, 1: 0, 2: 0}
+                positions = [i for i, tree in enumerate(values[0]) if isinstance(tree.trait, DiscreteTrait)]
+                for i, tree in zip(positions, (first, second)):
+                    values[0][i] = tree
+            with tempfile.TemporaryDirectory() as directory:
+                write_results(directory,result,write_nex_states=True)
+                root = Path(directory)
+                stats = pd.read_csv(root / 'trees_stats.csv')
+                continuous = stats['@element'] == continuous_path
+                self.assertTrue(stats.loc[continuous, ['n_0','n_1','n_2']].isna().all().all())
+                self.assertEqual(stats.loc[~continuous, 'n_0'].tolist(), [2,2,2,2])
+                self.assertEqual(stats['n_2'].notna().sum(), 2)
+                traits = pd.read_csv(root / 'trees_traits.tsv', sep='\t')
+                self.assertEqual(set(traits['@element']), {continuous_path})
+                self.assertEqual(set(traits['@execution']), {1,2})
+                self.assertEqual(set(traits['trait']), {2})
+                expected = {f'trees_execution{execution}[1][{index}].nex'
+                            for execution in (1,2) for index in (1,2,3)
+                            if f'[1][{index}]' != continuous_path}
+                self.assertEqual({p.name for p in root.glob('trees*.nex')}, expected)
+                complete = pd.read_csv(root / 'trees_complete.tsv', sep='\t')
+                self.assertEqual(len(complete), 6)
+
     @classmethod
     def setUpClass(cls) -> None:
         #########################

@@ -759,8 +759,10 @@ def prep_data_df(
                             summaries=True,
                             summaries_avg_over_repl=False)
 
-                total_n_states = (node_val[0].trait.states
-                                  if isinstance(node_val[0].trait, DiscreteTrait) else None)
+                # Keep the historical single-state-only schema, but include applicable
+                # state counts in mixed collections. Unassigned cells remain missing.
+                report_state_counts = any(isinstance(tree.trait, ContinuousTrait)
+                                          or tree.trait.states > 1 for tree in node_val)
 
                 # populating tree_summary_df_dict,
                 # iterating over samples and replicates
@@ -788,7 +790,7 @@ def prep_data_df(
                     # for leaves in the different states
                     # NOTE: at the moment, all leaves are counted (in the
                     # future, maybe just the sampled ones)
-                    if total_n_states is not None and total_n_states > 1:
+                    if report_state_counts and isinstance(replicate_tree.trait, DiscreteTrait):
                         for ith_state in range(replicate_tree.trait.states):
                             tree_summary_df_dict[rv_name].at[idx, "n_" + str(ith_state)] = \
                                 replicate_tree.state_count_dict[ith_state]
@@ -887,67 +889,41 @@ def prep_data_df(
                 # Doing dictionaries with tsv and nexus #
                 # strings for states                    #
                 #########################################
-                if isinstance(node_val[0].trait, ContinuousTrait):
-                    # The existing filename-to-text table also carries continuous trait TSVs.
-                    # Keep one row per complete-tree node, including internal and extinct nodes.
-                    rows = []
-                    fossil_rows = []
-                    for idx, tree in enumerate(node_val):
+                # Dispatch on each tree, keeping its original ordinal for every table
+                # and filename. Filtering by trait must never renumber observations.
+                rows = []
+                fossil_rows = []
+                have_continuous = False
+                for idx, tree in enumerate(node_val):
+                    sample_idx, repl_idx = idx // n_repl + 1, idx % n_repl + 1
+                    if isinstance(tree.trait, ContinuousTrait):
+                        have_continuous = True
+                        # Keep one row per complete-tree node, including internal and extinct nodes.
                         for nd in tree.tree.preorder_node_iter():
-                            rows.append((idx // n_repl + 1, idx % n_repl + 1, nd.label,
+                            rows.append((sample_idx, repl_idx, nd.label,
                                          getattr(nd, tree.trait.name), nd.alive, nd.sampled))
                             if nd.is_sa:
-                                fossil_rows.append((idx // n_repl + 1, idx % n_repl + 1, nd.label,
+                                fossil_rows.append((sample_idx, repl_idx, nd.label,
                                                     tree.node_heights_dict[nd.label], tree.node_ages_dict[nd.label],
                                                     getattr(nd, tree.trait.name)))
+                    else:
+                        # State and NEXUS serializers use this tree's state space, not that
+                        # of the first tree. Both living and ancestral state files are retained.
+                        filename = rv_name + "_sample" + str(sample_idx) + "_repl" + str(repl_idx)
+                        living_states, internal_states = tree.get_taxon_states_str()
+                        tree_living_nd_states_str_dict[filename + ".tsv"] = living_states
+                        tree_internal_nd_states_str_dict[filename + "_anc_states.tsv"] = internal_states
+                        if write_nex_states:
+                            tree_living_nd_states_str_nexus_dict[filename + ".nex"] = \
+                                tree.get_taxon_states_str(nexus=True, bit_format=bit_format)
+
+                if have_continuous:
+                    # The existing filename-to-text table also carries continuous trait TSVs.
                     fossils = pd.DataFrame(fossil_rows, columns=["sample", "replicate", "node", "time", "age", "trait"])
                     tree_living_nd_states_str_dict[rv_name + "_fossils.tsv"] = fossils.to_csv(sep="\t", index=False)
                     traits = pd.DataFrame(rows, columns=["sample", "replicate", "node", "trait",
                                                         "alive", "sampled"])
                     tree_living_nd_states_str_dict[rv_name + "_traits.tsv"] = traits.to_csv(sep="\t", index=False)
-                    continue
-
-                sample_idx = 0
-                repl_idx = 0
-                idx = 0
-                for replicate_tree in node_val:
-                    while (sample_idx < sample_size):
-                        while (repl_idx < n_repl):
-                            living_nd_states_tsv_fp = \
-                                rv_name + "_sample" + str(sample_idx + 1) \
-                                + "_repl" + str(repl_idx + 1) + ".tsv"
-                            internal_nd_states_tsv_fp = \
-                                rv_name + "_sample" + str(sample_idx + 1) \
-                                + "_repl" + str(repl_idx + 1) + "_anc_states.tsv"
-                            living_nd_states_str, int_node_states_str = \
-                                node_val[idx].get_taxon_states_str()
-                            tree_living_nd_states_str_dict[living_nd_states_tsv_fp] = \
-                                living_nd_states_str
-                            tree_internal_nd_states_str_dict[internal_nd_states_tsv_fp] = \
-                                int_node_states_str
-
-                            if write_nex_states:
-                                states_nex_fp = rv_name + "_sample" \
-                                    + str(sample_idx + 1) + "_repl" \
-                                    + str(repl_idx + 1) + ".nex"
-                                nexus_str = node_val[idx].get_taxon_states_str(nexus=True, bit_format=bit_format)
-                                tree_living_nd_states_str_nexus_dict[
-                                    states_nex_fp] = nexus_str
-
-                            repl_idx += 1
-                            idx += 1
-
-                        repl_idx = 0
-                        sample_idx += 1
-
-                    # TODO
-                    # while (sample_idx < n_samples):
-                    #     while (repl_idx < n_repl):
-                    #         nex_fp = node_name + "_sample" + str(sample_idx) + "_repl" + str(repl_idx) + ".nex"
-                    #         nexus_str = node_val[idx].get_taxon_states_nexus_str()
-                    #         tree_nexus_str_states_dict[nex_fp] = nexus_str
-                    #         repl_idx += 1
-                    #     sample_idx += 1
 
     # debugging
     # print("\n\nPrinting dataframe for scalars with fixed value:\n")
