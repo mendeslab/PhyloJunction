@@ -46,6 +46,11 @@ class DirectedAcyclicGraph:
                     raise ValueError("clamp must be a literal true/false flag.")
                 clamped = flag(clamp.value.value)
                 expression.keywords.remove(clamp)
+        # Clamping belongs to the entire sampling statement, never to inner constructors.
+        # Reject nested flags even inside empty comprehensions that will not be evaluated.
+        if any(isinstance(item, ast.Call) and any(kw.arg == 'clamp' for kw in item.keywords)
+               for item in ast.walk(expression)):
+            raise ValueError("clamp is allowed only on the outer call of a sampling statement.")
         names = list(dict.fromkeys(variable_names(expression)))
         missing = [name for name in names if name not in self.name_node_dict]
         if missing:
