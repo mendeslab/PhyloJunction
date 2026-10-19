@@ -313,43 +313,51 @@ Load ``examples/compare_files/comparison_multiple_scalar_tree_plated_trs2.csv`` 
 Coverage validation
 ===================
 
-The "Coverage" tab was developed for automating coverage validation, a procedure for verifying the correctness of a model implemented within a Bayesian framework.
-Coverage validation in fact validates multiple things simultaneously: the generating (simulator) and inferential implementations of the model, and any machinery used in inference (e.g., MCMC proposals).
-For the sake of clarity and conciseness, we will assume in this section that we are validating a model's inferential engine, and that all other involved code works as intended.
+Coverage measures how often posterior intervals contain the true parameter used to simulate
+each dataset. Across repeated draws from the prior and model, a 95% posterior interval should
+contain the true value about 95% of the time. Finite samples vary; coverage alone does not prove
+an implementation correct.
 
-The gist of coverage validation is straightforward: the :math:`\alpha` %-HPD over a model parameter produced during Bayesian inference should contain the "true" (i.e., simulated) parameter value approximately :math:`\alpha` % of the time.
-For example, if a stochastic node in the DAG is sampled 100 times (i.e., 100 i.i.d. random variables), then for approximately 95 of those simulations the 95%-HPD interval will contain the true sampled value.
+This example uses exact normal posterior intervals to demonstrate the GUI without an external
+inference program. From the repository root, run:
 
-In order to carry out coverage validation with the GUI, first we must build a model in |pj|.
-Click "File > Read script" and select `examples/coverage_files/r_b_exp.pj <https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/coverage_files/r_b_exp.pj>`_.
-In the loaded model, one hundred independent samples for a parameter :math:`r_b` were assigned to a constant node ``r_b`` named after it.
-These 100 values were drawn from an exponential distribution implemented elsewhere, but could also have been sampled directly in |pj|.
+.. code-block:: bash
 
-In the "Coverage" tab, one can now load a .csv file containing a table with :math:`r_b` 's posterior distribution's mean value, and the lower and upper bounds of an HPD interval.
-(This posterior distribution came from a Bayesian analysis done with a different program.)
-The table headers must be ``posterior_mean``, ``lower_95hpd``, and ``higher_95hpd``.
-Click "Read HPDs .csv (...)", and select `examples/coverage_files/r_b_exp.csv <https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/coverage_files/r_b_exp.csv>`_.
-The table should have been shown in the top middle window.
+    python examples/coverage_files/prepare_normal.py
 
-..  figure:: ../images/pjgui_coverage.png
+The preparation script executes this model 100 times with seed 42 and writes ``normal.csv``
+in the same directory:
+
+.. literalinclude:: ../../../examples/coverage_files/normal.pj
+   :language: text
+
+For this model, the posterior of ``mu`` has mean ``y / 2`` and variance ``1 / 2``.
+The CSV contains its mean and 95% HPD limits for each execution, in execution order.
+
+1. In **Settings**, set **Executions** to 100 and **Random seed** to 42.
+2. Use **File > Read script** to load ``examples/coverage_files/normal.pj``.
+3. In **Coverage**, select ``mu`` under **Non-det. nodes**.
+4. Click **Read HPDs .csv (...)**, load ``examples/coverage_files/normal.csv``, then click **Draw**.
+
+.. figure:: ../images/pjgui_coverage.png
     :figwidth: 100%
     :align: center
 
-    **Figure 5.** |pj|'s GUI "Coverage" tab.
+    **Figure 5.** Exact normal posterior intervals compared with the simulated values of ``mu``.
 
-To inspect coverage, select "r_b" from the top-left menu "Non-det. nodes", and then click on "Draw".
-The x- and y-axes in the plot (the main panel in Fig. 5) show to the true simulated values and the posterior means, respectively.
-Vertical bars denote the 95%-HPDs over :math:`r_b`, with blue bars (95 of them) indicating intervals containing the true value, and red bars (5 of them) not containing it.
-In other words, one can deduce from the graph that coverage for :math:`r_b` was 0.95 (though this is also shown in the top-right panel; Fig. 5); this coverage is adequate and indicative of a correctly implemented model.
+The horizontal axis shows true parameter values; the vertical axis shows posterior means.
+Blue intervals contain the true value and red intervals miss it. The top-right panel gives
+the fraction containing the truth.
 
-In addition to loading a .csv file with pre-calculated posterior distribution summaries, users can also tell |pj| the path of a directory containing MCMC output .log files.
-After loading the same model as before and clicking on "r_b" in the top-left menu, click on "Directory to .log's (...)", and choose `examples/coverage_files/logfiles/`.
-If in the .log files the node being examined were to be named something different from "r_b", users can tell |pj| what to look for by entering the alternative name in "Parameter name in .log".
-For example, one could type "r_b" in "Parameter name in .log" (in this case it is not necessary).
+For your own analysis, supply one CSV row per execution, in the same order, with columns
+``posterior_mean``, ``lower_95hpd``, and ``higher_95hpd``. Select a scalar parameter or a fixed
+vector component such as ``mu[1]``. Each component contributes one value per execution.
+Changing the model, seed, or execution count requires matching posterior summaries.
 
-Now click on "Draw".
-An almost identical plot should have been produced, and coverage is again appropriate (0.94).
-(The difference of 1 in coverage has to do with the behavior of different libraries when computing HPD boundaries.)
+Alternatively, use **Directory to .log's (...)** to compute summaries from posterior samples.
+Supply one tab-separated ``.log`` file per execution, named in execution order (for example,
+``run1.log``, ``run2.log``, …). Set **Parameter name in .log** if its column name differs from
+the selected parameter. The GUI uses all rows; remove burn-in samples before loading the files.
 
 ----------------------------
 Command-line interface (CLI)
