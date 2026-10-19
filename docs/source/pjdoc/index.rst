@@ -241,52 +241,6 @@ one comprehension are not supported. Each statement must occupy one line.
 Ordinary lists must have compatible element types and nesting; integers and reals may mix,
 and inner lists may differ in length. Empty lists are allowed.
 
-RevBayes inference export
-^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The exporter supports Normal, Lognormal, Uniform, Exponential, Gamma and Beta distributions,
-including aliases, vectorization, comprehensions, nested distribution lists and ``iid``.
-Distribution objects remain symbolic Rev objects, preserving dependencies on random parameters.
-Literal lists can produce direct element sampling statements; other collections use sampling
-loops where possible. Unequal inner lengths are allowed when structure is fixed during inference.
-
-``clamp=true`` on the outer call of a sampling statement treats every sampled leaf as observed
-at its simulated value for that execution. It does not clamp to the Boolean value ``true``:
-
-.. code-block:: text
-
-    mu ~ normal(0,1)
-    observations ~ normal([mu,mu],1,clamp=true)
-
-Inner clamping flags are rejected. Comprehension and alias right-hand sides have no clamping
-syntax yet. Distribution objects themselves carry no observation metadata.
-
-Export rejects the untyped literal ``[]``. Typed empty ``iid`` draws can be represented;
-other empty collections without a known Rev element type are rejected. Stochastic dimensions,
-stochastic selection of distributions or subcollections, and stochastic parameterization
-switches are not silently fixed to their simulated values. Unsupported domain functions and
-tree distributions produce explicit export errors. At least one movable numeric stochastic
-value is required for the generated MCMC script.
-
-Output formats
-^^^^^^^^^^^^^^
-
-The CLI ``--output-format`` option and GUI output selector offer:
-
-* ``separate-csv`` — **Separate files (CSV)**, one file per variable. Rows identify the
-  one-based ``@execution`` and nested ``@element`` path.
-* ``combined-csv`` — **Combined (CSV)**, one execution per row with columns such as
-  ``x[1]`` and ``x[2][1]``. Every variable must have the same full shape across executions;
-  otherwise export fails with guidance to use JSON. Empty vectors are preserved as ``[]``.
-* ``json`` — **JSON (MCON)**, a ``.mcon`` file with an MCON 0.2 header and one JSON object
-  per execution. Nested vectors and changing lengths are preserved. Record order identifies
-  the execution, without introducing a synthetic model variable.
-
-Distribution and other model-construction objects are omitted from observation exports.
-Trees are annotated Newick strings in these formats; dedicated tree, trait, fossil and
-stochastic-map files remain available. Existing pickled models from the older value-bearing
-DAG format are not supported. Reload their scripts instead.
-
 ------------------------------
 Graphical user interface (GUI)
 ------------------------------
@@ -305,6 +259,7 @@ Like any modern computer application, |pj|'s GUI exposes its features to users v
 On the main tab ("Model"), one can build a model (DAG) with commands entered in the prompt (Fig. 3, number 1), or by loading a *phylojunction* script or a model from a previous |pj| section.
 The latter can be done by clicking the application's menu (top-left corner of the Desktop on Apple machines), and clicking "File > Read script" or "File > Load model".
 Model building commands can be revisited by going into the menu's "Command log" tab.
+Saved models from the older value-bearing DAG format cannot be loaded; load their PJ scripts instead.
 
 .. warning::
     If mistakes are made when entering a command, |pj| will flash a "Warning produced" message in red, at the bottom of the main window.
@@ -422,8 +377,10 @@ The easiest way to see what is possible with the CLI is to call it on the Termin
 
 The help message should list a series of flags, which we expand on below:
 
+    | ``--runs``: Number of complete model executions (default: 1).
+    | ``--output-format``: ``separate-csv`` (default), ``combined-csv``, or ``json``; see :ref:`output-formats`.
     | ``-d``: Simulated data tables are written to disk.
-    | ``-f``: Plots for the selected DAG nodes (whose names and sample ranges are passed as arguments) are written to disk. The argument for ``-f`` should be passed within single-quotes, e.g., 'birth_rate,trs;1-2,1-10'.
+    | ``-f``: Plots for the selected DAG nodes (whose names and execution ranges are passed as arguments) are written to disk. The argument for ``-f`` should be passed within single-quotes, e.g., 'birth_rate,trs;1-2,1-10'.
     | ``-o``: Directory where to place simulated data tables and figures.
     | ``-p``: Prefix to prepend output files with (e.g., "simulation1")
     | ``-nex``: Certain simulated data is written to disk in NEXUS format.
@@ -431,6 +388,73 @@ The help message should list a series of flags, which we expand on below:
 
 Note that if no argument is passed to ``-o``, data tables written to disk (prompted by ``-d``) will be placed in the directory from which PhyloJunction is called.
 Figures (prompted by ``-f``), in turn, will be placed in a "figures/" sub-directory, next to the data tables. 
+
+.. _output-formats:
+
+--------------
+Exporting data
+--------------
+
+Use ``pjcli model.pj --runs 10 -d -o output`` to save simulated values, or select an output
+format in the GUI before saving data. The CLI ``--output-format`` choices are:
+
+* ``separate-csv`` (default): one CSV per variable, with ``@execution`` and ``@element``
+  identifying the execution and vector element. Both use one-based indices; nested element
+  paths look like ``[2][1]``. Scalars have an empty element path.
+* ``combined-csv``: one execution per row, with columns such as ``x[1]`` and ``x[2][1]``.
+  Each variable must retain its full vector shape across executions. Empty vectors appear
+  as ``[]``.
+* ``json``: a ``samples.mcon`` file with an MCON 0.2 header followed by one JSON object per
+  execution, in execution order. This format preserves nested vectors of changing lengths.
+
+The GUI labels these formats **Separate files (CSV)**, **Combined (CSV)**, and **JSON (MCON)**.
+Exports include simulated and assigned values; distributions and other model-construction objects are omitted.
+Trees appear as annotated Newick strings, with additional files for tree statistics, traits,
+and fossils. Stochastic maps can be saved separately.
+
+-------------------------
+RevBayes inference export
+-------------------------
+
+Export a simulated model to estimate its parameters in RevBayes. Put ``clamp=true`` on the
+outer call of a sampling statement to treat its simulated values as observed data.
+Here ``mu`` is inferred from the observations in each execution:
+
+.. code-block:: text
+
+    mu ~ normal(0,1)
+    observations ~ iid(5, normal(mu,1), clamp=true)
+
+Save this as ``model.pj``. The following Python code writes one Rev script per execution:
+
+.. code-block:: python
+
+    from pathlib import Path
+    from phylojunction.interface.cmdbox.cmd_parse import compile_model
+    from phylojunction.inference.revbayes.rb_inference import dag_obj_to_rev_inference_spec
+
+    results = compile_model(Path("model.pj").read_text()).execute(runs=10, random_seed=42)
+    models, analyses, directories = dag_obj_to_rev_inference_spec(
+        results, str(Path("inference").resolve()), mcmc_chain_length=1000)
+    for directory in directories:
+        Path(directory).mkdir(parents=True, exist_ok=True)
+    for i, (model, analysis) in enumerate(zip(models, analyses), 1):
+        Path(directories[1], f"run{i}.rev").write_text(model + "\n" + analysis + "\n")
+
+Run a script with RevBayes, for example ``rb inference/rev_scripts/run1.rev``.
+Its posterior samples are written to ``inference/inference_results/run1.log``.
+The example uses 1,000 MCMC iterations; choose a suitable run length and assess convergence
+for an actual analysis.
+
+Export supports Normal, Lognormal, Uniform, Exponential, Gamma and Beta distributions,
+including named distributions, vectorization, comprehensions, nested lists, and ``iid``.
+At least one numeric stochastic value must remain unclamped. Tree distributions and other
+unsupported model functions raise export errors.
+
+Place ``clamp=true`` only on the outer sampling call; nested calls, named aliases, and
+comprehension right-hand sides do not accept it. Collection sizes and distribution choices
+must stay fixed during inference. Empty collections without a known Rev element type,
+including literal ``[]``, cannot be exported; zero-length ``iid`` draws are supported.
 
 ---------------------------------
 Sandbox: Bypassing the interfaces
