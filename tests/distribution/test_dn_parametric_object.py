@@ -2,6 +2,9 @@ import sys
 sys.path.extend(["../", "../phylojunction"])
 import unittest
 import math
+import numpy as np
+from unittest.mock import patch
+from phylojunction.distribution.dn_iid import DnIID
 from statistics import mean, stdev
 
 # pj imports
@@ -12,6 +15,29 @@ class TestParametricDns(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.dummy_parent_node_tracker = dict()
+
+    # Existing moment checks do not protect nested shape or bulk sampling. This
+    # contract matters while IID vectors are explicit values rather than executions.
+    def test_iid_draws(self):
+        distribution = dnpar.DnNormal(1, 1, [2.0], [0.5], {})
+        with patch.object(distribution, 'draw_normal', return_value=np.arange(8.0)) as draw:
+            self.assertEqual(DnIID(8, distribution).draw(), list(range(8)))
+            draw.assert_called_once_with(8, 2.0, 0.5)
+        nested = DnIID(3, DnIID(4, distribution)).draw()
+        self.assertEqual([len(row) for row in nested], [4, 4, 4])
+        self.assertEqual(DnIID(3, DnIID(0, distribution)).draw(), [[], [], []])
+        self.assertEqual(DnIID(0, distribution).draw(), [])
+        for n in (-1, 1.5, True):
+            with self.assertRaises(ValueError):
+                DnIID(n, distribution)
+        beta = dnpar.DnBeta(2, 3)
+        with patch('phylojunction.distribution.dn_parametric.beta.rvs',
+                   return_value=np.array([0.25, 0.75])) as draw:
+            self.assertEqual(beta.draw_many(2), [0.25, 0.75])
+            draw.assert_called_once_with(2, 3, size=2)
+        for shapes in ((0, 1), (1, -1), (float('nan'), 1), (1, float('inf'))):
+            with self.assertRaises(ValueError):
+                dnpar.DnBeta(*shapes)
 
     def test_unif(self):
         """Test uniform draws with non-vectorized input."""

@@ -3,7 +3,7 @@ import typing as ty
 import math
 import numpy as np
 import random
-from scipy.stats import expon, lognorm, norm, gamma, uniform  # type: ignore
+from scipy.stats import expon, lognorm, norm, gamma, uniform, beta  # type: ignore
 
 # pj imports
 import phylojunction.pgm.pgm as pgm
@@ -109,6 +109,18 @@ class DnLogNormal(pgm.DistrForSampling):
                  "This is not allowed. Ignoring command..."))
 
         self.parent_node_tracker = parent_node_tracker
+
+    def draw(self):
+        return self.draw_many(1)[0]
+
+    # Use a single bulk random-number call for IID values with fixed parameters.
+    def draw_many(self, count):
+        self.validate_draw_count(count)
+        # Transitional: old batched constructors remain until application migration.
+        # Explicit draws cannot reinterpret their vectorized parameters as one scalar.
+        if len(self.ln_mean_list) != 1 or len(self.ln_sd_list) != 1:
+            raise ValueError("Single-value distributions require scalar parameters.")
+        return self.draw_ln(count, self.ln_mean_list[0], self.ln_sd_list[0], log_space=self.ln_log_space).tolist()
 
     def generate(self) -> ty.List[float]:
         sampled_values: ty.List[float] = list()
@@ -244,6 +256,18 @@ class DnNormal(pgm.DistrForSampling):
         # for inference, we need to keep track of parent node names
         self.parent_node_tracker = parent_node_tracker
 
+    def draw(self):
+        return self.draw_many(1)[0]
+
+    # Use a single bulk random-number call for IID values with fixed parameters.
+    def draw_many(self, count):
+        self.validate_draw_count(count)
+        # Transitional: old batched constructors remain until application migration.
+        # Explicit draws cannot reinterpret their vectorized parameters as one scalar.
+        if len(self.norm_mean_param_list) != 1 or len(self.norm_sd_param_list) != 1:
+            raise ValueError("Single-value distributions require scalar parameters.")
+        return self.draw_normal(count, self.norm_mean_param_list[0], self.norm_sd_param_list[0]).tolist()
+
     def generate(self) -> ty.List[float]:
         sampled_values: ty.List[float] = []
 
@@ -372,6 +396,18 @@ class DnExponential(pgm.DistrForSampling):
 
         # for inference, we need to keep track of parent node names
         self.parent_node_tracker = parent_node_tracker
+
+    def draw(self):
+        return self.draw_many(1)[0]
+
+    # Use a single bulk random-number call for IID values with fixed parameters.
+    def draw_many(self, count):
+        self.validate_draw_count(count)
+        # Transitional: old batched constructors remain until application migration.
+        # Explicit draws cannot reinterpret their vectorized parameters as one scalar.
+        if len(self.exp_scale_or_rate_param_list) != 1:
+            raise ValueError("Single-value distributions require scalar parameters.")
+        return self.draw_exp(count, self.exp_scale_or_rate_param_list[0], self.exp_rate_parameterization).tolist()
 
     def generate(self) -> ty.List[float]:
         sampled_values: ty.List[float] = []
@@ -505,6 +541,18 @@ class DnGamma(pgm.DistrForSampling):
         # for inference, we need to keep track of parent node names
         self.parent_node_tracker = parent_node_tracker
 
+    def draw(self):
+        return self.draw_many(1)[0]
+
+    # Use a single bulk random-number call for IID values with fixed parameters.
+    def draw_many(self, count):
+        self.validate_draw_count(count)
+        # Transitional: old batched constructors remain until application migration.
+        # Explicit draws cannot reinterpret their vectorized parameters as one scalar.
+        if len(self.gamma_shape_param_list) != 1 or len(self.gamma_scale_or_rate_param_list) != 1:
+            raise ValueError("Single-value distributions require scalar parameters.")
+        return self.draw_gamma(count, self.gamma_shape_param_list[0], self.gamma_scale_or_rate_param_list[0], self.gamma_rate_parameterization).tolist()
+
     def generate(self) -> ty.List[float]:
         sampled_values: ty.List[float] = list()
 
@@ -633,6 +681,18 @@ class DnUnif(pgm.DistrForSampling):
 
         # for inference, we need to keep track of parent node names
         self.parent_node_tracker = parent_node_tracker
+
+    def draw(self):
+        return self.draw_many(1)[0]
+
+    # Use a single bulk random-number call for IID values with fixed parameters.
+    def draw_many(self, count):
+        self.validate_draw_count(count)
+        # Transitional: old batched constructors remain until application migration.
+        # Explicit draws cannot reinterpret their vectorized parameters as one scalar.
+        if len(self.min_param_list) != 1 or len(self.max_param_list) != 1:
+            raise ValueError("Single-value distributions require scalar parameters.")
+        return self.draw_unif(count, self.min_param_list[0], self.max_param_list[0]).tolist()
 
     def generate(self) -> ty.List[float]:
         sampled_values: ty.List[ty.Union[float, ty.Any]] = []
@@ -766,6 +826,14 @@ class DnCategorical(pgm.DistrForSampling):
             self.DN_NAME,
             size_to_grow=self.n_samples)
 
+    def draw(self):
+        return self.draw_many(1)[0]
+
+    # Preserve category weights as distribution parameters, not execution dimensions.
+    def draw_many(self, count):
+        self.validate_draw_count(count)
+        return self.draw_categorical(count, self.cats_param_list[0], self.probs_param_list[0])
+
     def generate(self) -> ty.List[float]:
         sampled_values: ty.List[int] = []
 
@@ -807,6 +875,26 @@ class DnCategorical(pgm.DistrForSampling):
 
     def get_rev_inference_spec_info(self) -> ty.List[str]:
         return ""
+
+
+class DnBeta(pgm.DistrForSampling):
+    """Beta distribution with positive shape parameters alpha and beta."""
+
+    DN_NAME = "Beta"
+
+    # Keep distribution parameters, with no execution or replicate counts.
+    def __init__(self, alpha, beta):
+        if not (math.isfinite(alpha) and alpha > 0 and math.isfinite(beta) and beta > 0):
+            raise ValueError("Beta shape parameters must be finite and positive.")
+        self.alpha = alpha
+        self.beta = beta
+
+    def draw(self):
+        return self.draw_many(1)[0]
+
+    def draw_many(self, count):
+        self.validate_draw_count(count)
+        return beta.rvs(self.alpha, self.beta, size=count).tolist()
 
 
 if __name__ == "__main__":

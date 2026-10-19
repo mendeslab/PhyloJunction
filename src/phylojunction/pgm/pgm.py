@@ -3,6 +3,7 @@ from phylojunction.data.trait import DiscreteTrait, ContinuousTrait
 import typing as ty
 import numpy as np
 import random
+from numbers import Integral
 import matplotlib.pyplot as plt  # type: ignore
 import matplotlib.ticker as mticker  # type: ignore
 import statistics as stat  # type: ignore
@@ -195,12 +196,27 @@ class ValueGenerator(ABC):
         pass
 
 
-class DistrForSampling(ValueGenerator):
+class DistrForSampling(ABC):
     """Class for randomly generating (i.e., sampling) values.
 
-    An object of this class is required by stochastic DAG nodes so
-    values can be sampled.
+    A distribution describes one draw. Model execution owns repetition;
+    IID distributions explicitly describe vector-valued draws.
     """
+
+    # Validate transient draw counts independently of any model execution count.
+    @staticmethod
+    def validate_draw_count(count):
+        if isinstance(count, bool) or not isinstance(count, Integral) or count < 0:
+            raise ValueError("The number of draws must be a nonnegative integer.")
+
+    def draw(self):
+        raise NotImplementedError("This distribution does not implement single-value draws yet.")
+
+    # Scalar distributions override this for bulk sampling; tree and nested-vector
+    # distributions repeat whole draws so each tree has independent resource limits.
+    def draw_many(self, count):
+        self.validate_draw_count(count)
+        return [self.draw() for _ in range(count)]
 
     # python3's way of "declaring" an (required) abstract attribute
     @property
