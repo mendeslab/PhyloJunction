@@ -1,10 +1,7 @@
 import unittest
 import re
 from pathlib import Path
-
-EXAMPLES_DIR = Path(__file__).parent.parent.parent / "examples" / "trees_maps_files"
-FILE_PATH1_STR = str(EXAMPLES_DIR / "tree_to_read.tre")
-FILE_PATH2_STR = str(EXAMPLES_DIR / "trees_to_read.tre")
+import tempfile
 
 # pj imports
 import phylojunction.pgm.pgm as pgm
@@ -17,6 +14,19 @@ __email__ = "fmendes@lsu.edu"
 
 
 class TestVarAssignment(unittest.TestCase):
+    # Keep the existing file-reader assertions independent of absent example downloads.
+    # The inputs retain the annotations and branch lengths asserted by those tests.
+    @classmethod
+    def setUpClass(cls):
+        cls.tree_directory = tempfile.TemporaryDirectory()
+        cls.addClassCleanup(cls.tree_directory.cleanup)
+        cls.first_tree = str(Path(cls.tree_directory.name) / "one.tre")
+        cls.two_trees = str(Path(cls.tree_directory.name) / "two.tre")
+        first = "((sp1[&index=1]:1.0,sp2[&index=2]:1.0)[&index=4]:1.0,sp3[&index=3]:2.0)[&index=5];"
+        second = "((sp1[&index=1]:0.1,sp2[&index=2]:0.1)[&index=4]:1.9,sp3[&index=3]:2.0)[&index=5];"
+        Path(cls.first_tree).write_text(first + "\n")
+        Path(cls.two_trees).write_text(first + "\n" + second + "\n")
+
 
     def test_var_assignment(self):
         """
@@ -161,7 +171,7 @@ class TestVarAssignment(unittest.TestCase):
         dag_obj = pgm.DirectedAcyclicGraph()
 
         cmd_line1 = ('tr <- read_tree(file_path=\"' +
-                     FILE_PATH1_STR + '\",'
+                     self.first_tree + '\",'
                      'node_name_attr="index")')
 
         stoch_node_name, _, stoch_node_spec = \
@@ -180,7 +190,7 @@ class TestVarAssignment(unittest.TestCase):
                           '[&index=4],nd3:2.0[&index=3])nd5[&index=5];'))
         
         cmd_line2 = ('tr <- read_tree(file_path=\"' +
-                     FILE_PATH2_STR + '\",'
+                     self.two_trees + '\",'
                      'node_name_attr="index")')
 
         stoch_node_name, _, stoch_node_spec = re.split(cmdu.assign_regex, cmd_line2)
@@ -246,7 +256,7 @@ class TestVarAssignment(unittest.TestCase):
         dag_obj = pgm.DirectedAcyclicGraph()
 
         cmd_line1 = ('tr <- read_tree(nr=13, file_path=\"' +
-                     FILE_PATH1_STR + '\", '
+                     self.first_tree + '\", '
                      'node_name_attr="index")')
 
         stoch_node_name, _, stoch_node_spec = re.split(cmdu.assign_regex, cmd_line1)
@@ -266,7 +276,7 @@ class TestVarAssignment(unittest.TestCase):
                          expected_exception_message1)
         
         cmd_line2 = ('tr <- read_tree(file_path=\"' +
-                     FILE_PATH2_STR + '\", '
+                     self.two_trees + '\", '
                      'node_name_attr="name")')
 
         stoch_node_name, _, stoch_node_spec = re.split(cmdu.assign_regex, cmd_line2)
