@@ -24,8 +24,8 @@ class TestModelActions(unittest.TestCase):
         self.window.parse_cmd_update_gui()
 
     def test_display_controls_redraw_without_sampling(self):
-        self.enter('x ~ iid(2,normal(mean=0, sd=1))')
-        self.enter('y ~ iid(2,normal(mean=0, sd=1))')
+        self.enter('x ~ [normal(mu,1) for mu in [0,1]]')
+        self.enter('y ~ normal([0,1],1)')
         w, u = self.window, self.controls
         dag = w.gui_modeling.dag_obj
         values = list(w.gui_modeling.results.values('x'))

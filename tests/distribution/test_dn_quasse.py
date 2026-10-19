@@ -170,7 +170,10 @@ class TestQuaSSE(unittest.TestCase):
         self.assertEqual([t.seed_age for t in local], [0, 0, 2, 2])
         self.assertEqual([t.brosc_node.trait for t in local], [0, 0, 4, 4])
         self.assertEqual([t.n_extant_sampled_terminal_nodes for t in local], [1, 1, 0, 0])
-        for extra in ('block_duration=[1,2]', 'block_duration=-1', 'block_duration=.5,bridge_error=0',
+        vectorized = dag.append('vectorized ~ quasse(birth_rate=b,death_rate=b,stop="age",'
+                                'stop_value=1,method="local_thinning",block_duration=[1,2])')
+        self.assertEqual([len(value) for value in vectorized.values('vectorized')], [2, 2])
+        for extra in ('block_duration=-1', 'block_duration=.5,bridge_error=0',
                       'block_duration=.5,dt_max=.1'):
             with self.assertRaises((ValueError, TypeError)):
                 dag.append('invalid ~ quasse(birth_rate=b,death_rate=b,stop="age",'

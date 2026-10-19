@@ -24,7 +24,7 @@ class TestDataDump(unittest.TestCase):
     # Legacy dataframe checks do not cover execution/vector boundaries or MCON nesting.
     # Retain these contracts while both tabular and nested execution exports are supported.
     def test_execution_formats(self):
-        results = compile_model('x <- [[1,2],[]]\ny ~ normal(0,1)').execute(2, 42)
+        results = compile_model('x := [row for row in [[1,2],[]]]\ny ~ normal(0,1)').execute(2, 42)
         with tempfile.TemporaryDirectory() as directory:
             write_results(directory, results, output_format='json')
             records = [json.loads(line) for line in (Path(directory) / 'samples.mcon').read_text().splitlines()]
