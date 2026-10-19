@@ -1,5 +1,12 @@
 import unittest
 import io
+import json
+import tempfile
+from pathlib import Path
+import pandas as pd
+from phylojunction.interface.cmdbox.cmd_parse import compile_model
+from phylojunction.readwrite.execution_export import write_results
+from phylojunction.pgm.values import summaries
 
 # pj imports
 import phylojunction.calculation.discrete_sse as sseobj
@@ -12,6 +19,35 @@ __email__ = "fmendes@lsu.edu"
 
 
 class TestDataDump(unittest.TestCase):
+
+    # Legacy dataframe checks do not cover execution/vector boundaries or MCON nesting.
+    # Retain these contracts while both tabular and nested execution exports are supported.
+    def test_execution_formats(self):
+        results = compile_model('x <- [[1,2],[]]\ny ~ normal(0,1)').execute(2, 42)
+        with tempfile.TemporaryDirectory() as directory:
+            write_results(directory, results, output_format='json')
+            records = [json.loads(line) for line in (Path(directory) / 'samples.mcon').read_text().splitlines()]
+            self.assertEqual(records[0]['format'], 'MCON')
+            self.assertEqual(records[0]['version'], '0.2')
+            self.assertEqual(records[1]['x'], [[1, 2], []])
+            self.assertEqual([r['y'] for r in records[1:]], results.values('y'))
+            write_results(directory, results, output_format='combined-csv')
+            frame = pd.read_csv(Path(directory) / 'combined.csv')
+            self.assertEqual(frame.columns.tolist(), ['@execution', 'x[1][1]', 'x[1][2]', 'x[2]', 'y'])
+            self.assertEqual(frame['x[2]'].tolist(), ['[]', '[]'])
+            write_results(directory, results)
+            frame = pd.read_csv(Path(directory) / 'x.csv')
+            self.assertEqual(frame['@element'].tolist(), ['[1][1]', '[1][2]', '[2]'] * 2)
+            self.assertEqual(frame['x'].tolist(), ['1', '2', '[]'] * 2)
+            ragged = compile_model('n ~ categorical([1,2],[1,1])\nx ~ iid(n,normal(0,1))').execute(20,42)
+            with self.assertRaisesRegex(ValueError, 'JSON'):
+                write_results(directory, ragged, output_format='combined-csv')
+            write_results(directory, ragged, output_format='json')
+            records = [json.loads(line) for line in (Path(directory) / 'samples.mcon').read_text().splitlines()]
+            self.assertEqual([r['x'] for r in records[1:]], ragged.values('x'))
+        self.assertEqual(summaries([[1, 100]]), [])
+        self.assertEqual([r['mean'] for r in summaries([[1, 100], [3, 200]])], [2, 150])
+        self.assertEqual(summaries([[1], [2, 3]]), [])
 
     @classmethod
     def setUpClass(cls) -> None:

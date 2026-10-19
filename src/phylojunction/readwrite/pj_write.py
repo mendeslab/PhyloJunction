@@ -171,7 +171,7 @@ def initialize_tree_dataframe(
 
 def prep_trees_rb_smap_dfs(dag_obj: pgm.DirectedAcyclicGraph,
                            tree_dag_node_name_list: ty.List[str],
-                           mapped_attr_name: str) -> \
+                           mapped_attr_name: str, value_records=None) -> \
         ty.Tuple[ty.Dict[str, ty.List[pd.DataFrame]],
                  ty.Dict[str, ty.List[str]]]:
     """Initialize pandas DataFrame's for holding stochastic maps.
@@ -360,7 +360,11 @@ def prep_trees_rb_smap_dfs(dag_obj: pgm.DirectedAcyclicGraph,
     all_tr_nds_df_list_dict: ty.Dict[str, ty.List[pandas.DataFrame]] = dict()
     all_tr_nds_df_content_str_list_dict: ty.Dict[str, ty.List[str]] = dict()
 
-    for node_name, node_dag in dag_obj.name_node_dict.items():
+    # New callers supply values directly; retain this adapter during GUI migration.
+    if value_records is None:
+        value_records = [(name, node.value, node.sample_size, node.repl_size)
+                         for name, node in dag_obj.name_node_dict.items()]
+    for node_name, node_val, n_samples, n_repl in value_records:
         # initializing empty lists as values
         # each item will be a sample from this node
         # and inside those items (which will be either dataframes
@@ -370,14 +374,10 @@ def prep_trees_rb_smap_dfs(dag_obj: pgm.DirectedAcyclicGraph,
 
         if node_name in tree_dag_node_name_list:
             repl_df_content_str_list = list()
-            node_val = node_dag.value
 
             if isinstance(node_val, list) and \
                     isinstance(node_val[0], AnnotatedTree):
-                rv_name = node_dag.node_name
-                node_val = node_dag.value  # list
-                n_samples = node_dag.sample_size
-                n_repl = node_dag.repl_size
+                rv_name = node_name
 
                 assert(len(node_val) == (n_samples * n_repl))
 
@@ -484,7 +484,8 @@ def prep_trees_rb_smap_dfs(dag_obj: pgm.DirectedAcyclicGraph,
 def prep_data_df(
         dag_obj: pgm.DirectedAcyclicGraph,
         write_nex_states: bool = False,
-        bit_format: bool = False) -> \
+        bit_format: bool = False,
+        value_records=None) -> \
         ty.Tuple[ty.List[ty.Union[pd.DataFrame, ty.Dict[int, pd.DataFrame]]],
         ty.List[ty.Dict[str, pd.DataFrame]]]:
     """Return two pandas DataFrame's, with scalar and tree random variables.
@@ -503,8 +504,12 @@ def prep_data_df(
                  strings, another with pandas.DataFrame's
     """
 
-    sample_size = dag_obj.sample_size
-    node_dag_list = dag_obj.get_sorted_node_dag_list()
+    # Transitional input adapter: new execution consumers supply actual values, while
+    # old callers still enumerate value-bearing nodes until their migration is complete.
+    if value_records is None:
+        value_records = [(node.node_name, node.value, node.repl_size,
+                          isinstance(node, pgm.StochasticNodeDAG), node.is_sampled, dag_obj.sample_size)
+                         for node in dag_obj.get_sorted_node_dag_list()]
 
     # tree nodes (one dataframe per different tree node)
 
@@ -554,21 +559,18 @@ def prep_data_df(
     # stats; scalars always have only average and std. dev.
 
     # main loop: nodes!
-    for node_dag in node_dag_list:
-        rv_name = node_dag.node_name
-        node_val = node_dag.value  # list
-        n_repl = node_dag.repl_size
+    for rv_name, node_val, n_repl, is_stochastic, is_sampled, sample_size in value_records:
 
         # if stochastic node is constant and at least one value was indeed
         # saved in list
-        if isinstance(node_dag, pgm.StochasticNodeDAG) and node_val:
+        if is_stochastic and node_val:
             ################################
             # Fixed-value stochastic nodes #
             ################################
 
             # scalar constants (no support for replication via 2D-lists yet)
             if isinstance(node_val[0], (str, int, float, np.float64)) \
-                    and not node_dag.is_sampled:
+                    and not is_sampled:
 
                 if scalar_constant_df.empty:
                     if sample_size == 0:
@@ -596,7 +598,7 @@ def prep_data_df(
             # Scalars #
             ###########
             if isinstance(node_val[0], (str, int, float, np.float64)) \
-                    and node_dag.is_sampled:
+                    and is_sampled:
 
                 ######################################################
                 # DataFrame holding scalar values (replicates if     #

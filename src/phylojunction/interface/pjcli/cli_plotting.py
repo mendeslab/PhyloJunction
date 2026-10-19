@@ -155,3 +155,20 @@ def call_node_plot_cli(
         else:
             # raise ec.PJCLINodeNotInPGM(node_name)
             raise RuntimeError
+
+# Export each requested execution and nested element using explicit, one-based paths.
+def call_results_plot_cli(fig_dir, results, node_range_dict, fig_obj, fig_axes, prefix=''):
+    from pathlib import Path
+    from phylojunction.pgm.values import elements, path_text, plot_values
+    for name, bounds in node_range_dict.items():
+        if name not in results.model.name_node_dict:
+            raise ValueError(f'Unknown model variable: {name}')
+        start = bounds[0] if bounds else 1
+        end = bounds[-1] if bounds else results.n_executions
+        if not 1 <= start <= end <= results.n_executions:
+            raise ValueError('Execution range is out of bounds.')
+        for execution in range(start, end + 1):
+            for path, value in elements(results.value(name, execution - 1)):
+                plot_values(fig_axes, [value])
+                filename = ((prefix + '_') if prefix else '') + f'{name}_execution{execution}{path_text(path)}.png'
+                pjwrite.write_fig_to_file(str(Path(fig_dir) / filename), fig_obj)
