@@ -1,3 +1,5 @@
+from phylojunction.pgm.execution import ExecutionResults
+from phylojunction.pgm.values import elements
 from phylojunction.data.trait import DiscreteTrait
 import dendropy as dp
 import matplotlib
@@ -15,7 +17,7 @@ import phylojunction.distribution.dn_discrete_sse as distsse
 __author__ = "Fabio K. Mendes"
 __email__ = "fmendes@lsu.edu"
 
-def run_example_yule_string() -> pgm.DirectedAcyclicGraph:
+def run_example_yule_string() -> ExecutionResults:
     """Run example 1.
     
     This example sets up a simple Yule model with two samples,
@@ -23,20 +25,19 @@ def run_example_yule_string() -> pgm.DirectedAcyclicGraph:
     """
 
     yule_model_str = \
-        ('n_sim <- 2\nn_rep <- 2\nbirth_rate <- 1.0\n'
-         'start_states <- [0, 0, 0, 0]\n'''
+        ('n_rep <- 2\nbirth_rate <- 1.0\n'
          'det_birth_rate := sse_rate(name="lambda", value=birth_rate,'
          ' event="speciation")\n'
          'stash := sse_stash(flat_rate_mat=[det_birth_rate])\n'
-         'trs ~ discrete_sse(n=n_sim, nr=n_rep, stash=stash, start_state=start_states,'
-         ' stop="size", stop_value=10.0, origin="false")\n')
+         'trs ~ iid(n_rep, discrete_sse(stash=stash, start_state=0,'
+         ' stop="size", stop_value=10.0, origin="false"))\n')
     
-    dag_obj = cmdp.script2dag(yule_model_str, in_pj_file=False)
+    dag_obj = cmdp.script2dag(yule_model_str, in_pj_file=False, runs=2)
 
     return dag_obj
 
 
-def run_example_geosse_file() -> pgm.DirectedAcyclicGraph:
+def run_example_geosse_file() -> ExecutionResults:
     """Run example 2.
     
     This example reads script examples/bisse.pj. The tree
@@ -50,12 +51,11 @@ def run_example_geosse_file() -> pgm.DirectedAcyclicGraph:
     return dag_obj
 
 
-def run_example_manual_incomplete_sampling_bisse() -> pgm.DirectedAcyclicGraph:
+def run_example_manual_incomplete_sampling_bisse() -> list[pjtr.AnnotatedTree]:
     """Run example 3.
 
     This example manually builds a BiSSE distribution with incomplete
-    sampling, assigns it to a stochastic DAG node, and adds the node
-    to a DAG.
+    sampling and draws one tree for each of two starting states.
     """
 
     total_n_states = 2
@@ -142,42 +142,21 @@ def run_example_manual_incomplete_sampling_bisse() -> pgm.DirectedAcyclicGraph:
     ###################################
 
     stop_condition = "age"
-    stop_condition_value = [2.75]  # 2.75 time units
+    stop_condition_value = 2.75  # 2.75 time units
     start_at_origin = True
-    sample_size = 2
     start_states_list = [0, 1]
 
-    dist_obj = distsse.DnSSE(
+    # Draw each explicit parameter scenario; distributions hold no execution count.
+    return [distsse.DnSSE(
         sse_stash,
-        n=sample_size,
         origin=start_at_origin,
-        start_states_list=start_states_list,
+        start_state=state,
         stop=stop_condition,
         stop_value=stop_condition_value,
         epsilon=1e-8,
         runtime_limit=3000,
-        debug=False)
-    
-    #####################
-    # DAG-related setup #
-    #####################
-    
-    dag_obj = pgm.DirectedAcyclicGraph()
+        debug=False).draw() for state in start_states_list]
 
-    a_stoch_node_name = "trs"
-
-    stoch_node_dag = pgm.StochasticNodeDAG(
-        a_stoch_node_name,
-        sample_size=sample_size,
-        replicate_size=1,
-        sampled_from=dist_obj,
-        value=dist_obj.generate(),
-        parent_nodes=None,
-        clamped=False)
-    
-    dag_obj.add_node(stoch_node_dag)
-
-    return dag_obj
 
 
 def run_example_manual_tree_building(ax: matplotlib.pyplot.Axes) -> None:
@@ -399,10 +378,10 @@ def run_example_map_attr(ax: matplotlib.pyplot.Axes) -> None:
     dag_obj = cmdp.script2dag("examples/see_stoch_maps.pj", \
                               in_pj_file=True)
 
-    for node_name, node_dag in dag_obj.name_node_dict.items():
+    for node_name in dag_obj.model.name_node_dict:
         if node_name == "mapped_trs":
             i = 0 # 1
-            ann_tr = node_dag.value[i]
+            ann_tr = dag_obj.value(node_name)[i]
             pjtr.plot_ann_tree(
                 ann_tr,
                 ax,
@@ -491,14 +470,14 @@ if __name__ == "__main__":
         run_example_map_attr(ax)
         matplotlib.pyplot.show()
 
-    # printing to screen
-    if example_to_run in ([1, 2, 3]):
-        for node_name, node_dag in dag_obj.name_node_dict.items():
-            if isinstance(node_dag, pgm.StochasticNodeDAG):
-                if isinstance(node_dag.value[0], pjtr.AnnotatedTree):
-                    print(node_dag.value[0].tree.as_string(schema="newick"))
-                    print(node_dag.get_node_stats_str(0, len(node_dag.value), 0))
-
-                    # if one wants to see cladogenetic attribute transitions
-                    for nd_name, clado_at in node_dag.value[0].clado_at_dict.items():
-                        print(nd_name, "\n", clado_at)
+    # Inspect explicitly selected tree values, including nested IID elements.
+    if example_to_run in (1, 2, 3):
+        values = (dag_obj if example_to_run == 3 else
+                  [value for name in dag_obj.model.name_node_dict for value in dag_obj.values(name)])
+        for _, tree in elements(values):
+            if isinstance(tree, pjtr.AnnotatedTree):
+                print(tree.tree.as_string(schema="newick"))
+                print(tree.get_stats_dict())
+                # If one wants to see cladogenetic attribute transitions:
+                for nd_name, clado_at in tree.clado_at_dict.items():
+                    print(nd_name, "\n", clado_at)

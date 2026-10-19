@@ -19,7 +19,7 @@ class TestParametricDns(unittest.TestCase):
     # Existing moment checks do not protect nested shape or bulk sampling. This
     # contract matters while IID vectors are explicit values rather than executions.
     def test_iid_draws(self):
-        distribution = dnpar.DnNormal(1, 1, [2.0], [0.5], {})
+        distribution = dnpar.DnNormal(2.0, 0.5)
         with patch.object(distribution, 'draw_normal', return_value=np.arange(8.0)) as draw:
             self.assertEqual(DnIID(8, distribution).draw(), list(range(8)))
             draw.assert_called_once_with(8, 2.0, 0.5)
@@ -42,10 +42,7 @@ class TestParametricDns(unittest.TestCase):
     def test_unif(self):
         """Test uniform draws with non-vectorized input."""
 
-        unif_rv = dnpar.DnUnif(100000,
-                               1,
-                               [-1.0],
-                               [1.0]).generate()
+        unif_rv = dnpar.DnUnif(-1.0, 1.0).draw_many((100000) * (1))
         self.assertAlmostEqual(0.0, mean(unif_rv), delta=1e-2)
         self.assertLessEqual(-1.0, min(unif_rv))
         self.assertGreater(1.0, max(unif_rv))
@@ -57,7 +54,7 @@ class TestParametricDns(unittest.TestCase):
         maxs = [1.0, 2.0, 3.0, 4.0, 5.0]
         tups = tuple((i, maxs[idx]) for idx, i in enumerate(mins))
         # unif_rv = dnpar.DnUnif([5, repl_size, mins, maxs]).generate()
-        unif_rv = dnpar.DnUnif(5, repl_size, mins, maxs, self.dummy_parent_node_tracker).generate()
+        unif_rv = [value for lo, hi in zip(mins, maxs) for value in dnpar.DnUnif(lo, hi).draw_many(repl_size)]
 
         for idx, tup in enumerate(tups):
             self.assertTrue(tup[0] <= unif_rv[idx * repl_size] < tup[1])
@@ -67,8 +64,8 @@ class TestParametricDns(unittest.TestCase):
         """Test exponential draws with non-vectorized input"""
         # exp_rv1 = dnpar.DnExponential([100000, 1, 0.5, True]).generate() # rate parameterization (True is default)
         # exp_rv2 = dnpar.DnExponential([100000, 1, 0.5, False]).generate()
-        exp_rv1 = dnpar.DnExponential(100000, 1, 0.5, True, self.dummy_parent_node_tracker).generate() # rate parameterization (True is default)
-        exp_rv2 = dnpar.DnExponential(100000, 1, 0.5, False, self.dummy_parent_node_tracker).generate()
+        exp_rv1 = dnpar.DnExponential(0.5, True).draw_many((100000) * (1)) # rate parameterization (True is default)
+        exp_rv2 = dnpar.DnExponential(0.5, False).draw_many((100000) * (1))
         self.assertAlmostEqual(2.0, mean(exp_rv1), delta=0.05)
         self.assertAlmostEqual(0.5, mean(exp_rv2), delta=0.05)
 
@@ -76,32 +73,24 @@ class TestParametricDns(unittest.TestCase):
         """Test gamma draws with non-vectorized input"""
         # gamma_rv1 = dnpar.DnGamma([100000, 1, [0.5], [0.5], False]).generate() # rate parameterization (False is default)
         # gamma_rv2 = dnpar.DnGamma([100000, 1, [0.5], [0.5], True]).generate() # rate parameterization (False is default)
-        gamma_rv1 = dnpar.DnGamma(100000, 1, [0.5], [0.5], False, self.dummy_parent_node_tracker).generate() # rate parameterization (False is default)
-        gamma_rv2 = dnpar.DnGamma(100000, 1, [0.5], [0.5], True, self.dummy_parent_node_tracker).generate() # rate parameterization (False is default)
+        gamma_rv1 = dnpar.DnGamma(0.5, 0.5, False).draw_many((100000) * (1)) # rate parameterization (False is default)
+        gamma_rv2 = dnpar.DnGamma(0.5, 0.5, True).draw_many((100000) * (1)) # rate parameterization (False is default)
         self.assertAlmostEqual(0.25, mean(gamma_rv1), delta=0.05)
         self.assertAlmostEqual(1.0, mean(gamma_rv2), delta=0.05)
 
     def test_normal(self):
         """Test normal draws with non-vectorized input"""
         # normal_rv = dnpar.DnNormal([100000, 1, [0.5], [0.1]]).generate()
-        normal_rv = dnpar.DnNormal(100000, 1, [0.5], [0.1], self.dummy_parent_node_tracker).generate()
+        normal_rv = dnpar.DnNormal(0.5, 0.1).draw_many((100000) * (1))
         self.assertAlmostEqual(0.5, mean(normal_rv), delta=0.05)
 
     def test_lognormal(self):
         """Test log-normal draws with non-vectorized input."""
 
         # log-space = True, same as R's default
-        lognormal_rv1 = dnpar.DnLogNormal(200000,
-                                          1,
-                                          [-3.25],
-                                          [0.25],
-                                          True).generate()
+        lognormal_rv1 = dnpar.DnLogNormal(-3.25, 0.25, True).draw_many((200000) * (1))
         # real space
-        lognormal_rv2 = dnpar.DnLogNormal(200000,
-                                          1,
-                                          [math.exp(-3.25)],
-                                          [0.25],
-                                          False).generate()
+        lognormal_rv2 = dnpar.DnLogNormal(math.exp(-3.25), 0.25, False).draw_many((200000) * (1))
         self.assertAlmostEqual(0.04, mean(lognormal_rv1), delta=0.01)
         self.assertAlmostEqual(0.04, mean(lognormal_rv2), delta=0.01)
         self.assertAlmostEqual(0.01, stdev(lognormal_rv1), delta=0.01)

@@ -1,5 +1,6 @@
 import unittest
 import io
+import copy
 import json
 import tempfile
 from pathlib import Path
@@ -128,67 +129,30 @@ class TestDataDump(unittest.TestCase):
         start_at_origin = False
         start_states_list = [0 for i in range(n_sim)]
 
-        sse_sim = dnsse.DnSSE(
-            sse_stash,
-            n=n_sim,
-            n_replicates=n_repl,
-            origin=start_at_origin,
-            start_states_list=start_states_list,
-            stop=stop_condition,
-            stop_value=stop_condition_value,
-            condition_on_speciation=True,
-            condition_on_survival=True,
-            epsilon=1e-12,
-            runtime_limit=3600,
-            debug=False
-        )
+        trs = []
+        for execution in range(n_sim):
+            # Give each execution its own scalar parameters; IID repeats only the tree.
+            stash = copy.deepcopy(sse_stash)
+            for matrix in (stash.meh.sse_rate_manager.matrix_state_dep_params,
+                           stash.prob_handler.state_dep_prob_manager.matrix_state_dep_params):
+                for epoch in matrix:
+                    for parameter in epoch:
+                        parameter.value = [parameter.value[execution] if len(parameter.value) > 1
+                                           else parameter.value[0]]
+            distribution = dnsse.DnSSE(stash, origin=start_at_origin, start_state=start_states_list[execution],
+                                       stop=stop_condition, stop_value=stop_condition_value[0],
+                                       condition_on_speciation=True, condition_on_survival=True,
+                                       epsilon=1e-12, runtime_limit=3600, debug=False)
+            trs.extend(distribution.draw_many(n_repl))
 
-        trs = sse_sim.generate()
+        cls.trees = trs
 
-        ####################
-        # Initializing PGM #
-        ####################
-        cls.bisse_pgm = pgm.DirectedAcyclicGraph()
-
-        # rv
-        cls.bisse_pgm.add_node(
-            pgm.StochasticNodeDAG(
-                "l0", n_sim, value=l0, sampled_from="Log-normal"
-            )
-        )
-        cls.bisse_pgm.add_node(
-            pgm.StochasticNodeDAG(
-                "mu0", n_sim, value=mu0, sampled_from="Log-normal"
-            )
-        )
-
-        # deterministic
-        cls.bisse_pgm.add_node(pgm.DeterministicNodeDAG("l0r", value=l0rate))
-        cls.bisse_pgm.add_node(pgm.DeterministicNodeDAG("mu0r", value=mu0rate))
-        cls.bisse_pgm.add_node(pgm.DeterministicNodeDAG("q01r", value=q01rate))
-        cls.bisse_pgm.add_node(pgm.DeterministicNodeDAG("l1r", value=l1rate))
-        cls.bisse_pgm.add_node(pgm.DeterministicNodeDAG("mu1r", value=mu1rate))
-        cls.bisse_pgm.add_node(pgm.DeterministicNodeDAG("q10r", value=q10rate))
-        cls.bisse_pgm.add_node(pgm.DeterministicNodeDAG("meh", value=meh))
-
-        # more rv
-        cls.bisse_pgm.add_node(
-            pgm.StochasticNodeDAG(
-                "trs", n_sim, value=trs, sampled_from="DnSSE",
-                replicate_size=n_repl
-            )
-        )
-
-        # sorted_node_dag_list = bisse_pgm.get_sorted_node_dag_list()
-
-        ###################
-        # Output handling #
-        ###################
-        # populating dataframe to be dumped
-        # data_df_names_list, data_df_list = \
-        #     pjwrite.prep_data_df(sorted_node_dag_list)
+        # Keep the detailed serializer-content checks below, supplying actual values
+        # rather than constructing nodes that conceal execution and IID dimensions.
+        records = [('l0', l0, 1, True, True, n_sim), ('mu0', mu0, 1, True, True, n_sim),
+                   ('trs', trs, n_repl, True, True, n_sim)]
         cls.scalar_output_stash, cls.tree_output_stash = \
-            pjwrite.prep_data_df(cls.bisse_pgm, write_nex_states=True)
+            pjwrite.prep_data_df(records, write_nex_states=True)
 
         cls.output_fp_list, cls.output_df_str_list = \
             pjwrite.prep_data_filepaths_dfs(
@@ -559,8 +523,8 @@ class TestDataDump(unittest.TestCase):
         csvstring_dump_tree_internal_nd_states_str_dict_list = \
             csvstring_dump_tree_internal_nd_states_str_dict.split("\n")
 
-        trs_node = self.bisse_pgm.get_node_dag_by_name("trs")
-        last_rec_tr = trs_node.value[9].tree_reconstructed
+        trees = self.trees
+        last_rec_tr = trees[9].tree_reconstructed
         last_rec_tr_seed_node_label = last_rec_tr.seed_node.label
 
         # debugging

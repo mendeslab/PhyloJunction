@@ -10,71 +10,13 @@ from phylojunction.distribution.dn_quasse import DnQuaSSE
 from phylojunction.interface.grammar.det_fn_quasse_makers import RATE_CONSTRUCTORS
 
 
-# Scalar arguments must not silently broadcast vectors or accept boolean values.
+# Domain factories share the scalar/flag validation used by distribution constructors.
 def scalar(value):
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
-        raise ValueError("Expected a finite numeric scalar.")
-    return value
+    return dn.finite(value, 'parameter')
 
 
-# Retain documented string flags as well as boolean literals during script migration.
 def flag(value):
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str) and value.lower() in ('true', 'false', 't', 'f'):
-        return value.lower() in ('true', 't')
-    raise ValueError("Expected true or false.")
-
-
-# These constructors temporarily pass singleton parameters to the old Python API.
-# Remove that conversion when legacy distribution consumers have been migrated.
-def normal(mean, sd):
-    mean, sd = scalar(mean), scalar(sd)
-    if sd <= 0:
-        raise ValueError("Normal sd must be positive.")
-    return dn.DnNormal(1, 1, [mean], [sd], None)
-
-
-# Log-space controls the interpretation of the location, retaining existing semantics.
-def lognormal(meanlog, sdlog, log_space=True):
-    meanlog, sdlog = scalar(meanlog), scalar(sdlog)
-    log_space = flag(log_space)
-    if sdlog <= 0 or (not log_space and meanlog <= 0):
-        raise ValueError("Lognormal sdlog and natural-space scale must be positive.")
-    return dn.DnLogNormal(1, 1, [meanlog], [sdlog], log_space)
-
-
-# Keep the existing rate/scale switch; the distribution performs the conversion.
-def exponential(rate, rate_parameterization=True):
-    rate = scalar(rate)
-    if rate <= 0:
-        raise ValueError("Exponential rate or scale must be positive.")
-    return dn.DnExponential(1, 1, [rate], flag(rate_parameterization))
-
-
-# Gamma uses scale by default, matching the existing constructor.
-def gamma(shape, scale, rate_parameterization=False):
-    shape, scale = scalar(shape), scalar(scale)
-    if shape <= 0 or scale <= 0:
-        raise ValueError("Gamma shape and scale/rate must be positive.")
-    return dn.DnGamma(1, 1, [shape], [scale], flag(rate_parameterization))
-
-
-# Uniform bounds define one distribution, not a vector of parameter settings.
-def unif(min, max):
-    min, max = scalar(min), scalar(max)
-    if min >= max:
-        raise ValueError("Uniform min must be less than max.")
-    return dn.DnUnif(1, 1, [min], [max])
-
-
-# Category vectors are mathematical parameters, unlike the removed batch dimensions.
-def categorical(cats, probs):
-    if not isinstance(cats, list) or not isinstance(probs, list) or not cats or len(cats) != len(probs):
-        raise ValueError("Categories and probabilities must be nonempty vectors of equal length.")
-    if any(scalar(p) < 0 for p in probs) or sum(probs) <= 0:
-        raise ValueError("Category weights must be nonnegative with a positive sum.")
-    return dn.DnCategorical(1, 1, [cats], [probs])
+    return dn.boolean(value)
 
 
 # Integer controls are distinct from real parameters; do not silently round them.
@@ -135,8 +77,8 @@ def discrete_sse(stash, stop, stop_value, start_state=0, origin=True, cond_spn=F
                  cond_surv=True, cond_obs_both_sides=False, min_rec_taxa=0,
                  max_rec_taxa=int(1e12), abort_at_alive_count=int(1e12), eps=1e-12,
                  runtime_limit=300, max_n_attempts=200):
-    return DnSSE(stash, origin=flag(origin), start_states_list=[integer(start_state)],
-                 stop=stop, stop_value=[scalar(stop_value)], condition_on_speciation=flag(cond_spn),
+    return DnSSE(stash, origin=flag(origin), start_state=integer(start_state),
+                 stop=stop, stop_value=scalar(stop_value), condition_on_speciation=flag(cond_spn),
                  condition_on_survival=flag(cond_surv),
                  condition_on_obs_both_sides_root=flag(cond_obs_both_sides),
                  min_rec_taxa=integer(min_rec_taxa), max_rec_taxa=integer(max_rec_taxa),
@@ -148,14 +90,14 @@ def discrete_sse(stash, stop, stop_value, start_state=0, origin=True, cond_spn=F
 def read_tree(file_path=None, string=None, node_name_attr='', epoch_age_ends=None):
     if (file_path is None) == (string is None):
         raise ValueError("Specify exactly one of file_path or string.")
-    return CtFnTreeReader(1, 1, file_path if file_path is not None else string,
+    return CtFnTreeReader(file_path if file_path is not None else string,
                           node_name_attr, file_path is not None,
                           [] if epoch_age_ends is None else epoch_age_ends).generate()
 
 
 CONSTRUCTORS = {
-    'normal': normal, 'lognormal': lognormal, 'exponential': exponential,
-    'gamma': gamma, 'unif': unif, 'categorical': categorical,
+    'normal': dn.DnNormal, 'lognormal': dn.DnLogNormal, 'exponential': dn.DnExponential,
+    'gamma': dn.DnGamma, 'unif': dn.DnUnif, 'categorical': dn.DnCategorical,
     'beta': dn.DnBeta, 'iid': DnIID, 'quasse': DnQuaSSE,
     'sse_rate': sse_rate, 'sse_prob': sse_prob, 'sse_stash': sse_stash,
     'discrete_sse': discrete_sse, 'read_tree': read_tree, 'map_attr': map_attr,
@@ -172,4 +114,9 @@ def construct(constructor_name, /, *args, **kwargs):
         raise ValueError(f"Unknown constructor: {name}")
     if ('n' in kwargs and name != 'iid') or 'nr' in kwargs:
         raise ValueError("n/nr no longer specify sampling batches. Use iid(n, distribution) or --runs.")
+    # Script booleans historically allow quoted true/false; domain Python APIs use bool.
+    if name == 'quasse':
+        for key in ('cond_surv', 'cond_spn', 'cond_obs_both_sides'):
+            if key in kwargs:
+                kwargs[key] = flag(kwargs[key])
     return CONSTRUCTORS[name](*args, **kwargs)

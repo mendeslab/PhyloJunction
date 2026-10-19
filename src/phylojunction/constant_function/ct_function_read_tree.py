@@ -19,9 +19,6 @@ class CtFnTreeReader(pgm.ConstantFn):
 
     CT_FN_NAME = "read_tree"
 
-    # both defaults to 1 in make_tree_reader()
-    n_samples: int
-    n_repl: int
     node_name_attr: str
     slice_age_ends: ty.List[float]
     slice_t_ends: ty.List[float]
@@ -32,21 +29,18 @@ class CtFnTreeReader(pgm.ConstantFn):
 
     # validation of pars happens in phylojunction_grammar
     def __init__(self,
-                 n_samples: int,
-                 n_repl: int,
                  tr_fp_or_str: str,
                  node_name_attr: str,
                  in_file: bool,
                  list_time_slice_age_ends: ty.Optional[ty.List[float]] = None) -> None:
 
-        self.n_samples = n_samples
-        self.n_repl = n_repl
         self.node_name_attr = node_name_attr
         self.in_file = in_file
 
         self.slice_t_ends = None
         self.slice_age_ends = list_time_slice_age_ends
 
+        list_time_slice_age_ends = [] if list_time_slice_age_ends is None else list(list_time_slice_age_ends)
         if len(list_time_slice_age_ends) in (0, 1):
             # if 1 epoch is provided throw away last epoch end
             self.slice_age_ends = None
@@ -66,31 +60,6 @@ class CtFnTreeReader(pgm.ConstantFn):
              self.tr_str_list = [tr_fp_or_str]
 
         self.total_tr_count = len(self.tr_str_list)
-
-        # if n_samples and n_repl are not provided, but there is more
-        # than one tree, we update self.n_samples, and assume trees are
-        # not replicates, but different simulations (samples)
-        if self.n_samples == 1 and self.n_repl == 1 and \
-                self.total_tr_count > 1:
-            self.n_samples = self.total_tr_count
-
-        self.init_check_vectorize_sample_size()
-
-    def init_check_vectorize_sample_size(self) -> None:
-        """Check provided tree strings and count members match"""
-
-        arg: str = "string" 
-        if self.in_file:
-            arg = "file_path"
-
-        if (self.n_samples != 1 or self.n_repl != 1) and \
-            (self.n_samples * self.n_repl) != self.total_tr_count:
-                raise ec.ObjInitIncorrectDimensionError(
-                        "CtFnTreeReader",
-                        arg,
-                        self.total_tr_count,
-                        exp_len=self.n_samples * self.n_repl
-                    )
 
     def _update_ann_trs_time_slice_ends(self,
                                         generated_values:
@@ -184,34 +153,5 @@ if __name__ == "__main__":
     #
     # $ python3 -m phylojunction.constant_function.ct_function_read_tree
 
-    n_samples = 1
-    n_repl = 1
-
-    tr1 = CtFnTreeReader(1, 1, "((A:1.0,B:1.0):1.0,C:2.0);", False)
-    
-    try:
-        tr_error1 = CtFnTreeReader(1, 2, "((A:1.0,B:1.0):1.0,C:2.0);", False)
-    except Exception as e:
-        print(e)
-
-    try:
-        tr_error2 = CtFnTreeReader(2, 1, "((A:1.0,B:1.0):1.0,C:2.0);", False)
-    except Exception as e:
-        print(e)
-    
-    tr2 = CtFnTreeReader(1, 1, "examples/trees_maps_files/tree_to_read.tre", True)
-    tr3 = CtFnTreeReader(1, 1, "examples/trees_maps_files/trees_to_read.tre", True)
-    
-    try:
-        tr_error3 = CtFnTreeReader(1, 3, "examples/trees_maps_files/trees_to_read.tre", True)
-    except Exception as e:
-        print(e)
-
-    try:
-        tr_error4 = CtFnTreeReader(3, 1, "examples/trees_maps_files/trees_to_read.tre", True)
-    except Exception as e:
-        print(e)
-
-    print(tr1.generate())
-    print(tr2.generate())
-    print(tr3.generate())
+    trees = CtFnTreeReader("((A:1.0,B:1.0):1.0,C:2.0);", "", False).generate()
+    print(trees[0])

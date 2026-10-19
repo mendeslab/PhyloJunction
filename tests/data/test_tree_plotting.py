@@ -1539,7 +1539,7 @@ class TestReconstructedTreePrint(unittest.TestCase):
         """
 
         read_smap_str = \
-            ('trs <- read_tree(n=1, file_path=\"' +
+            ('trs <- read_tree(file_path=\"' +
              TR_FILE_PATH_STR + '\",'
              'node_name_attr="index")\n'
              'mapped_trs := map_attr(tree=trs, fun="smap", '
@@ -1562,10 +1562,10 @@ class TestReconstructedTreePrint(unittest.TestCase):
         ax.spines['right'].set_visible(False)
         ax.spines['top'].set_visible(False)
 
-        for node_name, node_dag in dag_obj.name_node_dict.items():
+        for node_name in dag_obj.model.name_node_dict:
             if node_name == "mapped_trs":
                 i = 0  # 1
-                ann_tr = node_dag.value[i]
+                ann_tr = dag_obj.value(node_name)[i]
 
                 x_coords, y_coords = \
                     pjtr.plot_ann_tree(ann_tr,

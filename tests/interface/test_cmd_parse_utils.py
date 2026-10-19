@@ -1,11 +1,11 @@
 import unittest
+import ast
 import random
 import numpy as np
 from phylojunction.interface.cmdbox.cmd_parse import compile_model
 from phylojunction.interface.cmdbox import expressions
 
 # pj imports
-import phylojunction.interface.cmdbox.cmd_parse_utils as cmdu
 
 __author__ = "Fabio K. Mendes"
 __email__ = "fmendes@lsu.edu"
@@ -28,18 +28,18 @@ class TestCommandParseUtils(unittest.TestCase):
         cmd_line2 = "a := sse_rate(" + fn_spec2 + ")" 
         cmd_line3 = "a := sse_rate(" + fn_spec3 + ")"     
         
-        token_dict1 = cmdu.tokenize_fn_spec(fn_spec1, cmd_line1)
-        token_dict2 = cmdu.tokenize_fn_spec(fn_spec2, cmd_line2)
-        token_dict3 = cmdu.tokenize_fn_spec(fn_spec3, cmd_line3)
+        token_dict1 = {kw.arg: ast.literal_eval(kw.value) for kw in expressions.parse_expression('sse_rate(' + fn_spec1 + ')').keywords}
+        token_dict2 = {kw.arg: ast.literal_eval(kw.value) for kw in expressions.parse_expression('sse_rate(' + fn_spec2 + ')').keywords}
+        token_dict3 = {kw.arg: ast.literal_eval(kw.value) for kw in expressions.parse_expression('sse_rate(' + fn_spec3 + ')').keywords}
 
         for k, v in self.tokenizer_exp_dict.items():
-            self.assertEqual(v, token_dict1[k])
+            self.assertEqual(ast.literal_eval(v), token_dict1[k])
 
         for k, v in self.tokenizer_exp_dict.items():
-            self.assertEqual(v, token_dict2[k])
+            self.assertEqual(ast.literal_eval(v), token_dict2[k])
 
         for k, v in self.tokenizer_exp_dict.items():
-            self.assertEqual(v, token_dict3[k])
+            self.assertEqual(ast.literal_eval(v), token_dict3[k])
 
     # The old flat-token tests cannot protect nested syntax or dependency discovery.
     # Keep this while expressions are shared by compilation and constructor dispatch.
@@ -49,8 +49,9 @@ class TestCommandParseUtils(unittest.TestCase):
         for source in ('x.real', '__import__("os").system("pwd")', '[x for x in y]', 'x[1:2]'):
             with self.assertRaises(ValueError):
                 expressions.parse_expression(source)
-        self.assertEqual(cmdu.tokenize_fn_spec('name="a b", value=[1, 2]', ''),
-                         {'name': '"a b"', 'value': '[1,2]'})
+        call = expressions.parse_expression('f(name="a b", value=[1, 2])')
+        self.assertEqual({kw.arg: ast.literal_eval(kw.value) for kw in call.keywords},
+                         {'name': 'a b', 'value': [1, 2]})
 
     # Legacy batch tests do not exercise shared definitions or transactional additions.
     # These invariants remain necessary while executions and IID values are distinct.
@@ -67,7 +68,7 @@ class TestCommandParseUtils(unittest.TestCase):
         self.assertEqual(other.values('z'), [5, 5, 5])
         self.assertEqual(other.values('y'), result.values('y'))
         self.assertNotIn('z', result.model.name_node_dict)
-        self.assertIsNone(result.model.name_node_dict['x'].value)
+        self.assertFalse(hasattr(result.model.name_node_dict['x'], 'value'))
         model.add_definition('extra <- 0')
         self.assertNotIn('extra', result.model.name_node_dict)
         for source in ('v := x[0]', 'v := x[4]', 'v := x[1.0]', 'v := x[true]', 'v ~ 2'):

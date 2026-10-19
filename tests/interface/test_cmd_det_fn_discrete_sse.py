@@ -24,14 +24,12 @@ class TestDetFnDiscreteSSEErrors(unittest.TestCase):
              "stash := sse_stash(flat_rate_mat=[l0ratet1, l0ratet2, l0ratet3], n_states=1, n_epochs=2, "
              "seed_age=3.0, epoch_age_ends=[1.2, 0.7])")
 
-        with self.assertRaises(ec.ParseDetFnInitFailError) as exc:
+        with self.assertRaises(ValueError) as exc:
             dag_obj = cmd.script2dag(yule_timehet_invalid_epoch, in_pj_file=False)
 
         self.assertEqual(
             str(exc.exception),
-            ("Deterministic output from 'sse_stash' could not be instantiated. "
-             "Incorrect dimension of container epoch_age_ends, which was of size 2. "
-             "The expected dimension was 1."))
+            "epoch_age_ends must contain n_epochs - 1 ages.")
         
     def test_rate_epoch_index_zero(self):
         """
@@ -45,13 +43,12 @@ class TestDetFnDiscreteSSEErrors(unittest.TestCase):
              "stash := sse_stash(flat_rate_mat=[l0ratet1, l0ratet2], n_states=1, n_epochs=2, "
              "seed_age=3.0, epoch_age_ends=[0.7])")
 
-        with self.assertRaises(ec.ParseRequirePositiveIntegerError) as exc:
+        with self.assertRaises(ValueError) as exc:
             dag_obj = cmd.script2dag(yule_zero_index, in_pj_file=False)
 
         self.assertEqual(
             str(exc.exception),
-            ("When specifying object sse_rate's parameter 'epoch', something other than a positive "
-             "integer was provided. A positive integer is required."))
+            "Expected an integer at least 1.")
 
 if __name__ == "__main__":
     # Assuming you opened the PhyloJunction/ (repo root) folder

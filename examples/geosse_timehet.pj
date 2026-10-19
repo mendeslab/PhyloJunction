@@ -1,3 +1,4 @@
+# Run the complete model with pjcli --runs 2 (or set Executions in Settings).
 # constant-node variable ('w_birth_rate0_t0') assignment
 # first epoch (old)
 # state 0
@@ -77,4 +78,4 @@ stash := sse_stash(flat_rate_mat=[det_w_birth_rate0_t0, det_death_rate0_t0, det_
 
 # stochastic-node variable ('trs') assignment
 ori <- 2.0
-trs ~ discrete_sse(n=2, nr=2, stash=stash, start_state=[0,0], stop="age", stop_value=2.0, origin="true")
+trs ~ iid(2, discrete_sse(stash=stash, start_state=0, stop='age', stop_value=2.0, origin='true'))

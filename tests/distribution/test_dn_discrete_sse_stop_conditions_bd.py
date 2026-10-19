@@ -48,28 +48,27 @@ class TestSSEStopConditionsBD(unittest.TestCase):
                 for stop, value in [("age", 10.0), ("size", 3)]:
                     with self.subTest(origin=origin, survival=survival, stop=stop):
                         sim = distsse.DnSSE(
-                            self.sse_stash, origin=origin, start_states_list=[0],
-                            stop=stop, stop_value=[value], condition_on_survival=survival)
+                            self.sse_stash, origin=origin, start_state=0,
+                            stop=stop, stop_value=value, condition_on_survival=survival)
                         self.assertFalse(sim._is_tr_ok(SimpleNamespace(tree_invalid=True), value))
         sim = distsse.DnSSE(
-            self.sse_stash, origin=True, start_states_list=[0], stop="age", stop_value=[10.0],
-            abort_at_alive_count=3, max_n_failed_attempts=0, rng_seed=123)
+            self.sse_stash, origin=True, start_state=0, stop="age", stop_value=10.0,
+            abort_at_alive_count=3, max_n_failed_attempts=0)
         self.sse_stash.get_meh().sse_rate_manager.matrix_state_dep_params[0][1].value = [0.0]
         with self.assertRaises(ec.MaxNFailedAttemptsLimit):
-            sim.generate()
+            sim.draw_many(1)
 
     # Unsupported observation models must fail before size simulation; existing tests
     # use default complete sampling. Remove when size stopping implements incomplete sampling.
     def test_size_requires_complete_sampling(self):
         probabilities = self.sse_stash.get_prob_handler().state_dep_prob_manager.matrix_state_dep_params
-        for values in [[0.0], [0.5], [1.0], [1.0, 0.5]]:
-            for stop in ["age", "size"]:
-                with self.subTest(values=values, stop=stop):
-                    probabilities[0][0].value = list(values)
-                    kwargs = dict(n=len(values), origin=True, start_states_list=[0],
-                                  stop=stop, stop_value=[3.0])
-                    if stop == "size" and any(value != 1.0 for value in values):
-                        with self.assertRaisesRegex(ec.ObjInitInvalidArgError, "complete sampling"):
+        for value in (0.0, 0.5, 1.0):
+            for stop in ('age', 'size'):
+                with self.subTest(value=value, stop=stop):
+                    probabilities[0][0].value = [value]
+                    kwargs = dict(origin=True, start_state=0, stop=stop, stop_value=3.0)
+                    if stop == 'size' and value != 1:
+                        with self.assertRaisesRegex(ec.ObjInitInvalidArgError, 'complete sampling'):
                             distsse.DnSSE(self.sse_stash, **kwargs)
                     else:
                         distsse.DnSSE(self.sse_stash, **kwargs)
@@ -88,10 +87,10 @@ class TestSSEStopConditionsBD(unittest.TestCase):
                     seed_age_for_time_slicing=2.0,
                     list_time_slice_age_ends=[1.0] if epochs else None)
                 stash = sseobj.SSEStash(sseobj.MacroevolEventHandler(manager))
-                sim = distsse.DnSSE(stash, origin=True, start_states_list=[0],
-                                   stop="age", stop_value=[2.0], condition_on_survival=False)
+                sim = distsse.DnSSE(stash, origin=True, start_state=0,
+                                   stop="age", stop_value=2.0, condition_on_survival=False)
                 with patch.object(distsse.dnpar.DnExponential, "draw_exp", return_value=[0.25]) as draw:
-                    tree = sim.generate()[0]
+                    tree = sim.draw_many(1)[0]
                 self.assertEqual(draw.call_count, 2 if epochs else 1)
                 self.assertEqual(tree.tree_died, epochs)
                 self.assertAlmostEqual(tree.origin_age, 1.25 if epochs else 2.0)
@@ -100,14 +99,14 @@ class TestSSEStopConditionsBD(unittest.TestCase):
         stash = sseobj.SSEStash(sseobj.MacroevolEventHandler(manager))
         for origin in [False, True]:
             with self.subTest(origin=origin):
-                sim = distsse.DnSSE(stash, origin=origin, start_states_list=[1],
-                                   stop="age", stop_value=[2.0])
-                tree = sim.generate()[0]
+                sim = distsse.DnSSE(stash, origin=origin, start_state=1,
+                                   stop="age", stop_value=2.0)
+                tree = sim.draw_many(1)[0]
                 self.assertEqual(tree.n_extant_sampled_terminal_nodes, 1 if origin else 2)
                 self.assertAlmostEqual(tree.origin_age if origin else tree.root_age, 2.0)
-        sim = distsse.DnSSE(stash, origin=True, start_states_list=[0], stop="size", stop_value=[3])
+        sim = distsse.DnSSE(stash, origin=True, start_state=0, stop="size", stop_value=3)
         with self.assertRaisesRegex(ec.GenerateFailError, "total event rate is zero"):
-            sim.generate()
+            sim.draw_many(1)
 
     def test_tree_size_stop_condition_origin(self):
         """
@@ -126,19 +125,19 @@ class TestSSEStopConditionsBD(unittest.TestCase):
         # seeds_list = [i+1 for i in range(n_sim)]
     
         # simulations
-        dnsse = distsse.DnSSE(
-            self.sse_stash,
-            n=n_sim,
-            origin=start_at_origin,
-            stop=stop_condition,
-            stop_value=stop_condition_value,
-            start_states_list=start_states_list,
-            condition_on_survival=True,
-            epsilon=1e-12)
         
         print(("\n\nRunning TestSSEStopConditionsBD.test_tree_size_stop_"
                "condition_origin"))
-        trs = dnsse.generate()
+        # Exercise each original stopping threshold explicitly.
+        trs = [distsse.DnSSE(
+            self.sse_stash,
+            
+            origin=start_at_origin,
+            stop=stop_condition,
+            stop_value=stop_value,
+            start_state=(start_states_list)[0],
+            condition_on_survival=True,
+            epsilon=1e-12).draw() for stop_value in stop_condition_value]
 
         tr_sizes = [ann_tr.n_extant_terminal_nodes for ann_tr in trs]
 
@@ -161,19 +160,19 @@ class TestSSEStopConditionsBD(unittest.TestCase):
         start_states_list = [0 for i in range(n_sim)]
     
         # simulations
-        dnsse = distsse.DnSSE(
-            self.sse_stash,
-            n=n_sim,
-            origin=start_at_origin,
-            start_states_list=start_states_list,
-            stop=stop_condition,
-            stop_value=stop_condition_value,
-            condition_on_survival=True,
-            epsilon=1e-12)
 
         print(("\n\nRunning TestSSEStopConditionsBD.test_tree_size_stop_"
                "condition_root"))
-        trs = dnsse.generate()
+        # Exercise each original stopping threshold explicitly.
+        trs = [distsse.DnSSE(
+            self.sse_stash,
+            
+            origin=start_at_origin,
+            start_state=(start_states_list)[0],
+            stop=stop_condition,
+            stop_value=stop_value,
+            condition_on_survival=True,
+            epsilon=1e-12).draw() for stop_value in stop_condition_value]
 
         tr_sizes = [ann_tr.n_extant_terminal_nodes for ann_tr in trs]
 
@@ -197,19 +196,19 @@ class TestSSEStopConditionsBD(unittest.TestCase):
         start_states_list = [0 for i in range(n_sim)]
     
         # simulations
-        dnsse = distsse.DnSSE(
-            self.sse_stash,
-            n=n_sim,
-            origin=start_at_origin,
-            start_states_list=start_states_list,
-            stop=stop_condition,
-            stop_value=stop_condition_value,
-            condition_on_survival=True,
-            epsilon=1e-12)
         
         print(("\n\nRunning TestSSEStopConditionsBD.test_tree_height_stop_"
                "condition_origin"))
-        trs = dnsse.generate()
+        # Exercise each original stopping threshold explicitly.
+        trs = [distsse.DnSSE(
+            self.sse_stash,
+            
+            origin=start_at_origin,
+            start_state=(start_states_list)[0],
+            stop=stop_condition,
+            stop_value=stop_value,
+            condition_on_survival=True,
+            epsilon=1e-12).draw() for stop_value in stop_condition_value]
 
         tr_sizes = [ann_tr.origin_age for ann_tr in trs]
 
@@ -239,19 +238,19 @@ class TestSSEStopConditionsBD(unittest.TestCase):
         # seeds_list = [i+1 for i in range(n_sim)]
     
         # simulations
-        dnsse = distsse.DnSSE(
-            self.sse_stash,
-            n=n_sim,
-            origin=start_at_origin,
-            start_states_list=start_states_list,
-            stop=stop_condition,
-            stop_value=stop_condition_value,
-            condition_on_survival=True,
-            epsilon=1e-12)
         
         print(("\n\nRunning TestSSEStopConditionsBD.test_tree_height_stop_"
                "condition_root"))
-        trs = dnsse.generate()
+        # Exercise each original stopping threshold explicitly.
+        trs = [distsse.DnSSE(
+            self.sse_stash,
+            
+            origin=start_at_origin,
+            start_state=(start_states_list)[0],
+            stop=stop_condition,
+            stop_value=stop_value,
+            condition_on_survival=True,
+            epsilon=1e-12).draw() for stop_value in stop_condition_value]
 
         tr_sizes = [ann_tr.root_age for ann_tr in trs]
 
@@ -276,7 +275,7 @@ class TestSSEStopConditionsBD(unittest.TestCase):
         start_states_list = [0 for i in range(n_sim)]
 
         stop_condition = "size"
-        stop_condition_value = [1, -1]
+        stop_condition_value = -1
         start_at_origin = True
 
         print(("\n\nRunning TestSSEStopConditionsBD.test_invalid_stop_"
@@ -286,9 +285,9 @@ class TestSSEStopConditionsBD(unittest.TestCase):
         with self.assertRaises(ec.ObjInitInvalidArgError) as exc:
             distsse.DnSSE(
                 self.sse_stash,
-                n=n_sim,
+                
                 origin=start_at_origin,
-                start_states_list=start_states_list,
+                start_state=(start_states_list)[0],
                 stop=stop_condition,
                 stop_value=stop_condition_value,
                 condition_on_survival=True,
@@ -302,13 +301,13 @@ class TestSSEStopConditionsBD(unittest.TestCase):
 
         # (2) Number of terminal nodes being a float that cannot be
         # converted to integer
-        stop_condition_value = [0.5, 2]
+        stop_condition_value = 0.5
         with self.assertRaises(ec.ObjInitInvalidArgError) as exc:
             distsse.DnSSE(
                 self.sse_stash,
-                n=n_sim,
+                
                 origin=start_at_origin,
-                start_states_list=start_states_list,
+                start_state=(start_states_list)[0],
                 stop=stop_condition,
                 stop_value=stop_condition_value,
                 condition_on_survival=True,
@@ -322,13 +321,13 @@ class TestSSEStopConditionsBD(unittest.TestCase):
 
         # (3) Negative tree height
         stop_condition = "age"
-        stop_condition_value = [0.0, -0.1]
+        stop_condition_value = -0.1
         with self.assertRaises(ec.ObjInitInvalidArgError) as exc:
             distsse.DnSSE(
                 self.sse_stash,
-                n=n_sim,
+                
                 origin=start_at_origin, 
-                start_states_list=start_states_list,
+                start_state=(start_states_list)[0],
                 stop=stop_condition,
                 stop_value=stop_condition_value,
                 condition_on_survival=True,

@@ -45,10 +45,10 @@ class _LocalBoundExceeded(Exception):
 class DnQuaSSE(DistrForSampling):
     DN_NAME = "DnQuaSSE"
 
-    # Keep model vectors separate from scalar execution settings, then validate both.
+    # Retain one parameter set and per-tree simulation limits, then validate both.
     def __init__(self, birth_rate, death_rate, stop, stop_value, start_trait=None,
-                 drift=0.0, diffusion=0.0, n=1, nr=1, method="diversitree", k=500,
-                 runtime_limit=300, max_steps=1000000, max_alive=100000, rng_seed=None,
+                 drift=0.0, diffusion=0.0, method="diversitree", k=500,
+                 runtime_limit=300, max_steps=1000000, max_alive=100000,
                  sampling_prob=1.0, cond_surv=True, cond_spn=False, cond_obs_both_sides=False,
                  min_rec_taxa=None, max_rec_taxa=None, max_n_attempts=200, dt_max=None, max_nodes=None,
                  block_duration=None, bridge_error=None, fossil_rate=None, start_distribution=None):
@@ -63,8 +63,6 @@ class DnQuaSSE(DistrForSampling):
                 raise ValueError("start_distribution must be a scalar continuous distribution.")
         self.start_distribution = start_distribution
         start_trait = 0.0 if start_trait is None else start_trait
-        self.n_sim = _integer(n, "n")
-        self.n_repl = _integer(nr, "nr")
         self.method = method
         self.stop = stop
         self.k = _integer(k, "k")
@@ -111,18 +109,16 @@ class DnQuaSSE(DistrForSampling):
         if self.min_rec_taxa > self.max_rec_taxa:
             raise ValueError("min_rec_taxa exceeds max_rec_taxa.")
         self.max_n_attempts = _integer(max_n_attempts, "max_n_attempts")
-        self.init_check_vectorize_sample_size()
-        if rng_seed is not None:
-            np.random.seed(rng_seed)
+        self._validate_parameters()
 
-    # A sample has one parameter set, shared by its independent replicates and retries.
-    def init_check_vectorize_sample_size(self, param_list=None):
+    # One parameter set is shared by IID tree draws and conditioning retries.
+    def _validate_parameters(self):
         for name in ("birth_rate", "death_rate", "fossil_rate", "start_trait", "drift", "diffusion",
                      "stop_value", "sampling_prob"):
             raw = getattr(self, name)
-            values = list(raw) if isinstance(raw, (list, tuple, np.ndarray)) else [raw]
-            if len(values) not in (1, self.n_sim):
-                raise ValueError(f"{name} must have length 1 or n={self.n_sim}.")
+            if isinstance(raw, (list, tuple, np.ndarray)):
+                raise ValueError(f"{name} must be scalar; use indexing to select a vector element.")
+            values = [raw]
             if name in ("birth_rate", "death_rate", "fossil_rate"):
                 if not all(isinstance(v, RateFunction) for v in values):
                     raise ValueError(f"{name} requires QuaSSE rate objects.")
@@ -141,7 +137,7 @@ class DnQuaSSE(DistrForSampling):
                     values = [_integer(v, name) for v in values]
                     if max(values) > self.max_alive:
                         raise ValueError("Size target exceeds max_alive.")
-            setattr(self, name, values * self.n_sim if len(values) == 1 else values)
+            setattr(self, name, values[0])
 
     # Nodes are the only persistent simulation representation; internal traits freeze at birth.
     def _new_node(self, tree, label, trait, parent=None):
@@ -188,17 +184,17 @@ class DnQuaSSE(DistrForSampling):
     # the resulting living nodes. A full step has expected event count R/(kR) = 1/k.
     # Truncating a final step also scales this probability. Equal horizon/step times finish
     # the simulation; size stopping happens at the selected birth, before any trait update.
-    def _simulate_diversitree(self, sample_idx, deadline, start_trait=None):
-        birth, death = self.birth_rate[sample_idx], self.death_rate[sample_idx]
-        drift, variance = self.drift[sample_idx], self.diffusion[sample_idx]
-        target = self.stop_value[sample_idx]
-        fossil = self.fossil_rate[sample_idx]
+    def _simulate_diversitree(self, deadline, start_trait=None):
+        birth, death = self.birth_rate, self.death_rate
+        drift, variance = self.drift, self.diffusion
+        target = self.stop_value
+        fossil = self.fossil_rate
         fossils_enabled = not fossil.is_identically_zero
-        rho = self.sampling_prob[sample_idx]
+        rho = self.sampling_prob
         if self.max_nodes is not None and self.max_nodes < 2:
             raise ec.GenerateFailError(self.DN_NAME, "Resource limit max_nodes cannot hold origin and initial lineage.")
         tree = dp.Tree(is_rooted=True)
-        origin = self._new_node(tree, "origin", self.start_trait[sample_idx] if start_trait is None else start_trait)
+        origin = self._new_node(tree, "origin", self.start_trait if start_trait is None else start_trait)
         origin.alive = origin.sampled = False
         tree.seed_node = origin
         living = [self._new_node(tree, "brosc", origin.trait, origin)]
@@ -350,18 +346,18 @@ class DnQuaSSE(DistrForSampling):
     # candidate at the endpoint is an endpoint action. Birth/death removes the popped record,
     # so there are no stale entries. Conditional on staying in its region, Poisson thinning
     # is exact; the call-wide sum of excursion probabilities bounds first divergence.
-    def _simulate_local_thinning(self, sample_idx, deadline, block_indices, work_indices, start_trait=None):
-        birth, death = self.birth_rate[sample_idx], self.death_rate[sample_idx]
-        drift, variance = self.drift[sample_idx], self.diffusion[sample_idx]
-        target = self.stop_value[sample_idx]
-        fossil = self.fossil_rate[sample_idx]
+    def _simulate_local_thinning(self, deadline, block_indices, work_indices, start_trait=None):
+        birth, death = self.birth_rate, self.death_rate
+        drift, variance = self.drift, self.diffusion
+        target = self.stop_value
+        fossil = self.fossil_rate
         fossils_enabled = not fossil.is_identically_zero
-        rho = self.sampling_prob[sample_idx]
+        rho = self.sampling_prob
         self._check_runtime(deadline)
         if self.max_nodes is not None and self.max_nodes < 2:
             raise ec.GenerateFailError(self.DN_NAME, "Resource limit max_nodes cannot hold origin and initial lineage.")
         tree = dp.Tree(is_rooted=True)
-        origin = self._new_node(tree, "origin", self.start_trait[sample_idx] if start_trait is None else start_trait)
+        origin = self._new_node(tree, "origin", self.start_trait if start_trait is None else start_trait)
         origin.alive = origin.sampled = False
         tree.seed_node = origin
         initial = self._new_node(tree, "brosc", origin.trait, origin)
@@ -482,7 +478,7 @@ class DnQuaSSE(DistrForSampling):
 
     # Dispatch without changing downstream tree/observation contracts or default RNG order.
     # Numerical retries discard only the current tree; budget, work, RNG and deadline persist.
-    def simulate(self, sample_idx=0, deadline=None, *, _block_indices=None):
+    def simulate(self, deadline=None, *, _block_indices=None):
         # Draw once per biological attempt; numerical restarts below reuse this trait.
         trait_args = {}
         if self.start_distribution is not None:
@@ -493,19 +489,19 @@ class DnQuaSSE(DistrForSampling):
         if deadline is None:
             deadline = time.monotonic() + self.runtime_limit
         if self.method == "diversitree":
-            tree, horizon = self._simulate_diversitree(sample_idx, deadline, **trait_args)
+            tree, horizon = self._simulate_diversitree(deadline, **trait_args)
         else:
             block_indices = count(1) if _block_indices is None else _block_indices
             work_indices = count()
             while True:
                 try:
-                    tree, horizon = self._simulate_local_thinning(sample_idx, deadline, block_indices, work_indices, **trait_args)
+                    tree, horizon = self._simulate_local_thinning(deadline, block_indices, work_indices, **trait_args)
                     break
                 except _LocalBoundExceeded:
                     # A detected violation already implies an excursion charged to this call's
                     # budget. Restarting is approximate recovery, not exact rejection sampling.
                     continue
-        probability = self.sampling_prob[sample_idx]
+        probability = self.sampling_prob
         has_fossils = False
         for node in tree.leaf_node_iter():
             if node.is_sa:
@@ -539,41 +535,14 @@ class DnQuaSSE(DistrForSampling):
     # A whole accepted-tree draw owns its limits. Biological rejection redraws the
     # starting trait inside simulate; numerical retries retain it and the bridge budget.
     def draw(self):
-        if self.n_sim != 1 or self.n_repl != 1:
-            raise ValueError("Use iid for multiple tree draws and model executions for parameter draws.")
         deadline = time.monotonic() + self.runtime_limit
         block_indices = count(1)
         for _ in range(self.max_n_attempts):
             self._check_runtime(deadline)
-            tree = (self.simulate(0, deadline, _block_indices=block_indices)
-                    if self.method == 'local_thinning' else self.simulate(0, deadline))
+            tree = (self.simulate(deadline, _block_indices=block_indices)
+                    if self.method == 'local_thinning' else self.simulate(deadline))
             self._check_runtime(deadline)
             if self._is_tree_accepted(tree):
                 return tree
         raise ec.MaxNFailedAttemptsLimit(self.max_n_attempts)
 
-    # Transitional batched API until application migration; model parameters stay fixed.
-    # A supplied starting distribution draws a new trait on each biological attempt.
-    # Other numerical/resource errors propagate. Bound-exceedance retries happen inside simulate.
-    def generate(self):
-        deadline = time.monotonic() + self.runtime_limit
-        output = []
-        rejected = 0
-        block_indices = count(1)
-        for sample in range(self.n_sim):
-            for _ in range(self.n_repl):
-                while True:
-                    self._check_runtime(deadline)
-                    tree = (self.simulate(sample, deadline, _block_indices=block_indices)
-                            if self.method == "local_thinning" else self.simulate(sample, deadline))
-                    self._check_runtime(deadline)
-                    if self._is_tree_accepted(tree):
-                        output.append(tree)
-                        break
-                    rejected += 1
-                    if rejected >= self.max_n_attempts:
-                        raise ec.MaxNFailedAttemptsLimit(self.max_n_attempts)
-        return output
-
-    def get_rev_inference_spec_info(self):
-        raise NotImplementedError("QuaSSE RevBayes inference export is not supported.")

@@ -1,6 +1,7 @@
 from phylojunction.data.trait import DiscreteTrait, ContinuousTrait
 import os
 import typing as ty
+from phylojunction.pgm.execution import ExecutionResults
 import dendropy as dp
 import numpy as np
 import pandas
@@ -169,9 +170,9 @@ def initialize_tree_dataframe(
     return return_df
 
 
-def prep_trees_rb_smap_dfs(dag_obj: pgm.DirectedAcyclicGraph,
+def prep_trees_rb_smap_dfs(value_records,
                            tree_dag_node_name_list: ty.List[str],
-                           mapped_attr_name: str, value_records=None) -> \
+                           mapped_attr_name: str) -> \
         ty.Tuple[ty.Dict[str, ty.List[pd.DataFrame]],
                  ty.Dict[str, ty.List[str]]]:
     """Initialize pandas DataFrame's for holding stochastic maps.
@@ -181,8 +182,9 @@ def prep_trees_rb_smap_dfs(dag_obj: pgm.DirectedAcyclicGraph,
     correspond to a single replicate.
 
     Args:
-        dag_obj (DirectedAcyclicGraph): Instance of DAG class, holding
-            the model.
+        value_records: Tuples of (name, trees, sample count, replicate count).
+            Execution export supplies one tree per coordinate; these ordinals
+            are internal to the established stochastic-map serializer.
         tree_dag_node_name_list (list): List with names of the DAG nodes
             tree random variables along which attributes have
             transitioned and for which we are producing a stochastic
@@ -360,10 +362,6 @@ def prep_trees_rb_smap_dfs(dag_obj: pgm.DirectedAcyclicGraph,
     all_tr_nds_df_list_dict: ty.Dict[str, ty.List[pandas.DataFrame]] = dict()
     all_tr_nds_df_content_str_list_dict: ty.Dict[str, ty.List[str]] = dict()
 
-    # New callers supply values directly; retain this adapter during GUI migration.
-    if value_records is None:
-        value_records = [(name, node.value, node.sample_size, node.repl_size)
-                         for name, node in dag_obj.name_node_dict.items()]
     for node_name, node_val, n_samples, n_repl in value_records:
         # initializing empty lists as values
         # each item will be a sample from this node
@@ -482,17 +480,17 @@ def prep_trees_rb_smap_dfs(dag_obj: pgm.DirectedAcyclicGraph,
 
 
 def prep_data_df(
-        dag_obj: pgm.DirectedAcyclicGraph,
+        value_records,
         write_nex_states: bool = False,
-        bit_format: bool = False,
-        value_records=None) -> \
+        bit_format: bool = False) -> \
         ty.Tuple[ty.List[ty.Union[pd.DataFrame, ty.Dict[int, pd.DataFrame]]],
         ty.List[ty.Dict[str, pd.DataFrame]]]:
     """Return two pandas DataFrame's, with scalar and tree random variables.
 
     Args:
-        dag_obj (DirectedAcyclicGraph): DAG object holding the
-            simulated data to be tabulated.
+        value_records: Tuples of (name, values, replicate count, is_stochastic,
+            is_sampled, sample count). These are explicit serializer inputs,
+            not DAG nodes. Use write_results() to export ExecutionResults.
         write_nex_states (bool): Flag specifying if .nex file should be
             additionally written. Defaults to 'False'.
         bit_format (bool): Flag specifying if states are to be
@@ -503,13 +501,6 @@ def prep_data_df(
         (tuple): Tuple with two lists as elements, one with file-suffix
                  strings, another with pandas.DataFrame's
     """
-
-    # Transitional input adapter: new execution consumers supply actual values, while
-    # old callers still enumerate value-bearing nodes until their migration is complete.
-    if value_records is None:
-        value_records = [(node.node_name, node.value, node.repl_size,
-                          isinstance(node, pgm.StochasticNodeDAG), node.is_sampled, dag_obj.sample_size)
-                         for node in dag_obj.get_sorted_node_dag_list()]
 
     # tree nodes (one dataframe per different tree node)
 
@@ -1120,7 +1111,7 @@ def prep_data_filepaths_dfs(
 
 
 def dump_pgm_data(dir_string: str,
-                  dag_obj: pgm.DirectedAcyclicGraph,
+                  dag_obj: "ExecutionResults",
                   prefix: str = "",
                   write_nex_states: bool = False,
                   bit_format: bool = False) -> None:
@@ -1130,8 +1121,7 @@ def dump_pgm_data(dir_string: str,
 
     Args:
         dir_string (str): Where to save the files to be written
-        dag_obj (DirectedAcyclicGraph): DAG object whose sampled
-            values we are extracting and writing to file.
+        dag_obj (ExecutionResults): Completed model executions whose values are written.
         prefix (str): String to preceed file names.
         write_nex_states (bool): Flag specifying if .nex file should be
             additionally written. Defaults to 'False'.
@@ -1140,106 +1130,23 @@ def dump_pgm_data(dir_string: str,
             '01', 'AB' -> '11'). Defaults to 'False'.
     """
 
-    sorted_node_dag_list: \
-        ty.List[pgm.NodeDAG] = dag_obj.get_sorted_node_dag_list()
-
-    # populating data stashes that will be dumped and their file names
-    scalar_output_stash: \
-        ty.List[ty.Union[pd.DataFrame, ty.Dict[int, pd.DataFrame]]]
-    tree_output_stash: ty.List[ty.Dict[str, pd.DataFrame]]
-    output_fp_list: ty.List[str]
-    output_df_str_list: ty.List[pd.DataFrame]
-
-    # still prefixless #
-    scalar_output_stash, tree_output_stash = \
-        prep_data_df(dag_obj,
-                     write_nex_states=write_nex_states,
-                     bit_format=bit_format)
-
-    output_fp_list, output_df_str_list = \
-        prep_data_filepaths_dfs(scalar_output_stash, tree_output_stash)
-
-    # sort out file path #
-    if not dir_string.endswith("/"):
-        dir_string += "/"
-
-    output_file_path = dir_string
-
-    if prefix:
-        output_file_path += prefix + "_"
-
-    # full file paths #
-    data_df_full_fp_list = \
-        [output_file_path + fn for fn in output_fp_list]
-
-    # debugging
-    # print("\n\n" + "\n".join(data_df_full_fp_list))
-    # for df_or_str in output_df_str_list:
-    #     if isinstance(df_or_str, pd.DataFrame):
-    #         print(tabulate(df, df.head(), tablefmt="plain",
-    #               showindex=False).lstrip())
-
-    # write! #
-    for idx, full_fp in enumerate(data_df_full_fp_list):
-        f: str = ""
-        to_print = output_df_str_list[idx]
-
-        if full_fp.endswith("csv"):
-            f = "csv"
-
-        elif full_fp.endswith("tsv"):
-            f = "tsv"
-
-        elif full_fp.endswith("nex"):
-            f = "nex"
-
-        if isinstance(to_print, pd.DataFrame):
-            with open(full_fp, "w") as data_out:
-                write_data_df(data_out, to_print, format=f)
-
-        elif isinstance(to_print, str):
-            # ignore nexus file #
-            if f == "nex" and not write_nex_states:
-                continue
-
-            with open(full_fp, "w") as data_out:
-                write_str_list(data_out, [to_print])
+    from phylojunction.readwrite.execution_export import write_results
+    write_results(dir_string, dag_obj, prefix, write_nex_states=write_nex_states, bit_format=bit_format)
 
 
 def dump_trees_rb_smap_dfs(dir_string: str,
-                           dag_obj: pgm.DirectedAcyclicGraph,
+                           dag_obj: "ExecutionResults",
                            tr_dag_node_name_list: ty.List[str],
                            mapped_attr_name: str,
                            prefix: str = "") -> None:
 
-    # get dataframes ready #
-    all_tr_nds_df_list_dict, all_tr_nds_df_content_str_list_dict = \
-        prep_trees_rb_smap_dfs(dag_obj, tr_dag_node_name_list, mapped_attr_name)
-
-    # sort out file path #
-    if not dir_string.endswith("/"):
-        dir_string += "/"
-
-    if not os.path.isdir(dir_string):
-        os.mkdir(dir_string)
-
-    if prefix:
-        dir_string += prefix + "_"
-
-    # full file paths #
-    for nd_name, df_list in all_tr_nds_df_list_dict.items():
-        for idx, df in enumerate(df_list):
-            file_path = \
-                dir_string + nd_name + "_sample" + str(idx + 1) + "_smaps.tsv"
-
-            if isinstance(df, pd.DataFrame):
-                with open(file_path, "w") as data_out:
-                    write_data_df(data_out, df, format="tsv")
+    from phylojunction.readwrite.execution_export import write_maps
+    write_maps(dir_string, dag_obj, tr_dag_node_name_list, mapped_attr_name, prefix)
 
 
 def dump_serialized_pgm(
         file_name: str,
-        dag_obj: pgm.DirectedAcyclicGraph,
+        dag_obj: "ExecutionResults",
         cmd_log_list: ty.List[str],
         prefix: str = "",
         to_folder: bool = False) -> None:
@@ -1350,7 +1257,8 @@ if __name__ == "__main__":
     dag_obj = cmdp.script2dag(model_fp, in_pj_file=True)
 
     # either: to see what's inside dataframes (uncomment debugging)
-    prep_data_df(dag_obj)
+    from phylojunction.readwrite.execution_export import tree_files
+    print(tree_files(dag_obj))
 
     # or: to see file names and dataframes after organized (uncomment debugging)
     # dump_pgm_data("./", dag_obj, prefix="test")

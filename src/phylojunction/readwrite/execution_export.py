@@ -51,7 +51,7 @@ def tree_files(results, write_nex_states=False, bit_format=False):
         if not entries:
             continue
         records = [(name, [v for _, _, v in entries], 1, True, True, len(entries))]
-        scalar, trees = prep_data_df(None, write_nex_states, bit_format, value_records=records)
+        scalar, trees = prep_data_df(records, write_nex_states, bit_format)
         filenames, contents = prep_data_filepaths_dfs(scalar, trees)
         for filename, content in zip(filenames, contents):
             if filename.endswith(('_traits.tsv', '_fossils.tsv')):
@@ -125,7 +125,7 @@ def write_maps(directory, results, names, attribute, prefix=''):
                     raise TypeError(f'{name}{path_text(path)} is not a tree.')
                 key = f'{name}_execution{i}{path_text(path)}'
                 records.append((key, [value], 1, 1))
-    frames, _ = prep_trees_rb_smap_dfs(None, [r[0] for r in records], attribute, value_records=records)
+    frames, _ = prep_trees_rb_smap_dfs(records, [r[0] for r in records], attribute)
     destination = Path(directory)
     destination.mkdir(parents=True, exist_ok=True)
     for key, tables in frames.items():
