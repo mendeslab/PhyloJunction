@@ -68,11 +68,11 @@ def tree_files(results, write_nex_states=False, bit_format=False):
                 indices = [int(i) - 1 for i in content['sample']]
                 content = content.drop(columns=['sample', 'replicate'], errors='ignore')
                 content.insert(0, '@element', [entries[i][1] for i in indices])
-                content.insert(0, '@execution', [entries[i][0] for i in indices])
+                content.insert(0, '@replicate', [entries[i][0] for i in indices])
             match = re.search(r'_sample(\d+)_repl1', filename)
             if match:
                 execution, path, _ = entries[int(match.group(1)) - 1]
-                filename = filename[:match.start()] + f'_execution{execution}{path}' + filename[match.end():]
+                filename = filename[:match.start()] + f'_replicate{execution}{path}' + filename[match.end():]
             add_output(outputs, filename, content)
     return outputs
 
@@ -91,7 +91,7 @@ def write_results(directory, results, prefix='', output_format='separate-csv',
             if any(shape(v) != shape(values[0]) for v in values[1:]):
                 raise ValueError(f'{name} changes vector shape between replicates; use JSON (MCON).')
         for i in range(results.n_executions):
-            row = {'@execution': i + 1}
+            row = {'@replicate': i + 1}
             for name, values in columns.items():
                 row.update({name + path_text(path): csv_value(v) for path, v in elements(values[i])})
             rows.append(row)
@@ -103,7 +103,7 @@ def write_results(directory, results, prefix='', output_format='separate-csv',
         add_output(outputs, 'samples.mcon', ''.join(json.dumps(row, allow_nan=False) + '\n' for row in records))
     else:
         for name, values in columns.items():
-            rows = [{'@execution': i, '@element': path_text(path), name: csv_value(value)}
+            rows = [{'@replicate': i, '@element': path_text(path), name: csv_value(value)}
                     for i, vector in enumerate(values, 1) for path, value in elements(vector)]
             add_output(outputs, name + '.csv', pd.DataFrame(rows))
     for filename, content in tree_files(results, write_nex_states, bit_format).items():
@@ -142,7 +142,7 @@ def write_maps(directory, results, names, attribute, prefix=''):
             for path, value in elements(vector):
                 if not isinstance(value, AnnotatedTree):
                     raise TypeError(f'{name}{path_text(path)}, replicate {i}, is not a tree.')
-                key = f'{name}_execution{i}{path_text(path)}'
+                key = f'{name}_replicate{i}{path_text(path)}'
                 if key in record_names:
                     raise ValueError(f'Conflicting map export identifier {key!r}.')
                 record_names.add(key)

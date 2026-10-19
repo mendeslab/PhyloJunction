@@ -34,7 +34,7 @@ class TestDataDump(unittest.TestCase):
             self.assertEqual([r['y'] for r in records[1:]], results.values('y'))
             write_results(directory, results, output_format='combined-csv')
             frame = pd.read_csv(Path(directory) / 'combined.csv')
-            self.assertEqual(frame.columns.tolist(), ['@execution', 'x[1][1]', 'x[1][2]', 'x[2]', 'y'])
+            self.assertEqual(frame.columns.tolist(), ['@replicate', 'x[1][1]', 'x[1][2]', 'x[2]', 'y'])
             self.assertEqual(frame['x[2]'].tolist(), ['[]', '[]'])
             write_results(directory, results)
             frame = pd.read_csv(Path(directory) / 'x.csv')
@@ -112,9 +112,9 @@ class TestDataDump(unittest.TestCase):
                 self.assertEqual(stats['n_2'].notna().sum(), 2)
                 traits = pd.read_csv(root / 'trees_traits.tsv', sep='\t')
                 self.assertEqual(set(traits['@element']), {continuous_path})
-                self.assertEqual(set(traits['@execution']), {1,2})
+                self.assertEqual(set(traits['@replicate']), {1,2})
                 self.assertEqual(set(traits['trait']), {2})
-                expected = {f'trees_execution{execution}[1][{index}].nex'
+                expected = {f'trees_replicate{execution}[1][{index}].nex'
                             for execution in (1,2) for index in (1,2,3)
                             if f'[1][{index}]' != continuous_path}
                 self.assertEqual({p.name for p in root.glob('trees*.nex')}, expected)
