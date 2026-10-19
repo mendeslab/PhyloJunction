@@ -205,7 +205,7 @@ if __name__ == "__main__":
         + "comparison_multiple_scalar_tree_plated_rv5.csv"
     # csv_fp = "examples/compare_files/" \
     #     + "comparison_multiple_scalar_tree_plated_trs2.csv"
-    compare_to_df = pjread.read_csv_into_dataframe(csv_fp)
+    compare_to_df = pjread.read_csv_tsv_into_dataframe(csv_fp)
 
     # try to join dataframes
     # comparison has data for "rv5[1]",
@@ -233,7 +233,7 @@ if __name__ == "__main__":
     #                tablefmt="pretty", showindex=False))
 
     # reading hpd table
-    hpd_df = pjread.read_csv_into_dataframe(
+    hpd_df = pjread.read_csv_tsv_into_dataframe(
         "./examples/coverage_files/r_b_exp.csv")
     # print(tabulate(hpd_df, headers=hpd_df.head(), tablefmt="pretty"))
 

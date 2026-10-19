@@ -699,7 +699,7 @@ class GUIMainWindow(QMainWindow):
 
             try:
                 self.other_comparison_df = \
-                    pjread.read_csv_into_dataframe(compare_csv_fp)
+                    pjread.read_csv_tsv_into_dataframe(compare_csv_fp)
 
                 other_comparison_df_str = \
                     tabulate(
