@@ -72,6 +72,18 @@ class TestDataDump(unittest.TestCase):
                 self.assertEqual(existing.read_text(), 'previous output')
                 self.assertEqual(list(destination.iterdir()), [existing])
 
+    # Invalid selections must be rejected before any files are created, including when
+    # a valid tree precedes the invalid entry. GUI mocks do not exercise this validation.
+    def test_map_export_selection(self):
+        from phylojunction.readwrite.execution_export import write_maps
+        result = compile_model('trees := read_tree(string="(A:1,B:1);")\nx <- [1,2]').execute()
+        for names in ('trees', [], [''], ['trees', 'trees'], ['trees', 'missing'], ['trees', 'x']):
+            with self.subTest(names=names), tempfile.TemporaryDirectory() as directory:
+                destination = Path(directory) / 'new'
+                with self.assertRaises((ValueError, TypeError)):
+                    write_maps(destination, result, names, 'state')
+                self.assertFalse(destination.exists())
+
     @classmethod
     def setUpClass(cls) -> None:
         #########################

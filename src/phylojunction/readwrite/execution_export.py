@@ -126,13 +126,26 @@ def write_results(directory, results, prefix='', output_format='separate-csv',
 # Preserve the existing stochastic-map serializer and identify each selected tree by path.
 def write_maps(directory, results, names, attribute, prefix=''):
     from phylojunction.readwrite.pj_write import prep_trees_rb_smap_dfs
+    if isinstance(names, str):
+        raise TypeError("Map export requires a list of variable names, not a string.")
+    names = list(names)
+    if not names or any(not isinstance(name, str) or not name for name in names):
+        raise ValueError("Select at least one tree variable; empty names are not allowed.")
+    if len(set(names)) != len(names):
+        raise ValueError("Map export variable names must be distinct.")
     records = []
+    record_names = set()
     for name in names:
+        if name not in results.model.name_node_dict:
+            raise ValueError(f"Unknown map export variable {name!r}.")
         for i, vector in enumerate(results.values(name), 1):
             for path, value in elements(vector):
                 if not isinstance(value, AnnotatedTree):
-                    raise TypeError(f'{name}{path_text(path)} is not a tree.')
+                    raise TypeError(f'{name}{path_text(path)}, execution {i}, is not a tree.')
                 key = f'{name}_execution{i}{path_text(path)}'
+                if key in record_names:
+                    raise ValueError(f'Conflicting map export identifier {key!r}.')
+                record_names.add(key)
                 records.append((key, [value], 1, 1))
     frames, _ = prep_trees_rb_smap_dfs(records, [r[0] for r in records], attribute)
     outputs = {}

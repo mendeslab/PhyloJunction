@@ -163,6 +163,8 @@ class GUIMainWindow(QMainWindow):
         ############
 
         self.ui.ui_pages.random_seed_prefix_textbox.returnPressed.connect(self._seed_entered)
+        self.ui.ui_pages.tr_dag_node_textbox.setToolTip(
+            "Comma-separated tree variable names, for example: trees, mapped_trees")
 
         # cmd line enter #
         self.ui.ui_pages.cmd_prompt.returnPressed.connect(
@@ -888,24 +890,20 @@ class GUIMainWindow(QMainWindow):
             write_results(data_out_dir, self.gui_modeling.results, prefix,
                           self.ui.ui_pages.output_format.currentData())
 
+    # Cancel without side effects; the exporter validates all selections before writing.
     def write_smaps_to_dir(self):
-        # get dir path
         data_out_dir = QFileDialog.getExistingDirectory(
             self, "Save in folder", "./", QFileDialog.ShowDirsOnly
         )
-
+        if not data_out_dir:
+            return
         prefix = self.ui.ui_pages.filename_prefix_textbox.text()
-        mapped_attr_name = \
-            self.ui.ui_pages.attr_name_textbox.text()
-        tr_dag_node_name_list = \
-            self.ui.ui_pages.tr_dag_node_textbox.text()
-
-        write_maps(
-            data_out_dir,
-            self.gui_modeling.results,
-            tr_dag_node_name_list,
-            mapped_attr_name,
-            prefix=prefix)
+        mapped_attr_name = self.ui.ui_pages.attr_name_textbox.text().strip()
+        names = [name.strip() for name in self.ui.ui_pages.tr_dag_node_textbox.text().split(',')]
+        try:
+            write_maps(data_out_dir, self.gui_modeling.results, names, mapped_attr_name, prefix=prefix)
+        except Exception as error:
+            QMessageBox.warning(self, "Cannot export stochastic maps", str(error))
 
     #################
     # Functions for #

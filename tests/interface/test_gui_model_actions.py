@@ -151,6 +151,26 @@ class TestModelActions(unittest.TestCase):
         self.enter('b <- 2')
         self.assertTrue(u.resample_model.isEnabled())
 
+    # Exercise actual dialog cancellation and field parsing; serializer tests cannot
+    # detect a GUI passing a string or writing after the user cancels.
+    def test_map_export_selection(self):
+        w, u = self.window, self.controls
+        module = 'phylojunction.interface.pysidegui.pj_gui.'
+        u.tr_dag_node_textbox.setText(' trees, mapped_trees ')
+        u.attr_name_textbox.setText('state')
+        with patch(module + 'QFileDialog.getExistingDirectory', return_value=''):
+            with patch(module + 'write_maps') as write:
+                w.write_smaps_to_dir()
+                write.assert_not_called()
+        with patch(module + 'QFileDialog.getExistingDirectory', return_value='destination'):
+            with patch(module + 'write_maps') as write:
+                w.write_smaps_to_dir()
+                self.assertEqual(write.call_args.args[2], ['trees', 'mapped_trees'])
+                write.side_effect = ValueError('Unknown map export variable')
+                with patch(module + 'QMessageBox.warning') as warning:
+                    w.write_smaps_to_dir()
+                    self.assertIn('Unknown map export variable', warning.call_args.args[2])
+
     # Settings commit only configuration; actual execution validates before destroying results.
     # These interactions are not covered by parser or layout tests.
     def test_single_line_settings_and_script_feedback(self):
