@@ -43,7 +43,8 @@ class TestInferenceRevBayesParametricDn(unittest.TestCase):
         self.assertEqual(len(models), 2)
         for i, model in enumerate(models):
             self.assertIn('a__definition1 ~ dnNormal(mean=0, sd=1)', model)
-            self.assertIn('x[2][2] ~ dnNormal(mean=a__definition1, sd=1)', model)
+            self.assertIn('d = dnNormal(mean=a__definition1, sd=1)', model)
+            self.assertRegex(model, r'x\[pjInternal\d+\]\[pjInternal\d+\] ~ d')
             self.assertIn(f'x[2][2].clamp({results.value("x", i)[1][1]})', model)
             self.assertIn('b ~ dnNormal(mean=a, sd=1)', model)
             self.assertIn('dnBeta(alpha=2, beta=3)', model)
@@ -51,6 +52,41 @@ class TestInferenceRevBayesParametricDn(unittest.TestCase):
         for source in ('x ~ iid(0,normal(0,1))', 'b := quasse_constant(1)\nx ~ quasse(b,b,"age",1)'):
             with self.assertRaises(ValueError):
                 execution_to_rev(cmdp.compile_model(source).execute(), 'results')
+
+    # Real Rev execution catches invalid collection types and lost dependencies that
+    # string checks miss. Keep this integration check while translating distribution values.
+    def test_collection_export_in_rev(self):
+        import shutil
+        import subprocess
+        import tempfile
+        from pathlib import Path
+        from phylojunction.inference.revbayes.execution import execution_to_rev
+        binary = shutil.which('rb')
+        if binary is None:
+            self.skipTest('RevBayes executable is not installed')
+        source = ('pjInternal1 ~ normal(0,1)\nrows := [[pjInternal1],[pjInternal1,2]]\n'
+                  'ds := [[normal(mu,1) for mu in row] for row in rows]\nxs ~ ds\n'
+                  'ys ~ [[normal(pjInternal1,1)]]\n'
+                  'mus ~ iid(2,normal(0,1))\n'
+                  'zs ~ [normal(mu,sd) for (mu,sd) in zip_strict(mus,[1,2])]\n'
+                  'empty ~ iid(0,normal(0,1),clamp=true)\n'
+                  'nested ~ [normal([0,1],1)]\n'
+                  'indexed ~ [normal(pair[1],pair[2]) for pair in zip_strict(mus,[1,2])]')
+        result = cmdp.compile_model(source).execute(1,42)
+        with tempfile.TemporaryDirectory() as directory:
+            models, logging, paths = execution_to_rev(result,directory,5)
+            self.assertIn('ys[1][1] ~ dnNormal(mean=pjInternal1, sd=1)', models[0])
+            self.assertIn('pjInternalX', models[0])
+            Path(paths[2]).mkdir()
+            script = Path(directory) / 'model.rev'
+            script.write_text(models[0] + '\nprint(model(pjInternal1,xs[1][1],xs[2][2]))\n' + logging[0])
+            completed = subprocess.run([binary, '-q', str(script)], text=True,
+                                       capture_output=True, timeout=30)
+            self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+            self.assertIn('_parents      = [ pjInternal1,', completed.stdout)
+        for source in ('x ~ normal([],1)', 'x <- []', 'x ~ [[normal(0,1,clamp=true)]]'):
+            with self.assertRaises(ValueError):
+                execution_to_rev(cmdp.compile_model(source).execute(), 'unused')
 
     def test_pj2rb_uniform(self):
         """
