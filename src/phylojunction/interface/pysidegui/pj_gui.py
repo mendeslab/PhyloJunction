@@ -2,7 +2,7 @@ import sys
 from contextlib import ExitStack
 import os
 import re
-from phylojunction.pgm.values import elements, path_text, shape, summaries, plot_values
+from phylojunction.pgm.values import elements, path_text, shape, summaries, plot_values, component_values, component_frame
 from phylojunction.pgm.execution import ExecutionResults
 from phylojunction.readwrite.execution_export import write_results, write_maps
 import typing as ty
@@ -475,29 +475,11 @@ class GUIMainWindow(QMainWindow):
         else:
             pass
 
-    # Comparison/coverage entries name an explicit component, shared across executions.
     def component_values(self, name):
-        from phylojunction.interface.cmdbox.expressions import parse_expression, evaluate
-        expression = parse_expression(name)
-        results = self.gui_modeling.results
-        return [evaluate(expression, lambda variable: results.value(variable, i), None)
-                for i in range(results.n_executions)]
+        return component_values(self.gui_modeling.results, name)
 
-    # Preserve tree statistic columns used by comparison plots; numeric values retain
-    # one row per execution, including fixed values used in coverage experiments.
     def component_frame(self, name):
-        values = self.component_values(name)
-        if all(isinstance(v, pjdt.AnnotatedTree) for v in values):
-            rows = [{'root_age': v.root_age, 'origin_age': v.origin_age,
-                     'n_total': v.n_extant_terminal_nodes + v.n_extinct_terminal_nodes,
-                     'n_extant': v.n_extant_terminal_nodes, 'n_extinct': v.n_extinct_terminal_nodes,
-                     'n_sa': v.n_sa_nodes} for v in values]
-            frame = pd.DataFrame(rows)
-        else:
-            frame = pd.DataFrame({name: values})
-        frame.insert(0, 'sample', range(1, len(values) + 1))
-        frame.insert(1, 'replicate', 1)
-        return frame
+        return component_frame(self.gui_modeling.results, name)
 
     # Compare the chosen component across executions, without within-vector averages.
     def do_selected_node_compare_page(self):
