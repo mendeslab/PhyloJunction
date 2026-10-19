@@ -50,6 +50,28 @@ class TestDataDump(unittest.TestCase):
         self.assertEqual([r['mean'] for r in summaries([[1, 100], [3, 200]])], [2, 150])
         self.assertEqual(summaries([[1], [2, 3]]), [])
 
+    # Ordinary format checks cannot detect loss at output dictionary insertion. Collisions
+    # must fail before touching files, regardless of which pair of producers shares a name.
+    def test_output_collisions(self):
+        tree = 't := read_tree(string="(A:1,B:1);")\n'
+        sources = [('x ~ normal(0,1)\nx_stats_summary <- 123', 'x_stats_summary.csv'),
+                   (tree + 't_stats <- 123', 't_stats.csv'),
+                   (tree + 't_annotated := t', 't_annotated_complete.tsv')]
+        for source, filename in sources:
+            with self.subTest(filename=filename), tempfile.TemporaryDirectory() as directory:
+                result = compile_model(source).execute(2,42)
+                destination = Path(directory) / 'new'
+                with self.assertRaisesRegex(ValueError, filename):
+                    write_results(destination, result)
+                self.assertFalse(destination.exists())
+                destination.mkdir()
+                existing = destination / filename
+                existing.write_text('previous output')
+                with self.assertRaises(ValueError):
+                    write_results(destination, result)
+                self.assertEqual(existing.read_text(), 'previous output')
+                self.assertEqual(list(destination.iterdir()), [existing])
+
     @classmethod
     def setUpClass(cls) -> None:
         #########################

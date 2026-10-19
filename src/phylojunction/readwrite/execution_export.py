@@ -10,6 +10,14 @@ from phylojunction.pgm.values import elements, path_text, shape, summaries
 FORMATS = {'separate-csv': 'Separate files (CSV)', 'combined-csv': 'Combined (CSV)', 'json': 'JSON (MCON)'}
 
 
+# Reject competing producers before a dictionary assignment can discard an earlier file.
+# Existing files from previous exports are separate: normal overwrite behavior is unchanged.
+def add_output(outputs, filename, content):
+    if filename in outputs:
+        raise ValueError(f"Conflicting export filename {filename!r}; rename the competing model variables.")
+    outputs[filename] = content
+
+
 # Domain construction objects are model definitions, not observations. Trees use annotated
 # Newick in tabular/JSON fields; dedicated files retain tree statistics and node observations.
 def json_value(value):
@@ -65,7 +73,7 @@ def tree_files(results, write_nex_states=False, bit_format=False):
             if match:
                 execution, path, _ = entries[int(match.group(1)) - 1]
                 filename = filename[:match.start()] + f'_execution{execution}{path}' + filename[match.end():]
-            outputs[filename] = content
+            add_output(outputs, filename, content)
     return outputs
 
 
@@ -87,22 +95,23 @@ def write_results(directory, results, prefix='', output_format='separate-csv',
             for name, values in columns.items():
                 row.update({name + path_text(path): csv_value(v) for path, v in elements(values[i])})
             rows.append(row)
-        outputs['combined.csv'] = pd.DataFrame(rows)
+        add_output(outputs, 'combined.csv', pd.DataFrame(rows))
     elif output_format == 'json':
         header = {'format': 'MCON', 'version': '0.2', 'nested': False, 'atomic': False}
         records = [header] + [{name: values[i] for name, values in columns.items()}
                               for i in range(results.n_executions)]
-        outputs['samples.mcon'] = ''.join(json.dumps(row, allow_nan=False) + '\n' for row in records)
+        add_output(outputs, 'samples.mcon', ''.join(json.dumps(row, allow_nan=False) + '\n' for row in records))
     else:
         for name, values in columns.items():
             rows = [{'@execution': i, '@element': path_text(path), name: csv_value(value)}
                     for i, vector in enumerate(values, 1) for path, value in elements(vector)]
-            outputs[name + '.csv'] = pd.DataFrame(rows)
-    outputs.update(tree_files(results, write_nex_states, bit_format))
+            add_output(outputs, name + '.csv', pd.DataFrame(rows))
+    for filename, content in tree_files(results, write_nex_states, bit_format).items():
+        add_output(outputs, filename, content)
     for name in columns:
         stats = summaries(results.values(name))
         if stats:
-            outputs[name + '_stats_summary.csv'] = pd.DataFrame(stats)
+            add_output(outputs, name + '_stats_summary.csv', pd.DataFrame(stats))
     destination = Path(directory)
     destination.mkdir(parents=True, exist_ok=True)
     for filename, content in outputs.items():
@@ -126,8 +135,11 @@ def write_maps(directory, results, names, attribute, prefix=''):
                 key = f'{name}_execution{i}{path_text(path)}'
                 records.append((key, [value], 1, 1))
     frames, _ = prep_trees_rb_smap_dfs(records, [r[0] for r in records], attribute)
-    destination = Path(directory)
-    destination.mkdir(parents=True, exist_ok=True)
+    outputs = {}
     for key, tables in frames.items():
         filename = ((prefix + '_') if prefix else '') + key + '_smaps.tsv'
-        tables[0].to_csv(destination / filename, sep='\t', index=False)
+        add_output(outputs, filename, tables[0])
+    destination = Path(directory)
+    destination.mkdir(parents=True, exist_ok=True)
+    for filename, table in outputs.items():
+        table.to_csv(destination / filename, sep='\t', index=False)
