@@ -39,6 +39,29 @@ class TestParametricDns(unittest.TestCase):
             with self.assertRaises(ValueError):
                 dnpar.DnBeta(*shapes)
 
+    # Cauchy has no moments: quantiles protect parameterization without unstable mean tests.
+    # Language checks also protect the object, vectorization, and IID integration paths.
+    def test_cauchy(self):
+        from phylojunction.interface.cmdbox.cmd_parse import compile_model
+        for location, scale in [(0, 0), (0, -1), (float('nan'), 1), (0, float('inf'))]:
+            with self.assertRaises(ValueError):
+                dnpar.DnCauchy(location, scale)
+        state = np.random.get_state()
+        try:
+            np.random.seed(42)
+            values = dnpar.DnCauchy(2, 3).draw_many(20000)
+            np.testing.assert_allclose(np.quantile(values, [.25, .5, .75]), [-1, 2, 5], atol=.15)
+            self.assertIsInstance(dnpar.DnCauchy(0, 1).draw(), float)
+            self.assertEqual(DnIID(0, dnpar.DnCauchy(0, 1)).draw(), [])
+            a = compile_model('d := cauchy(2,3)\nx ~ iid(4,d)').execute(2,42)
+            b = compile_model('x ~ iid(4,cauchy(location=2,scale=3))').execute(2,42)
+            self.assertEqual(a.values('x'), b.values('x'))
+            a = compile_model('x ~ cauchy([0,1],1)').execute(1,42)
+            b = compile_model('x ~ [cauchy(mu,1) for mu in [0,1]]').execute(1,42)
+            self.assertEqual(a.values('x'), b.values('x'))
+        finally:
+            np.random.set_state(state)
+
     def test_unif(self):
         """Test uniform draws with non-vectorized input."""
 

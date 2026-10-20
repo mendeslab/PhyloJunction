@@ -3,7 +3,7 @@ import math
 import random
 import typing as ty
 import numpy as np
-from scipy.stats import expon, lognorm, norm, gamma, uniform, beta
+from scipy.stats import expon, lognorm, norm, gamma, uniform, beta, cauchy
 from phylojunction.pgm.pgm import DistrForSampling
 
 __author__ = "Fabio K. Mendes"
@@ -291,6 +291,25 @@ class DnBeta(DistrForSampling):
     def draw_many(self, count):
         self.validate_draw_count(count)
         return beta.rvs(self.alpha, self.beta, size=count).tolist()
+
+
+class DnCauchy(DistrForSampling):
+    """Cauchy distribution with a location (median) and positive scale, not a standard deviation."""
+
+    DN_NAME = 'Cauchy'
+
+    # Keep one finite parameter pair; IID and model replication own repetition.
+    def __init__(self, location, scale):
+        self.location, self.scale = finite(location, 'location'), finite(scale, 'scale')
+        if self.scale <= 0:
+            raise ValueError('Cauchy scale must be positive.')
+
+    def draw(self):
+        return self.draw_many(1)[0]
+
+    def draw_many(self, count):
+        self.validate_draw_count(count)
+        return cauchy.rvs(loc=self.location, scale=self.scale, size=count).tolist()
 
 
 class DnCategorical(DistrForSampling):

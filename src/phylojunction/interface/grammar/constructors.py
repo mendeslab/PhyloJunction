@@ -118,6 +118,7 @@ CONSTRUCTORS = {
     'categorical': (dn.DnCategorical, [{
         'cats': Vector, 'probs': Vector,
     }]),
+    'cauchy': (dn.DnCauchy, [{'location': Scalar, 'scale': Scalar}]),
     'beta': (dn.DnBeta, [{
         'alpha': Scalar, 'beta': Scalar,
     }]),

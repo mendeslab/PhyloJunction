@@ -392,6 +392,22 @@ class TestQuaSSE(unittest.TestCase):
             with self.assertRaises(ec.GenerateFailError):
                 dn.draw()
 
+    # A passed distribution is redrawn on biological rejection under either integrator.
+    # Zero rates isolate starting-trait propagation from tree and diffusion randomness.
+    def test_cauchy_start(self):
+        from phylojunction.distribution.dn_parametric import DnCauchy
+        from phylojunction.interface.cmdbox.cmd_parse import compile_model
+        for method in ('diversitree', 'local_thinning'):
+            extra = ',block_duration=1' if method == 'local_thinning' else ''
+            source = ('b := quasse_constant(0)\n'
+                      't ~ quasse(b,b,"age",1,start_distribution=cauchy(0,1),method="'
+                      + method + '"' + extra + ')')
+            with patch.object(DnCauchy, 'draw', side_effect=[2.,3.]) as draw, \
+                    patch.object(DnQuaSSE, '_is_tree_accepted', side_effect=[False,True]):
+                result = compile_model(source).execute()
+                self.assertEqual(result.value('t').origin_node.trait, 3.)
+                self.assertEqual(draw.call_count, 2)
+
     # Invalid controls and numerical stalls must not become implicit conditioning.
     # Retain until another layer enforces the same continuous-simulation preconditions.
     def test_failures(self):

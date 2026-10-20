@@ -54,12 +54,12 @@ class DnQuaSSE(DistrForSampling):
                  block_duration=None, bridge_error=None, fossil_rate=None, start_distribution=None):
         if start_distribution is not None:
             from phylojunction.distribution.dn_parametric import (
-                DnNormal, DnLogNormal, DnUnif, DnExponential, DnGamma, DnBeta,
+                DnNormal, DnLogNormal, DnUnif, DnExponential, DnGamma, DnBeta, DnCauchy,
             )
             if start_trait is not None:
                 raise ValueError("Specify start_trait or start_distribution, not both.")
             if not isinstance(start_distribution, (DnNormal, DnLogNormal, DnUnif,
-                                                    DnExponential, DnGamma, DnBeta)):
+                                                    DnExponential, DnGamma, DnBeta, DnCauchy)):
                 raise ValueError("start_distribution must be a scalar continuous distribution.")
         self.start_distribution = start_distribution
         start_trait = 0.0 if start_trait is None else start_trait
