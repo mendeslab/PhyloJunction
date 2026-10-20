@@ -27,6 +27,17 @@ class TestReadAnnotatedNewick(unittest.TestCase):
     from an unsampled extinction event for arbitrary external data.
     """
 
+    # Child order must not change which edge continues after an observation; existing
+    # examples use only one order. Retain while sampled ancestors use dummy parents.
+    def test_continuing_lineage_flags_ignore_child_order(self):
+        for children in ("S:0,A:2", "A:2,S:0", "S:0,(T:0,A:1)D:1"):
+            with self.subTest(children=children):
+                tree = pjr.read_nwk_tree_str("(" + children + ");", in_file=False).tree
+                for node in tree.preorder_node_iter():
+                    if node.parent_node is not None:
+                        self.assertEqual(node.is_sa_lineage,
+                                         node.parent_node.is_sa_dummy_parent and not node.is_sa)
+
     def test_complete_tree_with_fossil_tip_is_reconstructed_correctly(self):
         """A fossil (dead, sampled) tip survives reconstruction.
 

@@ -635,8 +635,9 @@ def read_nwk_tree_str(nwk_tree_path_or_str: str,
                         else:
                             nd.alive = False
 
-            # annotate as sa_lineage
-            if nd.parent_node.is_sa_dummy_parent:
+            # Only the continuing child is an SA lineage. It can itself be a dummy
+            # parent when two sampling events occur on the same lineage.
+            if nd.parent_node.is_sa_dummy_parent and not nd.is_sa:
                 nd.is_sa_lineage = True
 
             # internal and no name provided
