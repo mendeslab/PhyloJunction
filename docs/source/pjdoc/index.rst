@@ -444,7 +444,7 @@ Its posterior samples are written to ``inference/inference_results/run1.log``.
 The example uses 1,000 MCMC iterations; choose a suitable run length and assess convergence
 for an actual analysis.
 
-Export supports Normal, Lognormal, Uniform, Exponential, Gamma and Beta distributions,
+Export supports Normal, Lognormal, Uniform, Exponential, Gamma, Beta and Cauchy distributions,
 including named distributions, vectorization, comprehensions, nested lists, and ``iid``.
 At least one numeric stochastic value must remain unclamped. Tree distributions and other
 unsupported model functions raise export errors.

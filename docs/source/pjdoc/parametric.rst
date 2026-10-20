@@ -60,6 +60,24 @@ The function for assigning a gamma (``gamma``) distribution to a random variable
 
     x ~ iid(2, gamma(shape=10.0, scale=1.0))
 
+Cauchy
+------
+
+``cauchy(location, scale)`` describes a real-valued distribution with heavy tails.
+Both parameters are required: ``location`` is a finite median and mode, and ``scale``
+is finite and strictly positive. Scale is not a standard deviation; the Cauchy
+has no finite mean or variance. Sample averages need not stabilize with more draws.
+
+.. code-block:: text
+
+    initial := cauchy(location=0, scale=1)
+    x ~ initial
+    xs ~ iid(10, initial)
+
+Use it as ``start_distribution=initial`` in ``quasse`` to redraw the origin trait
+for each biological attempt. ``examples/quasse_cauchy_origin.pj`` demonstrates this.
+Cauchy draws also export to RevBayes as ``dnCauchy(location=..., scale=...)``.
+
 Normal
 ------
 

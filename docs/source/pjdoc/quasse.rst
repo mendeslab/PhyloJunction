@@ -99,6 +99,8 @@ one-level vectorization; comprehensions give explicit control over nested collec
 Rejected trees do not resample DAG parents. A ``start_distribution`` is instead drawn inside
 the tree sampler for each biological attempt; a numerical restart retains that starting trait.
 For example, ``start_distribution=normal(0, 1)`` passes a distribution object directly.
+For a heavy-tailed starting trait, use ``start_distribution=cauchy(0, 1)``; the second
+argument is a scale, not a standard deviation.
 
 Diversitree method and stopping
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
