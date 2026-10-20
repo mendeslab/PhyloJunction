@@ -1899,6 +1899,9 @@ class AnnotatedTree(dp.Tree):
         if not self.tree_reconstructed:
             self.extract_reconstructed_tree(plotting_overhead=False)
 
+        # Each edge counts genuine splits on its own complete-tree path. A sampled
+        # ancestor separates two segments but contributes no split and moves no counts
+        # between them. The reconstructed root has no incoming path to count.
         for rec_nd in self.tree_reconstructed.preorder_node_iter():
             rec_nd.n_stub = 0
 
@@ -1917,25 +1920,6 @@ class AnnotatedTree(dp.Tree):
                     rec_nd.n_stub += 1
 
                 current_nd = current_nd.parent_node
-
-        # dummy nodes (parents of sampled ancestors) are not real branching
-        # events, so any stub count accumulated on their own branch really
-        # belongs to the lineage that survives past the SA event -- we
-        # transfer it to the 'is_sa_lineage' child and zero the dummy node
-        # out; preorder traversal guarantees a parent dummy is processed
-        # (and its count already transferred downward) before any child
-        # dummy is reached, so chained SA events cascade correctly
-        for rec_nd in self.tree_reconstructed.preorder_node_iter():
-            if rec_nd.is_sa_dummy_parent:
-                lineage_child = next(
-                    (ch for ch in rec_nd.child_node_iter()
-                     if ch.is_sa_lineage),
-                    None)
-
-                if lineage_child is not None:
-                    lineage_child.n_stub += rec_nd.n_stub
-
-                rec_nd.n_stub = 0
 
     def n_rec_branches(self) -> int:
         """Return the number of real branches in the reconstructed tree.

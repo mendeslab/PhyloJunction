@@ -48,7 +48,13 @@ Gamma-spike relaxed clock
 Deterministic function ``gamma_spike_clock`` implements the Gamma-spike punctuated relaxed-clock model of Douglas et al. (2025), annotating a tree's *reconstructed* branches with a new, continuous rate attribute (e.g., ``"mutation_rate"``) that combines:
 
     (i) branch-specific "raw" rates from the relaxed-clock component, supplied via ``br_specific_rel_rate``, and
-    (ii) a punctuated component, the "spike effect" tied to the number of accumulated anagenetic "stubs" (unobserved speciation/extinction/direct-ancestor-sampling events) on each branch.
+    (ii) a punctuated component, the "spike effect", from hidden speciation events ("stubs") on
+         each reconstructed edge and the speciation event at its parent, if any.
+
+A sampled ancestor divides a lineage into two edge segments. Each segment keeps its own stub
+count; sampling contributes no spike and does not transfer stubs between segments. A branch
+leaving a genuine speciation receives one additional spike contribution; a branch leaving a
+sampled-ancestor observation receives none.
 
 The clock model reads a tree's topology and branch lengths (the tree should be a chronogram with branch lengths measured in absolute time). Any pre-existing discrete-state annotations (e.g., from ``map_attr``, above) are left untouched on the returned, independently-copied tree.
 

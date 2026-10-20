@@ -28,11 +28,12 @@ def populate_gamma_spike_mol_rates_on_rec_tr_branches(
     bifurcations) on that branch.
 
     Under the model exactly as described by Douglas et al.
-    ('strict_clock_when_no_stubs=False', the default), a branch with
-    zero stubs still gets independent, randomly-drawn gradual and
+    ('strict_clock_when_no_stubs=False', the default), a branch leaving
+    a genuine speciation with zero stubs still gets independent gradual and
     spike components (a relaxed clock varies rates branch-to-branch
     regardless of stubs; zero stubs just means one baseline spike --
-    see eqn 2.7 -- rather than a larger, stub-inflated one). Setting
+    see eqn 2.7 -- rather than a larger, stub-inflated one). A branch
+    leaving a sampled-ancestor observation has no baseline spike. Setting
     'strict_clock_when_no_stubs=True' deliberately departs from the
     paper: a branch with zero stubs instead gets a fixed, deterministic
     rate (equivalent to a strict clock: 'branch_raw_rate = 1.0',
@@ -193,39 +194,17 @@ def populate_gamma_spike_mol_rates_on_rec_tr_branches(
         # by a 'lognormal(n_nr_from=...)' DAG node)
         rec_nd.branch_raw_rate = br_specific_rel_rates[this_branch_idx]
 
-        # number of gamma-distributed spikes contributing to this
-        # branch's total spike effect: one per stub, plus one more
-        # for the branch's own (sampled) bifurcation event -- unless
-        # this branch is the surviving sibling lineage of a direct
-        # (sampled) ancestor (i.e., 'rec_nd.is_sa_lineage' is True).
-        # In that case, the "+1" is dropped because the parent in
-        # the reconstructed tree is a dummy node marking where the
-        # sampled ancestor was collected, not a true bifurcation
-        # event.
-        #
-        # IMPORTANT: this "+1" is a property of this branch's own
-        # PARENT (was *it* a genuine bifurcation, or just a direct-
-        # ancestor marker?), never of this branch's own children --
-        # i.e., whether 'rec_nd' itself later bifurcates is
-        # irrelevant to whether 'rec_nd's *own* incoming branch gets
-        # the "+1". So an 'is_sa_lineage' node that is also, itself,
-        # a genuine internal bifurcation (e.g., the reconstructed
-        # tree's root, if reached via a chain of direct ancestors
-        # above it -- see 'tree.is_real_branch') still correctly gets
-        # no "+1" on its own incoming branch; that node's own
-        # bifurcation is instead credited to *its* children's
-        # branches, the same as for any other internal node. Douglas
-        # et al. (2025) state this explicitly, in the text under eqn
-        # (2.7): "the total number of spikes on a branch is equal to
-        # the number of stubs along that branch, plus one
-        # (corresponding to the parent node)" -- and this matches
-        # 'getNSpikes()' in the GammaSpikeModel BEAST2 package that
-        # accompanies this clock model, which looks only at
-        # 'node.getParent().isFake()', never at the node's own
-        # children
-        # (src/main/java/gammaspike/distribution/BranchSpikePrior.java).
+        # Number of Gamma-distributed spikes: one per hidden split on this segment,
+        # plus one for the PARENT if it is a genuine speciation, not an SA marker.
+        # Whether this node itself bifurcates is irrelevant to its incoming edge;
+        # that bifurcation contributes to each of its daughters' edges instead.
+        # This also covers a genuine root reached through a chain of SA observations.
+        # Inspect reconstructed topology directly: suppression can leave lineage flags stale.
+        # Douglas et al. (2025), eqn 2.7, attribute the extra spike to the parent;
+        # likewise, getNSpikes() in GammaSpikeModel's BranchSpikePrior.java checks
+        # node.getParent().isFake(), not the node's own children.
         n_spikes = rec_nd.n_stub
-        if not rec_nd.is_sa_lineage:
+        if not rec_nd.parent_node.is_sa_dummy_parent:
             n_spikes += 1
 
         # if there are no spikes to add (no stubs, and no baseline
