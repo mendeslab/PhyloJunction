@@ -1,13 +1,40 @@
 import unittest
+from unittest.mock import patch
 import numpy as np
 from dendropy import Tree, Node, Taxon
 
 # pj imports
+import phylojunction.readwrite.pj_read as pjr
 import phylojunction.data.tree as pjtr
 import phylojunction.calculation.gamma_spike_clock_model as pjgsc
 
 
 class TestGammaSpike(unittest.TestCase):
+
+    # Valid-clock tests cannot detect partial mutation on invalid input. Keep this guard
+    # while rates are populated in place and randomness comes from numpy.random.gamma.
+    def test_invalid_rates_do_not_draw_or_annotate(self):
+        tree = pjr.read_nwk_tree_str("(A:1,B:1);", in_file=False)
+        rec = tree.extract_reconstructed_tree()
+        valid = dict(clock_rate=0.1, spike_mean=0.01, spike_shape=2.0,
+                     br_specific_rel_rates=[1.0, 1.0])
+        invalid = [(name, value) for name in ("clock_rate", "spike_mean", "spike_shape")
+                   for value in (-1.0, float("nan"), float("inf"), -float("inf"))]
+        invalid += [("clock_rate", 0.0), ("spike_shape", 0.0)]
+        invalid += [("br_specific_rel_rates", rates) for rates in
+                    ([1.0], [1.0, -1.0], [1.0, float("nan")], [1.0, float("inf")])]
+        for name, value in invalid:
+            with self.subTest(name=name, value=value), patch("numpy.random.gamma") as gamma:
+                with self.assertRaises(ValueError):
+                    pjgsc.populate_gamma_spike_mol_rates_on_rec_tr_branches(
+                        tree, **(valid | {name: value}))
+                gamma.assert_not_called()
+                self.assertTrue(all(not hasattr(nd, "mol_rate")
+                                    for nd in rec.preorder_node_iter()))
+        # Both zero components are legal, including on a branch leaving a speciation.
+        pjgsc.populate_gamma_spike_mol_rates_on_rec_tr_branches(
+            tree, **(valid | {"spike_mean": 0.0, "br_specific_rel_rates": [0.0, 0.0]}))
+        self.assertTrue(all(nd.mol_rate == 0.0 for nd in rec.leaf_node_iter()))
 
     def test_gamma_spike(self):
         # We will construct the complete tree here

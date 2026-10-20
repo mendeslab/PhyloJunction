@@ -71,9 +71,12 @@ The parameters for ``gamma_spike_clock`` are:
     | ``attr_name`` (string, required): Name of the new per-branch attribute to populate (e.g., ``"mutation_rate"``).
     | ``clock_rate`` (positive real, required): The mean absolute substitution rate (to scale the branch-specific raw rates).
     | ``br_specific_rel_rate`` (string, required): Name of a DAG node holding branch-specific raw rates (one raw rate per branch; conventionally centered at 1.0 in real space, e.g. from ``lognormal(n_nr_from=...)``, above) -- this is how the relaxed-clock component's own distribution and hyperparameters are chosen, independently, in the script.
-    | ``spike_mean`` (positive real, required): Mean of the Gamma-distributed punctuated "spike" component.
+    | ``spike_mean`` (nonnegative real, required): Mean of the Gamma-distributed punctuated "spike" component.
     | ``spike_shape`` (positive real, required): Shape of the Gamma-distributed punctuated "spike" component.
     | ``strict_clock_when_no_stubs`` (string boolean, optional): When ``"true"``, a branch with no accumulated stubs is pinned to a fixed, strict-clock rate. This is **not** a realistic model of molecular evolution -- it exists only as a debugging/diagnostic device (e.g., to make the rarer, stub-affected branches stand out when coloring a tree by ``attr_name``). Defaults to ``"false"``.
+
+All numeric clock parameters and branch-specific rates must be finite. Branch-specific rates
+must be nonnegative (zero is allowed); ``clock_rate`` and ``spike_shape`` must be strictly positive.
 
 Below, a complete worked example: two FBD trees in Newick format stored in a file to be read as one sample with two replicates (``n=1, nr=2`` -- see :ref:`read-tree`), with the Gamma-spike clock model applied to each, as in `examples/fbd_read_gamma_spike.pj <https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/fbd_read_gamma_spike.pj>`_.
 A version of this same pipeline applied to a tree additionally "painted" with a stochastic map (via ``map_attr``) can be found in `examples/sse_smap_gamma_spike_clock.pj <https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/sse_smap_gamma_spike_clock.pj>`_.

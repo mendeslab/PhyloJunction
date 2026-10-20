@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import typing as ty
 import numpy as np
 
@@ -95,11 +96,11 @@ def populate_gamma_spike_mol_rates_on_rec_tr_branches(
         ann_tr (AnnotatedTree): Tree instance whose reconstructed
             tree's branches will be annotated, in place.
         clock_rate (float): Mean clock (substitution) rate (mu_c in
-            Douglas et al. 2025). Must be > 0.0.
-        spike_mean (float): Mean spike size (S_mu). Must be >= 0.0.
+            Douglas et al. 2025). Must be finite and > 0.0.
+        spike_mean (float): Mean spike size (S_mu). Must be finite and >= 0.0.
         spike_shape (float): Shape (S_alpha) of the Gamma
             distribution governing spike sizes (eqn 2.7). Must be
-            > 0.0.
+            finite and > 0.0.
         br_specific_rel_rates (list of float): Pre-generated
             per-branch *relative* rates (the gradual, relaxed-clock
             component), e.g. produced by a separate
@@ -113,7 +114,8 @@ def populate_gamma_spike_mol_rates_on_rec_tr_branches(
             identifiability convention BEAST2's UCLN relaxed clock
             uses -- though this function itself does not enforce that
             centering; it simply multiplies whatever is given by
-            'clock_rate'. Must have exactly 'ann_tr.n_rec_branches()'
+            'clock_rate'. Entries must be finite and nonnegative. Must
+            have exactly 'ann_tr.n_rec_branches()'
             entries, one per real branch of the reconstructed tree, in
             the same (preorder) order 'n_rec_branches' counts them in
             -- checked directly against the tree's own actual real-
@@ -128,18 +130,23 @@ def populate_gamma_spike_mol_rates_on_rec_tr_branches(
     Raises:
         ValueError: Is raised if any of 'clock_rate', 'spike_mean',
             or 'spike_shape' is out of its valid range, or if
-            'br_specific_rel_rates' is given with the wrong number of
-            entries.
+            'br_specific_rel_rates' contains invalid values or has the
+            wrong number of entries.
     """
 
-    if clock_rate <= 0.0:
-        raise ValueError("clock_rate must be greater than 0.0")
+    if not math.isfinite(clock_rate) or clock_rate <= 0.0:
+        raise ValueError("clock_rate must be finite and greater than 0.0")
 
-    if spike_mean < 0.0:
-        raise ValueError("spike_mean cannot be negative")
+    if not math.isfinite(spike_mean) or spike_mean < 0.0:
+        raise ValueError("spike_mean must be finite and nonnegative")
 
-    if spike_shape <= 0.0:
-        raise ValueError("spike_shape must be greater than 0.0")
+    if not math.isfinite(spike_shape) or spike_shape <= 0.0:
+        raise ValueError("spike_shape must be finite and greater than 0.0")
+
+    # Validate the entire vector before annotating any branch or drawing any spikes.
+    # Zero relative rates are valid: the gradual component can be absent on an edge.
+    if any(not math.isfinite(rate) or rate < 0.0 for rate in br_specific_rel_rates):
+        raise ValueError("br_specific_rel_rates must all be finite and nonnegative")
 
     if not ann_tr.tree_reconstructed:
         ann_tr.extract_reconstructed_tree(plotting_overhead=False)
