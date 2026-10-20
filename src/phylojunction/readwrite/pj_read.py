@@ -257,8 +257,10 @@ def read_nwk_tree_str(nwk_tree_path_or_str: str,
             simulator would produce, including lineages that were
             never sampled) -- PhyloJunction will not try to infer
             which terminal branches are alive or sampled from branch
-            lengths alone (not reliable for arbitrary, possibly non-
-            ultrametric, externally-provided data); instead, every
+            lengths alone: a fossil may be arbitrarily close to the
+            present, and rounded branch lengths can obscure its age.
+            The annotations restore biological status without changing
+            branch lengths. Every
             non-direct-ancestor leaf must carry an explicit
             '[&alive=True]'/'[&alive=False]' NHX annotation, and, for
             any leaf so annotated 'alive=False', an explicit
@@ -555,10 +557,9 @@ def read_nwk_tree_str(nwk_tree_path_or_str: str,
                 else:
                     nd.is_sa = False
 
-                    # complete tree: branch lengths/depth alone are
-                    # not trustworthy (e.g. non-ultrametric real
-                    # data), so 'alive'/'sampled' must come from
-                    # explicit annotations instead of being inferred
+                    # Complete-tree annotations preserve biological status even when
+                    # rounded lengths cannot distinguish a near-present fossil from
+                    # a living tip. They do not change the branch lengths.
                     if is_complete:
                         alive_ann = _get_bool_annotation(
                             nd, "alive", nd_identity)
@@ -737,12 +738,15 @@ def read_nwk_tree_str(nwk_tree_path_or_str: str,
                 age=root_height - global_time,
                 time_to_lineage_node=lineage_sibling.edge_length))
 
+    # Fossil-only trees have no living tips but can still have observed samples.
+    tree_died = not any(nd.alive and not nd.is_sa for nd in dp_tr.leaf_node_iter())
+
     # note the empty attribute transition dict members
     ann_tr = AnnotatedTree(dp_tr,
                            n_states,
                            alternative_root_label=root_alternative_label,
                            start_at_origin=is_origin,
-                           tree_died=False,
+                           tree_died=tree_died,
                            read_as_newick_string=True,
                            at_dict=dict(),
                            clado_at_dict=dict(),

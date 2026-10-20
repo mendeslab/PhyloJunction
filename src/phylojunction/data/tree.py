@@ -796,10 +796,30 @@ class AnnotatedTree(dp.Tree):
         extant_sampled_terminal_nd_labels_list: ty.List[str] = []
         extinct_sampled_terminal_nd_labels_list: ty.List[str] = []
 
+        # Imported trees already have biological flags restored by the reader. In particular,
+        # a near-present fossil must not become living just because its depth is maximal.
+        # Count sampled status separately, and exclude SA observations by their own flag.
+        if self.tree_read_as_newick:
+            for nd in self.tree.leaf_node_iter():
+                if nd.is_sa:
+                    continue
+                if nd.alive:
+                    self.n_extant_terminal_nodes += 1
+                    extant_terminal_nd_labels_list.append(nd.taxon.label)
+                    if nd.sampled:
+                        self.n_extant_sampled_terminal_nodes += 1
+                        extant_sampled_terminal_nd_labels_list.append(nd.taxon.label)
+                else:
+                    self.n_extinct_terminal_nodes += 1
+                    extinct_terminal_nd_labels_list.append(nd.taxon.label)
+                    if nd.sampled:
+                        self.n_extinct_sampled_terminal_nodes += 1
+                        extinct_sampled_terminal_nd_labels_list.append(nd.taxon.label)
+
         # tree died!
         #
         # no extant taxa, so counting extinct terminal nodes only
-        if self.tree_died:
+        elif self.tree_died:
             # no root, single lineage from origin died
             if self.brosc_node:
                 self.n_extinct_terminal_nodes = 1  # brosc node
@@ -831,27 +851,8 @@ class AnnotatedTree(dp.Tree):
                     # nd.distance_from_root() returns distance to seed
                     if abs(self.seed_age - nd.distance_from_root()) \
                             <= self.epsilon:
-                        if self.tree_read_as_newick:
-                            self.n_extant_terminal_nodes += 1
-                            extant_terminal_nd_labels_list. \
-                                append(nd.taxon.label)
-
-                            # a leaf read from Newick may have been
-                            # explicitly annotated 'sampled=False'
-                            # (e.g. a known-but-unsequenced living
-                            # taxon, when 'read_tree's
-                            # 'keep_unsampled_alive' argument is left
-                            # at its "false" default) -- respect that
-                            # instead of assuming every extant leaf is
-                            # sampled
-                            if hasattr(nd, "sampled") and nd.sampled:
-                                self.n_extant_sampled_terminal_nodes += 1
-                                extant_sampled_terminal_nd_labels_list.\
-                                    append(nd.taxon.label)
-
-                        # if tree was created via simulation
-                        # (and .alive has been set as an attribute)
-                        elif nd.alive:
+                        # tree was created via simulation, with .alive set
+                        if nd.alive:
                             self.n_extant_terminal_nodes += 1
                             extant_terminal_nd_labels_list.append(nd.label)
 
@@ -865,24 +866,8 @@ class AnnotatedTree(dp.Tree):
                     # if terminal node's path is not maximal, it must
                     # have gone extinct
                     else:
-                        if self.tree_read_as_newick:
-                            self.n_extinct_terminal_nodes += 1
-                            extinct_terminal_nd_labels_list \
-                                .append(nd.taxon.label)
-
-                            # a dead leaf read from Newick may still
-                            # have been sampled (a fossil tip, '&
-                            # sampled=True') -- track that separately
-                            # from "extinct" in general, same as for
-                            # extant leaves above
-                            if hasattr(nd, "sampled") and nd.sampled:
-                                self.n_extinct_sampled_terminal_nodes += 1
-                                extinct_sampled_terminal_nd_labels_list \
-                                    .append(nd.taxon.label)
-
-                        # if tree was created via simulation
-                        # (and .alive a member of Node)
-                        elif not nd.alive:
+                        # tree was created via simulation, with .alive set
+                        if not nd.alive:
                             self.n_extinct_terminal_nodes += 1
                             extinct_terminal_nd_labels_list \
                                 .append(nd.label)

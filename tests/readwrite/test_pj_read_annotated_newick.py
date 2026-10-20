@@ -103,10 +103,32 @@ class TestReadAnnotatedNewick(unittest.TestCase):
         tr_rec = ann_tr.extract_reconstructed_tree(
             plotting_overhead=False, require_obs_both_sides=False)
 
+        self.assertTrue(ann_tr.tree_died)
+        self.assertEqual(ann_tr.n_extant_terminal_nodes, 0)
+        self.assertEqual(ann_tr.n_extinct_terminal_nodes, 2)
+        self.assertEqual(ann_tr.n_extinct_sampled_terminal_nodes, 2)
         self.assertGreater(len(tr_rec.leaf_nodes()), 0)
         rec_leaf_labels = {
             nd.taxon.label for nd in tr_rec.leaf_node_iter()}
         self.assertEqual(rec_leaf_labels, {"fossila", "fossilb"})
+
+    # Depth-based tests cannot protect status when ages are rounded. Check explicit flags
+    # and their serialization together; relevant while complete Newick uses these annotations.
+    def test_near_present_annotations_survive_roundtrip(self):
+        nwk = ("(A[&alive=true,sampled=true]:1,"
+               "B[&alive=true,sampled=false]:0.9999,"
+               "F[&alive=false,sampled=true]:1,"
+               "U[&alive=false,sampled=false]:0.9999);")
+        for _ in range(2):
+            tree = pjr.read_nwk_tree_str(nwk, in_file=False, is_complete=True)
+            self.assertFalse(tree.tree_died)
+            self.assertEqual(set(tree.extant_terminal_nodes_labels), {"A", "B"})
+            self.assertEqual(set(tree.extant_sampled_terminal_nodes_labels), {"A"})
+            self.assertEqual(set(tree.extinct_terminal_nodes_labels), {"F", "U"})
+            self.assertEqual(set(tree.extinct_sampled_terminal_nodes_labels), {"F"})
+            rec = tree.extract_reconstructed_tree(plotting_overhead=False)
+            self.assertEqual({nd.taxon.label for nd in rec.leaf_node_iter()}, {"A", "F"})
+            nwk = tree.tree.as_string(schema="newick", suppress_annotations=False)
 
     def test_complete_tree_gamma_spike_end_to_end(self):
         """Gamma-spike runs cleanly on a complete tree with a fossil tip.
