@@ -71,12 +71,16 @@ class TestInferenceRevBayesParametricDn(unittest.TestCase):
                   'zs ~ [normal(mu,sd) for (mu,sd) in zip_strict(mus,[1,2])]\n'
                   'empty ~ iid(0,normal(0,1),clamp=true)\n'
                   'nested ~ [normal([0,1],1)]\n'
-                  'indexed ~ [normal(pair[1],pair[2]) for pair in zip_strict(mus,[1,2])]')
+                  'indexed ~ [normal(pair[1],pair[2]) for pair in zip_strict(mus,[1,2])]\n'
+                  'cd := cauchy(pjInternal1,1)\ncx ~ iid(2,cd)\ncy ~ cauchy(pjInternal1,1,clamp=true)')
         result = cmdp.compile_model(source).execute(1,42)
         with tempfile.TemporaryDirectory() as directory:
             models, logging, paths = execution_to_rev(result,directory,5)
             self.assertIn('ys[1][1] ~ dnNormal(mean=pjInternal1, sd=1)', models[0])
             self.assertIn('pjInternalX', models[0])
+            self.assertIn('cd = dnCauchy(location=pjInternal1, scale=1)', models[0])
+            self.assertIn('mvSlide(cx[', logging[0])
+            self.assertIn('cy.clamp(', models[0])
             Path(paths[2]).mkdir()
             script = Path(directory) / 'model.rev'
             script.write_text(models[0] + '\nprint(model(pjInternal1,xs[1][1],xs[2][2]))\n' + logging[0])

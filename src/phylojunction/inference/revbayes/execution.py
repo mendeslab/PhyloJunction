@@ -105,6 +105,8 @@ def execution_to_rev(results, root, mcmc_chain_length=1000, prefix=''):
             inner = None
             if name == 'normal':
                 code = f'dnNormal(mean={text("mean")}, sd={text("sd")})'
+            elif name == 'cauchy':
+                code = f'dnCauchy(location={text("location")}, scale={text("scale")})'
             elif name == 'beta':
                 code = f'dnBeta(alpha={text("alpha")}, beta={text("beta")})'
             elif name == 'unif':
@@ -200,7 +202,7 @@ def execution_to_rev(results, root, mcmc_chain_length=1000, prefix=''):
                                 for entries in zip(*(arg.items for arg in args)))
                 return _RevExpression('', [item.value for item in records],
                                       all(arg.fixed for arg in args), records)
-            if name not in ('normal', 'lognormal', 'unif', 'gamma', 'exponential', 'beta', 'iid'):
+            if name not in ('normal', 'lognormal', 'unif', 'gamma', 'exponential', 'beta', 'cauchy', 'iid'):
                 raise ValueError(f'RevBayes export does not support {name}.')
             bound, traversed = bind_call(name, [item.value for item in args],
                                          {key: item.value for key, item in kwargs.items()})
@@ -247,7 +249,7 @@ def execution_to_rev(results, root, mcmc_chain_length=1000, prefix=''):
                     lines.append(f'{target}.clamp({target})')
                 return
             if not isinstance(spec.value, (dn.DnNormal, dn.DnLogNormal, dn.DnUnif,
-                                           dn.DnExponential, dn.DnGamma, dn.DnBeta)):
+                                           dn.DnExponential, dn.DnGamma, dn.DnBeta, dn.DnCauchy)):
                 raise ValueError(f'Rev export does not support {type(spec.value).__name__}.')
             stochastic.append(target)
             if clamped:
