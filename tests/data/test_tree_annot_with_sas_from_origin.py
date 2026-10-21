@@ -1,3 +1,4 @@
+from phylojunction.data.trait import DiscreteTrait
 import unittest
 from dendropy import Tree, Node, Taxon
 
@@ -98,7 +99,7 @@ class TestAnnotateTreeWithSAsFromOrigin(unittest.TestCase):
 
         ann_tr_sa_no_spn_survives_max_age = pjtr.AnnotatedTree(
             tr_sa_no_spn_survives,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=True,
             max_age=max_age,
             sa_lineage_dict=sa_lineage_dict,
@@ -133,7 +134,7 @@ class TestAnnotateTreeWithSAsFromOrigin(unittest.TestCase):
 
         ann_tr_sa_no_spn_survives_no_max_age = pjtr.AnnotatedTree(
             tr_sa_no_spn_survives_no_max_age,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=True,
             sa_lineage_dict=sa_lineage_dict,
             epsilon=1e-12)
@@ -265,7 +266,7 @@ class TestAnnotateTreeWithSAsFromOrigin(unittest.TestCase):
 
         ann_tr_2sas_no_spn_survives_max_age = pjtr.AnnotatedTree(
             tr_2sas_no_spn_survives,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=True,
             max_age=max_age,
             sa_lineage_dict=sa_lineage_dict,
@@ -286,7 +287,7 @@ class TestAnnotateTreeWithSAsFromOrigin(unittest.TestCase):
 
         ann_tr_2sas_no_spn_survives_no_max_age = pjtr.AnnotatedTree(
             tr_2sas_no_spn_survives_no_max_age,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=True,
             sa_lineage_dict=sa_lineage_dict,
             epsilon=1e-12)
@@ -382,7 +383,7 @@ class TestAnnotateTreeWithSAsFromOrigin(unittest.TestCase):
 
         ann_tr_sa_no_spn_dies_max_age = pjtr.AnnotatedTree(
             tr_sa_no_spn_dies,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=True,
             max_age=max_age,
             sa_lineage_dict=sa_lineage_dict,
@@ -413,7 +414,7 @@ class TestAnnotateTreeWithSAsFromOrigin(unittest.TestCase):
 
         ann_tr_sa_no_spn_dies_no_max_age = pjtr.AnnotatedTree(
             tr_sa_no_spn_dies_no_max_age,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=True,
             sa_lineage_dict=sa_lineage_dict,
             epsilon=1e-12)
@@ -552,7 +553,7 @@ class TestAnnotateTreeWithSAsFromOrigin(unittest.TestCase):
 
         ann_tr_2sas_no_spn_dies_max_age = pjtr.AnnotatedTree(
             tr_2sas_no_spn_dies,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=True,
             max_age=max_age,
             sa_lineage_dict=sa_lineage_dict,
@@ -584,7 +585,7 @@ class TestAnnotateTreeWithSAsFromOrigin(unittest.TestCase):
 
         ann_tr_2sas_no_spn_dies_no_max_age = pjtr.AnnotatedTree(
             tr_2sas_no_spn_dies_no_max_age,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=True,
             sa_lineage_dict=sa_lineage_dict,
             epsilon=1e-12)
@@ -718,7 +719,7 @@ class TestAnnotateTreeWithSAsFromOrigin(unittest.TestCase):
 
         ann_tr_sa_with_root_survives_max_age = pjtr.AnnotatedTree(
             tr_sa_with_root_survives,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=True,
             max_age=max_age,
             sa_lineage_dict=sa_lineage_dict,
@@ -751,7 +752,7 @@ class TestAnnotateTreeWithSAsFromOrigin(unittest.TestCase):
 
         ann_tr_sa_with_root_survives_no_max_age = pjtr.AnnotatedTree(
             tr_sa_with_root_survives_no_max_age,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=True,
             sa_lineage_dict=sa_lineage_dict,
             epsilon=1e-12)

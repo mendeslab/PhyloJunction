@@ -1,3 +1,4 @@
+from phylojunction.data.trait import DiscreteTrait
 # Time-heterogeneous GeoSSE tree
 #
 # (((nd10:0.05585634266420793[&state=1],(nd12:0.01444225652017525[&state=0],nd13:0.01444225652017525[&state=2])nd11:0.04141408614403268[&state=2])nd2:1.225238932333245[&state=2],((nd6:0.15152443528855317[&state=1],nd7:0.15152443528855317[&state=1])nd4:0.16841576897032884[&state=1],(nd8:0.11388809491478649[&state=1],nd9:0.0982030908340934[&state=1])nd5:0.2060521093440955[&state=1])nd3:0.9611550707385709[&state=1])root:0.7189047250025469[&state=0])origin:0.0[&state=0];
@@ -79,7 +80,7 @@ if __name__ == "__main__":
 
     ann_tr1.at_dict = at_dict
     ann_tr1.populate_nd_attr_dict(["state"], attr_dict_added_separately_from_tree=True)
-    ann_tr1.state_count = 3
+    ann_tr1.trait = DiscreteTrait(3, name=ann_tr1.trait.name)
     
     fig = matplotlib.pyplot.figure()
 
@@ -130,7 +131,7 @@ if __name__ == "__main__":
     #     print(nd.state)
 
     # TODO: should update state_count to 3 in read_node_attr_update_tree
-    # print(ann_tr2.state_count)
+    # print(ann_tr2.trait.states)
 
     # pjt.plot_ann_tree(
     #     ann_tr2,

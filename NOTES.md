@@ -316,24 +316,43 @@ PhyloJunction has two functional GUIs:
 The GUI built with PySimpleGUI was coded entirely by hand, and is out-of-date at this point.
 
 The GUI built with PySide6 had its main structure coded by hand (`pysidegui/content_main_window.py`), but then individual pages built with Qt Creator / Qt Designer (an app for automating PySide6 GUI development).
-These individual pages are saved as a single `.ui` file (pjguipages/pjgui_pages.ui) that can be translated to a `.py` file with Qt Creator / Qt Designer (Form > View Python Code) or a command line tool:
+These pages are saved in `pjguipages/pjgui_pages.ui`. From the repository root, regenerate
+its Python module using the installed PySide6 tool (no PyQt import conversion is needed):
 
-```
-pyuic6 -x created_file.ui -o created_file.py
-```
-
-or pyuic5 depending on what's available for your OS
-
-```
-pyuic5 -x src/phylojunction/interface/pysidegui/pjguipages/pjgui_pages.ui -o src/phylojunction/interface/pysidegui/pjguipages/gui_pages.py
+```sh
+.venv/bin/pyside6-uic src/phylojunction/interface/pysidegui/pjguipages/pjgui_pages.ui -o src/phylojunction/interface/pysidegui/pjguipages/gui_pages.py
 ```
 
-Then, after `gui_pages.py` is updated, at the top, replace PyQt with `PySide6`.
-You also need to point `gui_pages.py` to PJ's matplotlib widget
+After generation, retain the resource registration import alongside the custom widget imports:
 
+```python
+from phylojunction.interface.pysidegui.images.icons import resources
 ```
-from PySide6 import QtCore, QtGui, QtWidgets
-```
+
+The clear icon uses `:/icon_clear.svg`; Rerun uses Qt's standard browser-reload icon.
+The UI file supplies the custom widget module paths. Review generated changes separately from
+layout changes when switching generator versions.
+
+The `plot_controls` Designer placeholder is arranged after `setupUi` using
+`superqt.QFlowLayout` in `content_main_window.py`. Designer does not preview its wrapping.
+Keep the control objects in the UI file and their layout setup in that method.
+
+The model page redraws when node selection or display controls change, including keyboard
+navigation and the Reconstructed checkbox. These actions display existing samples.
+
+All four Settings inputs are single-line fields. Editing a seed or pressing Return does not
+run the model; Return validates the entry. A blank seed continues the current random sequence.
+
+Rerun executes the stored script and subsequent successful commands entered at the prompt,
+then restores the selected node and display settings. It does not reread the original script
+file. A specified seed resets the generators once per run; the bottom status bar explains
+that unchanged seeds and inputs reproduce the same samples. Read script also applies the seed,
+returns to the model page and selects a node automatically. For incremental prompt commands,
+a seed is applied only when the current model has none; edited seeds apply on a full rerun.
+Execution is synchronous, so a long simulation can temporarily block the window. Rerun failures
+leave existing results displayed, although failed execution can consume randomness. Clear or
+load a script after a command error to enable replay; serialized models alone do not provide
+a verified replay source.
 
 ### Qt Creator / Qt Designer
 
@@ -396,17 +415,9 @@ clear_dag_pressed = QIcon(QPixmap(":/icon_clear_pressed.svg"))
 The above code specifies the path to the icon for clearing the DAG.
 The `:/` syntax makes use of the resource file.
 
-Then we must edit the `gui_pages.py` file produced by QtCreator:
-
-```
-from phylojunction.interface.pysidegui.images.icons import resources # at the top with the imports
-
-# replace the corresponding lines
-icon.addPixmap(QtGui.QPixmap(":/draw.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-icon1.addPixmap(QtGui.QPixmap(":/icon_clear.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-```
-
-The above code allows the icons for those buttons to appear wherever the GUI is called from.
+The Designer file uses the resource URLs `:/draw.svg` and `:/icon_clear.svg` for these icons.
+After regenerating the Python module, register the resources with the import described above.
+This keeps the icons independent of the working directory used to launch the GUI.
 
 ## Documentation
 

@@ -1,13 +1,82 @@
 import unittest
+from unittest.mock import patch
 import numpy as np
 from dendropy import Tree, Node, Taxon
 
 # pj imports
+import phylojunction.readwrite.pj_read as pjr
 import phylojunction.data.tree as pjtr
+from phylojunction.data.trait import DiscreteTrait
 import phylojunction.calculation.gamma_spike_clock_model as pjgsc
 
 
 class TestGammaSpike(unittest.TestCase):
+
+    # Valid-clock tests cannot detect partial mutation on invalid input. Keep this guard
+    # while rates are populated in place and randomness comes from numpy.random.gamma.
+    def test_invalid_rates_do_not_draw_or_annotate(self):
+        tree = pjr.read_nwk_tree_str("(A:1,B:1);", in_file=False)
+        rec = tree.extract_reconstructed_tree()
+        valid = dict(clock_rate=0.1, spike_mean=0.01, spike_shape=2.0,
+                     br_specific_rel_rates=[1.0, 1.0])
+        invalid = [(name, value) for name in ("clock_rate", "spike_mean", "spike_shape")
+                   for value in (-1.0, float("nan"), float("inf"), -float("inf"))]
+        invalid += [("clock_rate", 0.0), ("spike_shape", 0.0)]
+        invalid += [("br_specific_rel_rates", rates) for rates in
+                    ([1.0], [1.0, -1.0], [1.0, float("nan")], [1.0, float("inf")])]
+        for name, value in invalid:
+            with self.subTest(name=name, value=value), patch("numpy.random.gamma") as gamma:
+                with self.assertRaises(ValueError):
+                    pjgsc.populate_gamma_spike_mol_rates_on_rec_tr_branches(
+                        tree, **(valid | {name: value}))
+                gamma.assert_not_called()
+                self.assertTrue(all(not hasattr(nd, "mol_rate")
+                                    for nd in rec.preorder_node_iter()))
+        # Both zero components are legal, including on a branch leaving a speciation.
+        pjgsc.populate_gamma_spike_mol_rates_on_rec_tr_branches(
+            tree, **(valid | {"spike_mean": 0.0, "br_specific_rel_rates": [0.0, 0.0]}))
+        self.assertTrue(all(nd.mol_rate == 0.0 for nd in rec.leaf_node_iter()))
+
+    # The numerical tests do not exercise distribution objects or model repetition.
+    # This protects value-based construction and independent copies until that interface changes.
+    def test_distribution_expression_and_copies(self):
+        from phylojunction.interface.cmdbox.cmd_parse import compile_model
+        source = 'trees <- read_tree(string="(A:1,B:1);")\nrates ~ [iid(n_rec_branches(t), lognormal(0, 0.1)) for t in trees]\nd := gamma_spike_clock(trees[1], "rate", 0.1, 0, 2, rates[1])\nout ~ iid(2, d)\n'
+        result = compile_model(source).execute(runs=2, random_seed=1)
+        for replicate in range(2):
+            original = result.value('trees', replicate)[0]
+            first, second = result.value('out', replicate)
+            self.assertIsNot(first, second)
+            self.assertIsNone(original.clock_model_attr_name)
+            for node, rate in zip(first.tree_reconstructed.leaf_node_iter(), result.value('rates', replicate)[0]):
+                self.assertAlmostEqual(node.rate, 0.1 * rate)
+            self.assertIn('rate=', first.rec_str())
+
+    # QuaSSE reconstruction used to rebuild on each read, unlike discrete trees. Exercise
+    # the shared consumer entry point so repeated display/export preparation retains rates.
+    def test_continuous_rate_annotations_survive_reads(self):
+        from phylojunction.distribution.dn_quasse import DnQuaSSE
+        from phylojunction.distribution.dn_gamma_spike import DnGammaSpikeClock
+        from phylojunction.calculation.continuous_sse import ConstantRate
+        np.random.seed(9)
+        tree = DnQuaSSE(ConstantRate(2), ConstantRate(0), stop="age", stop_value=1,
+                       start_trait=0, diffusion=0.1, fossil_rate=ConstantRate(1)).draw()
+        result = DnGammaSpikeClock(tree, 'rate', .1, .01, 2, [1.] * tree.n_rec_branches()).draw()
+        rec = result.tree_reconstructed
+        text = result.rec_str()
+        from matplotlib.figure import Figure
+        from matplotlib.backends.backend_agg import FigureCanvasAgg
+        figure = Figure()
+        FigureCanvasAgg(figure)
+        axes = figure.subplots()
+        for reconstructed, distance in ((False, False), (True, False), (True, True), (False, False)):
+            result.plot_node(axes, draw_reconstructed=reconstructed, evolutionary_distance=distance)
+            figure.canvas.draw()
+            self.assertEqual(any(line.get_gid() == 'present-reference' for line in axes.lines), not distance)
+            self.assertIs(result.ensure_reconstructed_tree(), rec)
+            self.assertEqual(result.rec_str(), text)
+        result.plot_node(axes, draw_reconstructed=True, branch_rate_attr='rate')
+        figure.canvas.draw()
 
     def test_gamma_spike(self):
         # We will construct the complete tree here
@@ -269,7 +338,7 @@ class TestGammaSpike(unittest.TestCase):
 
         ann_tr = pjtr.AnnotatedTree(
             tr_complete,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=True,
             max_age=max_age,
             epsilon=1e-12
@@ -289,15 +358,13 @@ class TestGammaSpike(unittest.TestCase):
         # 'nd5' was unifurcation-suppressed when the reconstructed tree was
         # extracted (its other child, 'nd11', was alive but unsampled), so
         # the branch leading to the dummy node 'nd6' absorbs that stub.
-        # Because 'nd7' is the surviving lineage sibling of the sampled
-        # ancestor (nd7.is_sa_lineage == True), that one stub must be
-        # transferred from the dummy node onto 'nd7', not left behind.
+        # The stub stays before the fossil, on nd6's incoming edge, not nd7's.
         expected_n_stub_by_label = {
             "root": 0,
             "nd10": 1,
-            "nd6": 0,
+            "nd6": 1,
             "extinct_sp3": 0,
-            "nd7": 1,
+            "nd7": 0,
             "nd12": 0,
             "nd13": 1,
         }
@@ -310,10 +377,7 @@ class TestGammaSpike(unittest.TestCase):
                     msg=f"n_stub mismatch on node '{nd.label}'"
                 )
 
-        # sanity check on the fixture itself: if this ever goes back to
-        # 'False', the n_stub transfer above (and the n_spikes rule
-        # below) are never exercised, and this test silently stops
-        # covering the sampled-ancestor-sibling code path
+        # The continuation gets no parent-event spike: its parent marks sampling.
         rec_nd7 = tr_rec.find_node_with_label("nd7")
         self.assertTrue(rec_nd7.is_sa_lineage)
 
@@ -516,7 +580,7 @@ class TestGammaSpike(unittest.TestCase):
 
         ann_tr = pjtr.AnnotatedTree(
             tr_complete,
-            total_state_count=1,
+            trait=DiscreteTrait(1),
             start_at_origin=True,
             max_age=3.0,
             epsilon=1e-12
@@ -656,7 +720,7 @@ class TestGammaSpike(unittest.TestCase):
 
         ann_tr = pjtr.AnnotatedTree(
             tr_complete,
-            total_state_count=1,
+            trait=DiscreteTrait(1),
             start_at_origin=True,
             max_age=4.0,
             epsilon=1e-12
@@ -800,7 +864,7 @@ class TestGammaSpike(unittest.TestCase):
             tr_complete.taxon_namespace.add_taxon(nd.taxon)
 
         ann_tr = pjtr.AnnotatedTree(
-            tr_complete, total_state_count=1, start_at_origin=True,
+            tr_complete, trait=DiscreteTrait(1), start_at_origin=True,
             max_age=3.0, epsilon=1e-12)
 
         tr_rec = ann_tr.extract_reconstructed_tree(
@@ -910,7 +974,7 @@ class TestGammaSpike(unittest.TestCase):
           chain above the first bifurcation, like here, 'AnnotatedTree'
           's "root" becomes just an ordinary interior node of the
           reconstructed tree, with a real incoming branch -- so it CAN
-          and does carry an inherited stub (see
+          could carry a stub on its own path (see
           'expected_n_stub_by_label' below), the same as any other
           real branch. It is only the reconstructed tree's actual seed
           node that is guaranteed to always have zero stubs and no
@@ -1026,7 +1090,7 @@ class TestGammaSpike(unittest.TestCase):
             tr_complete.taxon_namespace.add_taxon(nd.taxon)
 
         ann_tr = pjtr.AnnotatedTree(
-            tr_complete, total_state_count=1, start_at_origin=True,
+            tr_complete, trait=DiscreteTrait(1), start_at_origin=True,
             max_age=8.7, epsilon=1e-12)
 
         tr_rec = ann_tr.extract_reconstructed_tree(
@@ -1064,13 +1128,13 @@ class TestGammaSpike(unittest.TestCase):
         expected_n_stub_by_label = {
             "dummy_1": 0,
             "DA_1": 0,
-            "node_X": 0,
+            "node_X": 1,
             "DA_2": 0,
-            "root": 1,
+            "root": 0,
             "tip_a": 0,
-            "dummy_2": 0,
+            "dummy_2": 1,
             "SA_3": 0,
-            "lineage_3": 1,
+            "lineage_3": 0,
             "tip_c": 0,
             "tip_d": 0,
         }
@@ -1112,23 +1176,13 @@ class TestGammaSpike(unittest.TestCase):
             self.assertIsNone(nd.spike_effect)
             self.assertIsNone(nd.mol_rate)
 
-        # 'node_X': n_stub == 0 and is_sa_lineage == True -> n_spikes
-        # == 0, a deterministic point mass at 0.0, no randomness
-        # involved at all
-        self.assertEqual(rec_node_X.spike_effect, 0.0)
-        self.assertGreater(rec_node_X.branch_raw_rate, 0.0)
+        # These continuations have neither stubs on their own segments nor a
+        # speciation at their parent. Earlier stubs remain on node_X and dummy_2.
+        for node in (rec_root, rec_lineage_3):
+            self.assertEqual(node.spike_effect, 0.0)
+            self.assertGreater(node.branch_raw_rate, 0.0)
 
-        # every other real branch has n_spikes > 0 (either from its
-        # own "+1", from an inherited stub, or both), so each gets a
-        # genuine, strictly positive random draw -- this is where
-        # 'root' (is_sa_lineage, no "+1", but n_stub == 1) and
-        # 'dummy_2' (NOT is_sa_lineage itself, but its own parent
-        # 'root' is real, so it DOES get the "+1") both land, for
-        # different reasons, confirming the rule is evaluated
-        # per-branch from each branch's own parent, not copied from
-        # anywhere else
-        for label in ("root", "tip_a", "dummy_2", "lineage_3",
-                      "tip_c", "tip_d"):
+        for label in ("node_X", "tip_a", "dummy_2", "tip_c", "tip_d"):
             nd = tr_rec.find_node_with_label(label)
             self.assertGreater(
                 nd.branch_raw_rate, 0.0,

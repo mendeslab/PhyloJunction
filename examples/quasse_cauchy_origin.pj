@@ -1,0 +1,6 @@
+# Generate two model replicates with: pjcli examples/quasse_cauchy_origin.pj --runs 2
+# Each tree attempt draws a fresh origin trait, including after biological rejection.
+initial := cauchy(location=0, scale=1)
+birth := quasse_constant(rate=0.8)
+death := quasse_constant(rate=0.2)
+trees ~ iid(2, quasse(birth_rate=birth, death_rate=death, start_distribution=initial, diffusion=0.1, stop="age", stop_value=2, min_rec_taxa=1))

@@ -1,3 +1,4 @@
+from phylojunction.data.trait import DiscreteTrait
 import io
 import unittest
 import matplotlib
@@ -276,7 +277,7 @@ class TestSmapWrite(unittest.TestCase):
             max_age = 5.0
             ann_tr = pjtr.AnnotatedTree(
                 tr_complete,
-                total_state_count,
+                DiscreteTrait(total_state_count),
                 at_dict=at_dict,
                 clado_at_dict=clado_at_dict,
                 start_at_origin=True,
@@ -590,7 +591,7 @@ class TestSmapWrite(unittest.TestCase):
             max_age = 5.0
             ann_tr = pjtr.AnnotatedTree(
                 tr_complete,
-                total_state_count,
+                DiscreteTrait(total_state_count),
                 at_dict=at_dict,
                 clado_at_dict=clado_at_dict,
                 start_at_origin=True,
@@ -655,29 +656,11 @@ class TestSmapWrite(unittest.TestCase):
         node_val1 = [ann_tr1, ann_tr2]
         node_val2 = [ann_tr1, ann_tr2]
 
-        dag_obj = pgm.DirectedAcyclicGraph()
-
-        # one sample, two replicates
-        stoch_node1 = pgm.StochasticNodeDAG(
-            "tr1",
-            sample_size=1,
-            replicate_size=2,
-            value=node_val1,
-            clamped=True)
-
-        # two samples, each with one replicate
-        stoch_node2 = pgm.StochasticNodeDAG(
-            "tr2",
-            sample_size=2,
-            replicate_size=1,
-            value=node_val2,
-            clamped=True)
-
-        dag_obj.add_node(stoch_node1)
-        dag_obj.add_node(stoch_node2)
-
+        # Exercise both one replicate containing two trees and two replicates
+        # containing one tree each, without value-bearing DAG nodes.
+        records = [('tr1', node_val1, 1, 2), ('tr2', node_val2, 2, 1)]
         all_nds_df_list_dict, all_nds_df_content_str_list_dict = \
-            pjw.prep_trees_rb_smap_dfs(dag_obj, ["tr1", "tr2"], "state")
+            pjw.prep_trees_rb_smap_dfs(records, ['tr1', 'tr2'], 'state')
 
         # writing to file handle
         rb_smap_dfs_outfile_tr1 = io.StringIO()

@@ -10,7 +10,11 @@ from PySide6.QtWidgets import QStackedWidget  # type: ignore
 from PySide6.QtWidgets import QLabel  # type: ignore
 from PySide6.QtWidgets import QSpacerItem  # type: ignore
 from PySide6.QtWidgets import QSizePolicy  # type: ignore
+from PySide6.QtWidgets import QSpinBox, QComboBox, QCheckBox
+from phylojunction.readwrite.execution_export import FORMATS
 from PySide6.QtWidgets import QMessageBox  # type: ignore
+
+from superqt import QFlowLayout
 
 # pj imports #
 from phylojunction.interface.pysidegui.pjguipages.gui_pages \
@@ -236,10 +240,52 @@ class ContentGUIMainWindow(object):
         # 'from PySide6 import' everywhere
 
         self.pages = QStackedWidget()
+        self.pages.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.pages.setStyleSheet("font-size: 14pt; color: black")
 
         self.ui_pages = Ui_PJGUIPages()
         self.ui_pages.setupUi(self.pages)  # self.pages is the parent
+
+        # Install the wrapping layout after Designer has created the existing controls.
+        # Height-for-width lets the parent reserve only the rows currently needed.
+        controls = self.ui_pages
+        controls.evolutionary_distance_check = QCheckBox("Evolutionary distance", controls.plot_controls)
+        controls.evolutionary_distance_check.setToolTip("Draw reconstructed edges with length time × rate")
+        controls.evolutionary_distance_check.hide()
+        flow = QFlowLayout(controls.plot_controls)
+        flow.setContentsMargins(0, 0, 0, 0)
+        flow.setHorizontalSpacing(6)
+        flow.setVerticalSpacing(6)
+        for widget in (controls.one_sample_radio, controls.all_samples_radio,
+                       controls.reconstructed_tree_check, controls.evolutionary_distance_check, controls.sample_idx_spin,
+                       controls.repl_idx_spin, controls.save_pgm_node_plot):
+            flow.addWidget(widget)
+
+        # Execution controls belong to the application, not individual distribution nodes.
+        grid = controls.settings_page_grid_layout
+        positions = [(grid.itemAt(i), grid.getItemPosition(i)) for i in range(grid.count())]
+        for item, (row, column, rowspan, colspan) in positions:
+            if row >= 2:
+                if item.widget() is not None:
+                    grid.addWidget(item.widget(), row + (2 if row >= 4 else 1), column, rowspan, colspan)
+        grid.removeItem(controls.settings_vert_spacer)
+        grid.addItem(controls.settings_vert_spacer, 9, 0)
+        controls.execution_count = QSpinBox(controls.settings_page)
+        controls.execution_count.setRange(1, 1000000)
+        controls.execution_count.setToolTip('Number of complete model replicates to generate on the next load or rerun.')
+        controls.output_format = QComboBox(controls.settings_page)
+        for code, label in FORMATS.items():
+            controls.output_format.addItem(label, code)
+        grid.addWidget(QLabel('Replicates:', controls.settings_page), 2, 0)
+        grid.addWidget(controls.execution_count, 2, 1)
+        grid.addWidget(QLabel('Data output format:', controls.settings_page), 5, 0)
+        grid.addWidget(controls.output_format, 5, 1)
+        controls.sample_idx_spin.setPrefix('Replicate #')
+        controls.repl_idx_spin.setPrefix('Element #')
+        controls.one_sample_radio.setText('One replicate')
+        controls.all_samples_radio.setText('All replicates')
+        controls.avg_replicate_check_button.hide()
+
         self.ui_pages.sample_idx_spin.setDisabled(True)
         self.ui_pages.repl_idx_spin.setDisabled(True)
 
@@ -276,7 +322,7 @@ class ContentGUIMainWindow(object):
         self.left_menu_layout.addWidget(self.left_menu_version_label)
 
         self.content_layout.addWidget(self.top_bar)
-        self.content_layout.addWidget(self.pages, alignment=Qt.AlignCenter)
+        self.content_layout.addWidget(self.pages, stretch=1)
         self.content_layout.addWidget(self.bottom_bar)
 
         ###################

@@ -1,23 +1,8 @@
-# a 5-tip GeoSSE tree (the same one 'see_stoch_maps.pj' and
-# 'tests/functionality/test_stoch_maps.py' use), read back in by node
-# index and then "painted" with its own stochastic map -- every
-# mid-branch and cladogenetic discrete-state change along it (an
-# anagenetic range expansion/contraction, or a cladogenetic range
-# split) gets recorded onto 'mapped_trs' (its 'at_dict'/
-# 'clado_at_dict'/'node_attr_dict'), entirely independently of branch
-# lengths/topology
-trs <- read_tree(n=1, file_path="examples/trees_maps_files/geosse_dummy_tree2.tre", node_name_attr="index")
-mapped_trs := map_attr(tree=trs, fun="smap", maps_file_path="examples/trees_maps_files/geosse_dummy_tree2_maps.tsv", tip_attr_file_path="examples/trees_maps_files/geosse_dummy_tree2_tip_states.tsv", attr_name="state", n_regions=2, geo="true")
-
-# per-branch relaxed-clock rates, drawn independently of the clock model
-# below; mean 1 in real space (meanlog = -sdlog^2 / 2), sdlog=0.5 as in
-# Douglas et al. (2025)'s own empirical analyses ('clockSD')
-n_rec_br := n_rec_branches(tree=mapped_trs)
-br_specific_rel_rate ~ lognormal(n_nr_from=n_rec_br, meanlog=-0.125, sdlog=0.5, log_space="true")
-
-# Gamma-spike punctuated relaxed clock (Douglas et al. 2025), applied on
-# top of the state-painted chronogram above -- the clock model only
-# touches topology/branch lengths (it deep-copies 'mapped_trs' and adds
-# its own 'mutation_rate' attribute), so the discrete-state painting
-# from 'map_attr' survives untouched alongside it on 'phylo'
-phylo := gamma_spike_clock(tree=mapped_trs, attr_name="mutation_rate", clock_rate=0.001, spike_mean=0.01, spike_shape=2.0, br_specific_rel_rate=br_specific_rel_rate)
+# A GeoSSE tree with every supplied stochastic history retained as a mapped tree.
+trs <- read_tree(file_path="examples/trees_maps_files/geosse_dummy_tree2.tre", node_name_attr="index")
+histories := read_maps(file_path="examples/trees_maps_files/geosse_dummy_tree2_maps.tsv", tip_attr_file_path="examples/trees_maps_files/geosse_dummy_tree2_tip_states.tsv", n_regions=2, geo=true)
+mapped_trs := map_attr(tree=trs[1], history=histories, attr_name="state")
+# Clock draws preserve the discrete maps; each mapped tree receives its own rate vector.
+n_rec_br := n_rec_branches(mapped_trs)
+br_specific_rel_rate ~ [iid(n, lognormal(-0.125, 0.5)) for n in n_rec_br]
+phylo ~ [gamma_spike_clock(t, "mutation_rate", 0.001, 0.01, 2.0, r) for (t, r) in zip_strict(mapped_trs, br_specific_rel_rate)]

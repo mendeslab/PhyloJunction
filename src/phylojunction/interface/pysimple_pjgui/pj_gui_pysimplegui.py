@@ -3,6 +3,9 @@
 # NOTE: running the GUI from a conda environment messes up the fonts
 
 import os
+from phylojunction.pgm.values import elements, path_text, shape, summaries, plot_values, component_values, component_frame
+from phylojunction.pgm.execution import ExecutionResults
+from phylojunction.readwrite.execution_export import write_results, FORMATS
 import typing as ty
 import re
 import PySimpleGUI as sg # type: ignore
@@ -70,33 +73,41 @@ def call_gui():
     ###################
     # Inner functions #
     ###################
+    # Publish all new replicate values together, preserving prior values on failure.
     def parse_cmd_lines(cmd_line_list, cmd_line_hist, a_pgm, wdw):
-        valid_cmd_line = None
-        
-        print("Reading script command lines")
+        nonlocal results, dag_obj
+        lines = [line.strip() for line in cmd_line_list if line.strip() and not line.strip().startswith('#')]
+        try:
+            if not results.model.definitions:
+                candidate = cmdp.compile_model('\n'.join(cmd_line_list), '<interactive>').execute(int(wdw['-RUNS-'].get()),
+                    int(wdw['-SEED-'].get()) if wdw['-SEED-'].get().strip() else None)
+            else:
+                candidate = results.append('\n'.join(cmd_line_list))
+        except Exception as error:
+            wdw['-ERROR_MSG-'].update(str(error))
+            return False
+        results, dag_obj = candidate, candidate.model
+        cmd_line_hist.extend(lines)
+        wdw['-HIST-'].update('\n'.join(cmd_line_hist))
+        refresh_names(wdw)
+        return True
 
-        for line in cmd_line_list:
-            line = line.strip() # removing whitespaces from left and right
-            
-            try:
-                valid_cmd_line = cmdp.cmdline2dag(a_pgm, line)
-        
-            except Exception as e:
-                if not event == "Simulate":
-                    if e.__context__:
-                        wdw["-ERROR_MSG-"].Update(e.__context__) # __context__ catches the innermost exception message
-                    else:
-                        wdw["-ERROR_MSG-"].Update(e)
-
-            if valid_cmd_line:
-                print("  " + valid_cmd_line)
-                
-                cmd_line_hist.append(valid_cmd_line)
-                wdw["-HIST-"].update("\n".join(cmd_line_hist))
-                wdw["-PGM-NODES-"].update([node_name for node_name in dag_obj.name_node_dict])
-                wdw["-COMPARISON-PGM-NODES-"].update([nd.node_name for nd in dag_obj.get_sorted_node_dag_list() if nd.is_sampled])
-                wdw["-VALIDATION-PGM-NODES-"].update([nd.node_name for nd in dag_obj.get_sorted_node_dag_list() if not nd.is_deterministic])
-
+    # Comparison and coverage name explicit components with consistent shapes across runs.
+    def refresh_names(wdw):
+        wdw['-PGM-NODES-'].update(list(dag_obj.name_node_dict))
+        compare, coverage = [], []
+        for name, node in dag_obj.name_node_dict.items():
+            rows = results.values(name)
+            if any(shape(row) != shape(rows[0]) for row in rows[1:]):
+                continue
+            for path, value in elements(rows[0]):
+                label = name + path_text(path)
+                if node.is_sampled and isinstance(value, (int, float, pjdt.AnnotatedTree)):
+                    compare.append(label)
+                if isinstance(value, (int, float)):
+                    coverage.append(label)
+        wdw['-COMPARISON-PGM-NODES-'].update(compare)
+        wdw['-VALIDATION-PGM-NODES-'].update(coverage)
 
     def initialize_axes(fig: Figure, disabled_yticks: bool=True) -> plt.Axes:
         ax = fig.add_axes([0.25, 0.2, 0.5, 0.6])
@@ -117,7 +128,9 @@ def call_gui():
         Destroy PGM object, reset all panels (except history panel).
         History panel is updated with 'reset PGM' line.
         """
-        dag_obj = pgm.DirectedAcyclicGraph() # new DAG
+        nonlocal results
+        results = pgm.DirectedAcyclicGraph().execute()
+        dag_obj = results.model # new shared graph
 
         window["-COPY-VALUE-"].update(disabled=True)
         window["-COPY-ALL-"].update(disabled=True)
@@ -151,94 +164,31 @@ def call_gui():
         return dag_obj, ax, comparison_ax, validation_ax
 
 
-    def draw_node_dag(axes, node_dag, sample_idx=None, repl_idx=0, repl_size=1):
-        return node_dag.plot_node(axes, sample_idx=sample_idx, repl_idx=repl_idx, repl_size=repl_size)
-
-    
-    def selected_node_read(dag_obj, node_name):
-        node_dag = dag_obj.get_node_dag_by_name(node_name)
-        # display_node_dag_value_str = pg.get_display_str_by_name(node_name)
-        sample_size = len(node_dag) # this is n_sim inside sampling distribution classes
-        repl_size = node_dag.repl_size
-        
-        return node_dag, sample_size, repl_size
-
-    
-    def selected_node_display(wdw, dag_obj, node_dag, do_all_samples, sample_idx=None, repl_idx=0, repl_size=1):
-        display_node_dag_value_str = str()
-        display_node_dag_stat_str = str()
-
-        # first we do values
-        # we care about a specific sample and maybe a specific replicate
-        if not sample_idx == None and not do_all_samples:
-            start = sample_idx * repl_size
-            end = start + repl_size
-            display_node_dag_value_str = node_dag.get_start2end_str(start, end) # values
-            display_node_dag_stat_str = node_dag.get_node_stats_str(start, end, repl_idx) # summary stats
-        
-        # we get all samples
-        else:
-            # just calling __str__
-            display_node_dag_value_str = dag_obj.get_display_str_by_name(node_dag.node_name)
-            # getting all values
-            display_node_dag_stat_str = node_dag.get_node_stats_str(0, len(node_dag.value), repl_idx) # summary stats
-        
-        wdw["-PGM-NODE-DISPLAY-"].update(display_node_dag_value_str)
-        wdw["-PGM-NODE-STAT-"].update(display_node_dag_stat_str)
-
-        
-    def selected_node_plot(fig_obj, node_dag, do_all_samples, sample_idx=None, repl_idx=0, repl_size=1):
-        """
-        Plot pgm node on 'node_display_fig_axes' (Axes object) scoped to 'call_gui()',
-        then update canvas with new plot
-        """
-        try:
-            # if a tree
-            if isinstance(node_dag.value[0], pjdt.AnnotatedTree):
-                draw_node_dag(node_display_fig_axes, node_dag, sample_idx=sample_idx, repl_idx=repl_idx)
-            # when not a tree
-            else:
-                if do_all_samples: 
-                    draw_node_dag(node_display_fig_axes, node_dag, repl_size=repl_size)
-                else:
-                    draw_node_dag(node_display_fig_axes, node_dag, sample_idx=sample_idx, repl_size=repl_size)
-        # when it's deterministic
-        except:
-            draw_node_dag(node_display_fig_axes, node_dag)
-
-        fig_obj.canvas.draw()
-
-    
+    # Keep replicate choice separate from the explicit path of a vector element.
     def do_selected_node(dag_obj, wdw, fig_obj, node_name, do_all_samples=True):
-        """
-        Given selected node name, display its string representation and
-        plot it on canvas if possible
-        """
-
-        node_dag, sample_size, repl_size = selected_node_read(dag_obj, node_name)
-
-        # updates spin window with number of elements in this node_dag
-        # window["-ITH-VAL-"].update(values=[x for x in range(1, sample_size + 1)]) # can only select the number of values this node contains
-        wdw["-ITH-SAMPLE-"].update(values=[x for x in range(1, sample_size + 1)]) # can only select the number of values this node contains
-
-        if type(node_dag.value) == list:
-            if isinstance(node_dag.value[0], pjdt.AnnotatedTree):
-                wdw["-ITH-REPL-"].update(values=[x for x in range(1, repl_size + 1)]) # can only select the number of values this node contains
-            else:
-                wdw["-ITH-REPL-"].update(disabled=True)
-        
-        # makes sure we stay at the right spin element
-        # sample_idx = int(window["-ITH-VAL-"].get()) - 1 # (offset)
-        sample_idx = int(wdw["-ITH-SAMPLE-"].get()) - 1 # (offset)
-        repl_idx = int(wdw["-ITH-REPL-"].get()) - 1 # (offset)
-
-        # updating node values on window happens inside
-        selected_node_display(wdw, dag_obj, node_dag, do_all_samples, sample_idx=sample_idx, repl_idx=repl_idx, repl_size=repl_size)
-    
-        # plotting to canvas happens inside
-        selected_node_plot(fig_obj, node_dag, do_all_samples, sample_idx=sample_idx, repl_idx=repl_idx, repl_size=repl_size)
-
-        return node_dag
+        rows = results.values(node_name)
+        execution = min(max(int(wdw['-ITH-SAMPLE-'].get()) - 1, 0), len(rows) - 1)
+        choices = list(elements(rows[execution]))
+        element = min(max(int(wdw['-ITH-REPL-'].get()) - 1, 0), len(choices) - 1)
+        path, value = choices[element]
+        is_tree = isinstance(value, pjdt.AnnotatedTree)
+        same_shape = all(shape(row) == shape(rows[0]) for row in rows[1:])
+        do_all_samples = do_all_samples and not is_tree and same_shape
+        wdw['-ALL-SAMPLES-'].update(do_all_samples, disabled=is_tree or not same_shape)
+        wdw['-ONE-SAMPLE-'].update(not do_all_samples, disabled=False)
+        wdw['-ITH-SAMPLE-'].update(execution + 1, values=list(range(1, len(rows) + 1)), disabled=do_all_samples)
+        wdw['-ITH-REPL-'].update(element + 1, values=list(range(1, len(choices) + 1)), disabled=len(choices) < 2)
+        selected = [dict(elements(row))[path] for row in rows] if do_all_samples else [value]
+        wdw['-PGM-NODE-DISPLAY-'].update(node_name + path_text(path) + '\n' + '\n'.join(map(str, selected)))
+        if is_tree:
+            text = tabulate(value.get_stats_dict().items(), tablefmt='plain')
+        else:
+            stats = summaries(selected)
+            text = tabulate(stats, headers='keys', tablefmt='plain') if stats else ''
+        wdw['-PGM-NODE-STAT-'].update(text)
+        plot_values(node_display_fig_axes, selected)
+        fig_obj.canvas.draw()
+        return dag_obj.name_node_dict[node_name]
 
     ###################### 
     # Development screen #
@@ -318,11 +268,11 @@ def call_gui():
  
                     sg.Column(
                         layout = [
-                            [ sg.Radio("All samples", "-WHICH-SAMPLES-", key="-ALL-SAMPLES-", default=True, enable_events=True, disabled=True, font=("helvetica 14")) ],
-                            [ sg.Radio("One sample", "-WHICH-SAMPLES-", key="-ONE-SAMPLE-", default=False, enable_events=True, disabled=True, font=("helvetica 14")) ],
-                            [ sg.Text("Sample #", font=("helvetica 14")) ],
+                            [ sg.Radio("All replicates", "-WHICH-SAMPLES-", key="-ALL-SAMPLES-", default=True, enable_events=True, disabled=True, font=("helvetica 14")) ],
+                            [ sg.Radio("One replicate", "-WHICH-SAMPLES-", key="-ONE-SAMPLE-", default=False, enable_events=True, disabled=True, font=("helvetica 14")) ],
+                            [ sg.Text("Replicate #", font=("helvetica 14")) ],
                             [ sg.Spin([1], initial_value=1, key="-ITH-SAMPLE-", enable_events=True, readonly=True, disabled=True, font=("helvetica 14"), size=(8,1)) ],
-                            [ sg.Text("Replicate #", font=("helvetica 14"), size=(9,1)) ],
+                            [ sg.Text("Element #", font=("helvetica 14"), size=(9,1)) ],
                             [ sg.Spin([1], initial_value=1, key="-ITH-REPL-", enable_events=True, readonly=True, disabled=True, font=("helvetica 14"), size=(8,1)) ]
                         ],
                         element_justification="center",
@@ -477,7 +427,7 @@ def call_gui():
                         )
                     ],
 
-                    [ sg.Checkbox("Replicate avgs.", key="-REPL-AVG-", default=False, font=("helvetica 14")) ],
+                    [ sg.Checkbox("Replicate avgs.", key="-REPL-AVG-", default=False, visible=False, font=("helvetica 14")) ],
 
                     [ sg.VPush() ],
                     
@@ -619,6 +569,9 @@ def call_gui():
     #####################
     layout_save = [
         [
+            sg.Text("Replicates"), sg.Input("1", key="-RUNS-", size=(6,1)),
+            sg.Text("Seed"), sg.Input("", key="-SEED-", size=(10,1)),
+            sg.Combo(list(FORMATS.values()), default_value=FORMATS["separate-csv"], readonly=True, key="-FORMAT-"),
             sg.Text("Save with prefix", font=("Helvetica", 14)), sg.Input(size=(10, 1), font=("Helvetica", 14), key="-PREFIX-")
         ]
     ]
@@ -691,7 +644,8 @@ def call_gui():
     ##############
     # Event loop #
     ##############
-    dag_obj: pgm.DirectedAcyclicGraph = pgm.DirectedAcyclicGraph()
+    results = pgm.DirectedAcyclicGraph().execute()
+    dag_obj = results.model
     cmd_history: ty.List[str] = []
     cmd_line: str = ""
     script_out_fp: str = ""
@@ -743,7 +697,7 @@ def call_gui():
             value_str = str()
             
             if values["-COPY-ALL-"]:
-                value_str = dag_obj.get_display_str_by_name(node_dag.node_name)
+                value_str = '\n'.join(map(str, results.values(node_dag.node_name)))
 
             else:
                 value_str = values['-PGM-NODE-DISPLAY-']
@@ -751,7 +705,14 @@ def call_gui():
             pyperclip.copy(str(value_str)) # requires xclip (Linux) / pbcopy (OS X) are installed
 
         elif event == "Simulate":
-            pass
+            try:
+                source = '\n'.join(node.source for node in dag_obj.definitions)
+                candidate = cmdp.compile_model(source, "<rerun>").execute(
+                    int(values['-RUNS-']), int(values['-SEED-']) if values['-SEED-'].strip() else None)
+                results, dag_obj = candidate, candidate.model
+                refresh_names(window)
+            except Exception as error:
+                window['-ERROR_MSG-'].update(str(error))
 
 
         ####################
@@ -773,54 +734,10 @@ def call_gui():
                 selected_node_dag_name = values["-PGM-NODES-"][0]
                 do_all_samples = window["-ALL-SAMPLES-"].get() # True or False
 
-                # if selected node is tree, we do not want to show all trees on display by default
-                try:
-                    if isinstance(dag_obj.get_node_dag_by_name(selected_node_dag_name).value[0], pjdt.AnnotatedTree):
-                        do_all_samples = False
-                except: pass # the value of the node_dag might be an DiscreteStateDependentRate, which is not subscriptable, so we pass
-                
-                node_dag = do_selected_node(dag_obj, window, node_display_fig, selected_node_dag_name, do_all_samples=do_all_samples)
-                
-                # we enable value copying as soon as a node is clicked
-                window["-COPY-VALUE-"].update(disabled=False)
-                window["-COPY-ALL-"].update(disabled=False)
-
-                # if there is a chance for replicates to exist, we enable the one-sample radio button
-                if node_dag.is_sampled:
-                    window["-ONE-SAMPLE-"].update(disabled=False)
-
-                    # cycling through trees can only be done with "one-sample" radio button
-                    if isinstance(node_dag.value[0], pjdt.AnnotatedTree):
-                        window["-ALL-SAMPLES-"].update(disabled=True)
-                        window["-ALL-SAMPLES-"].update(False)
-                        window["-ONE-SAMPLE-"].update(True)
-                        window["-ITH-SAMPLE-"].update(disabled=False)
-                        window["-ITH-REPL-"].update(disabled=False)
-                    # for all other stochastic nodes, cycling can be done through "all-samples"
-                    else:
-                        window["-ALL-SAMPLES-"].update(disabled=False)
-
-                # if node was created by hand through assignment, radio buttons and cycling are disabled
-                else:
-                    window["-ALL-SAMPLES-"].update(disabled=True)
-                    window["-ONE-SAMPLE-"].update(disabled=True)
-
-            # if we're looking at all samples, all samples and replicates shown in histogram
-            # and if tree, only one sample at a time is allowed
-            if event == "-ALL-SAMPLES-":
-                window["-ITH-REPL-"].update(disabled=True)
-                window["-ITH-SAMPLE-"].update(disabled=True)
-            
-            # if one sample at a time, spin element works (only for sampled random variables)
-            if event == "-ONE-SAMPLE-":
-                window["-ITH-SAMPLE-"].update(disabled=False)
-
-                # if we are looking at trees, we can cycle through replicates
-                if isinstance(node_dag.value[0], pjdt.AnnotatedTree):
-                    window["-ITH-REPL-"].update(disabled=False)
-                # otherwise, all replicates will be visualized as histogram (no cycling allowed)
-                else:
-                    window["-ITH-REPL-"].update(disabled=True)
+                node_dag = do_selected_node(dag_obj, window, node_display_fig, selected_node_dag_name,
+                                            do_all_samples=do_all_samples)
+                window['-COPY-VALUE-'].update(disabled=False)
+                window['-COPY-ALL-'].update(disabled=False)
 
 
         #########################################
@@ -861,14 +778,21 @@ def call_gui():
             script_in_fp = sg.popup_get_file("Script to load", no_window=True, keep_on_top=True)
             
             if script_in_fp:
-                _, node_display_fig_axes, comparison_fig_axes, validation_fig_axes = clean_disable_everything(cmd_history, "## Loading script at this point. Previous model, if it existed, is now obliterated") # clean figure, reset axes
-                cmd_lines = pjread.read_text_file(script_in_fp)
-                parse_cmd_lines(cmd_lines, cmd_history, dag_obj, window)
+                try:
+                    lines = pjread.read_text_file(script_in_fp, keep_empty=True)
+                    candidate = cmdp.compile_model('\n'.join(lines), script_in_fp).execute(
+                        int(values['-RUNS-']), int(values['-SEED-']) if values['-SEED-'].strip() else None)
+                except Exception as error:
+                    window['-ERROR_MSG-'].update(str(error))
+                    continue
+                _, node_display_fig_axes, comparison_fig_axes, validation_fig_axes = clean_disable_everything(
+                    cmd_history, '## Loaded a new script')
+                results, dag_obj = candidate, candidate.model
+                cmd_history.extend(lines)
+                window['-HIST-'].update('\n'.join(cmd_history))
+                refresh_names(window)
+                window['-DESTROY-PGM-'].update(disabled=not dag_obj.n_nodes)
 
-                # it model has at least one node, destroying is now a possibility
-                if dag_obj.n_nodes >= 1:
-                    window["-DESTROY-PGM-"].update(disabled=False)
-            
             else: pass # event canceled by user
 
 
@@ -879,12 +803,18 @@ def call_gui():
             model_in_fp = sg.popup_get_file("Model to load", no_window=True, keep_on_top=True)
             
             if model_in_fp:
-                _, node_display_fig_axes, comparison_fig_axes, validation_fig_axes = clean_disable_everything(cmd_history, "## Loading serialized model at this point. Previous model, if it existed, is now obliterated") # clean figure, reset axes
-                dag_obj = pjread.read_serialized_pgm(model_in_fp)
-                window["-PGM-NODES-"].update([node_name for node_name in dag_obj.name_node_dict])
-                window["-COMPARISON-PGM-NODES-"].update([nd.node_name for nd in dag_obj.get_sorted_node_dag_list() if nd.is_sampled])
-                window["-VALIDATION-PGM-NODES-"].update([nd.node_name for nd in dag_obj.get_sorted_node_dag_list() if not nd.is_deterministic])
-            
+                try:
+                    candidate, history = pjread.read_serialized_pgm(model_in_fp)
+                    if not isinstance(candidate, ExecutionResults):
+                        raise ValueError('This saved model uses the old format; reload its script.')
+                except Exception as error:
+                    window['-ERROR_MSG-'].update(str(error))
+                    continue
+                _, node_display_fig_axes, comparison_fig_axes, validation_fig_axes = clean_disable_everything(
+                    cmd_history, '## Loaded a saved model')
+                results, dag_obj, cmd_history = candidate, candidate.model, history
+                refresh_names(window)
+
             else: pass # user canceled event
 
 
@@ -901,7 +831,9 @@ def call_gui():
                         
             # default value is "./"
             # if data_out_dir:
-            pjwrite.dump_pgm_data(data_out_dir, dag_obj, prefix=prefix)
+            if data_out_dir:
+                write_results(data_out_dir, results, prefix,
+                              next(code for code, label in FORMATS.items() if label == values['-FORMAT-']))
 
 
         ###########################
@@ -916,7 +848,7 @@ def call_gui():
             prefix = values["-PREFIX-"]
             
             # pickling and saving PGM
-            pjwrite.dump_serialized_pgm(model_out_dir, dag_obj, [""], prefix=prefix)
+            pjwrite.dump_serialized_pgm(model_out_dir, results, cmd_history, prefix=prefix)
 
 
         ##################
@@ -963,7 +895,7 @@ def call_gui():
                 except ec.InvalidMCMCChainLength as e:
                     sg.popup_error("Invalid MCMC chain length")
 
-                all_sims_model_spec_list, all_sims_mcmc_logging_spec_list, dir_list = rbinf.dag_obj_to_rev_inference_spec(dag_obj, inf_out_dir, mcmc_chain_length=mcmc_chain_length)
+                all_sims_model_spec_list, all_sims_mcmc_logging_spec_list, dir_list = rbinf.dag_obj_to_rev_inference_spec(results, inf_out_dir, mcmc_chain_length=mcmc_chain_length)
 
                 all_sims_spec_strs_list = pjwrite.get_write_inference_rev_scripts(all_sims_model_spec_list, all_sims_mcmc_logging_spec_list, dir_list, write2file=False)
 
@@ -1026,7 +958,7 @@ def call_gui():
             except Exception as e:
                 sg.popup_error("MCMC chain length must be a number")
 
-            all_sims_model_spec_list, all_sims_mcmc_logging_spec_list, dir_list = rbinf.dag_obj_to_rev_inference_spec(dag_obj, inf_out_dir, mcmc_chain_length=mcmc_chain_length, prefix=prefix)
+            all_sims_model_spec_list, all_sims_mcmc_logging_spec_list, dir_list = rbinf.dag_obj_to_rev_inference_spec(results, inf_out_dir, mcmc_chain_length=mcmc_chain_length, prefix=prefix)
 
             _ = pjwrite.get_write_inference_rev_scripts(all_sims_model_spec_list, all_sims_mcmc_logging_spec_list, dir_list, prefix=prefix, write2file=True)
             
@@ -1058,52 +990,16 @@ def call_gui():
 
 
         elif event == "-COMPARISON-PGM-NODES-":
-            selected_node_name: str = ""
-            avg_over_repls = values["-REPL-AVG-"]
-            
-            if values["-COMPARISON-PGM-NODES-"]:
-                selected_node_name = values["-COMPARISON-PGM-NODES-"][0]
-                selected_node = dag_obj.get_node_dag_by_name(selected_node_name)
-                selected_node_repl_size = selected_node.repl_size
+            if values['-COMPARISON-PGM-NODES-']:
+                selected_node_name = values['-COMPARISON-PGM-NODES-'][0]
+                selected_node = dag_obj.name_node_dict[selected_node_name.split('[')[0]]
+                pj_comparison_df = component_frame(results, selected_node_name)
+                pj_comparison_df['program'] = 'PJ'
+                tree = isinstance(component_values(results, selected_node_name)[0], pjdt.AnnotatedTree)
+                window['-COMPARISON-PGM-NODE-STATS-'].update(
+                    [column for column in pj_comparison_df if column not in ('sample', 'replicate', 'program')]
+                    if tree else [])
 
-                # could be more efficient, but this makes sure that stashes are always up-to-date
-                scalar_output_stash, tree_output_stash = pjwrite.prep_data_df(dag_obj)
-                
-                _, scalar_value_df_dict, scalar_repl_summary_df = scalar_output_stash
-                
-                tree_value_df_dict, tree_ann_value_df_dict, tree_rec_value_df_dict, \
-                tree_rec_ann_value_df_dict, tree_summary_df_dict, tree_repl_summary_df_dict, \
-                tree_living_nd_states_str_dict, tree_living_nd_states_str_nexus_dict, \
-                tree_internal_nd_states_str_dict, tree_n_stub_df_dict = tree_output_stash
-                
-                # adding "program" column to PJ's pandas DataFrame's stored inside dicts
-                for repl_size in scalar_value_df_dict:
-                    scalar_value_df_dict[repl_size].loc[:, "program"] = "PJ"
-
-                for tr_nd_name in tree_summary_df_dict:
-                    tree_summary_df_dict[tr_nd_name].loc[:, "program"] = "PJ"
-                
-                for tr_w_repl_nd_name in tree_repl_summary_df_dict:
-                    tree_repl_summary_df_dict[tr_w_repl_nd_name].loc[:, "program"] = "PJ"
-
-                if isinstance(selected_node.value[0], (int, float, np.float64)):
-                    if not avg_over_repls:
-                        window["-COMPARISON-PGM-NODE-STATS-"].update([])
-                        pj_comparison_df = scalar_value_df_dict[selected_node_repl_size]
-
-                    else:
-                        window["-COMPARISON-PGM-NODE-STATS-"].update(values=["average", "std. dev."])
-                        pj_comparison_df = scalar_repl_summary_df
-
-                elif isinstance(selected_node.value[0], pjdt.AnnotatedTree):
-                    pj_comparison_df = tree_summary_df_dict[selected_node_name]
-                    window["-COMPARISON-PGM-NODE-STATS-"].update(values=[tree_stat for tree_stat in pj_comparison_df.keys() if tree_stat not in ("program", "sample", "replicate")])
-            
-            else:
-                print("If there are no sampled nodes in PJ model, we cannot compare against PJ. Later write an Exception for this")
-                pass
-
-        
         elif event == "-DRAW-VIOLIN1-":
             avg_over_repls = values["-REPL-AVG-"]
             comparison_fig.clf()
@@ -1120,7 +1016,7 @@ def call_gui():
                 value_to_compare: str = ""
                 
                 # scalar
-                if isinstance(selected_node.value[0], (int, float, np.float64)):
+                if isinstance(component_values(results, selected_node_name)[0], (int, float, np.float64)):
                     if not avg_over_repls:
                         value_to_compare = values["-COMPARISON-PGM-NODES-"][0]
                     
@@ -1196,50 +1092,11 @@ def call_gui():
 
 
         elif event == "-VALIDATION-PGM-NODES-":
-            selected_node_name: str = ""
-            # avg_over_repls = values["-REPL-AVG-"]
-            
-            if values["-VALIDATION-PGM-NODES-"]:
-                selected_node_name = values["-VALIDATION-PGM-NODES-"][0]
-                selected_node = dag_obj.get_node_dag_by_name(selected_node_name)
-                selected_node_repl_size = selected_node.repl_size
-
-                # could be more efficient, but this makes sure that stashes are always up-to-date
-                scalar_output_stash, tree_output_stash = pjwrite.prep_data_df(dag_obj)
-                scalar_constant_value_df, scalar_value_df_dict, scalar_repl_summary_df = scalar_output_stash
-                tree_value_df_dict, tree_ann_value_df_dict, tree_rec_value_df_dict, \
-                tree_rec_ann_value_df_dict, tree_summary_df_dict, tree_repl_summary_df_dict, \
-                tree_living_nd_states_str_dict, tree_living_nd_states_str_nexus_dict, \
-                tree_internal_nd_states_str_dict, tree_n_stub_df_dict = tree_output_stash
-
-                # str because could be constant set by hand
-                if isinstance(selected_node.value[0], (str, int, float, np.float64)):
-                    if selected_node_repl_size == 1:
-                        window["-VALIDATION-PGM-NODE-STATS-"].update([])
-
-                        # sampled, non-deterministic
-                        if selected_node.is_sampled:
-                            pj_validation_df = scalar_value_df_dict[selected_node_repl_size]
-                        
-                        # constant, non-deterministic
-                        else:
-                            pj_validation_df = scalar_constant_value_df
-
-                    else:
-                        window["-VALIDATION-PGM-NODE-STATS-"].update(values=["average", "std. dev."])
-                        pj_validation_df = scalar_repl_summary_df
-
-                # elif isinstance(selected_node.value[0], pjdt.AnnotatedTree):
-                #     pj_validation_df = tree_summary_df_dict[selected_node_name]
-                #     window["-VALIDATION-PGM-NODE-STATS-"].update(values=[tree_stat for tree_stat in pj_validation_df.keys() if tree_stat not in ("program", "sample", "replicate")])
-            
-            else:
-                print("If there are no sampled nodes in PJ model, we cannot compare against PJ. Later write an Exception for this")
-                pass
-
-            # debugging
-            # print(tabulate(pj_validation_df, pj_validation_df.head(), tablefmt="plain", showindex=False))
- 
+            if values['-VALIDATION-PGM-NODES-']:
+                selected_node_name = values['-VALIDATION-PGM-NODES-'][0]
+                selected_node = dag_obj.name_node_dict[selected_node_name.split('[')[0]]
+                pj_validation_df = component_frame(results, selected_node_name)
+                window['-VALIDATION-PGM-NODE-STATS-'].update([])
 
         elif event == "-DRAW-COVG-":
             # avg_over_repls = values["-REPL-AVG-"]
@@ -1257,7 +1114,7 @@ def call_gui():
                 stat_to_validate: str = ""
                 
                 # scalar
-                if isinstance(selected_node.value[0], (str, int, float, np.float64)):
+                if isinstance(component_values(results, selected_node_name)[0], (str, int, float, np.float64)):
                     stat_to_validate = selected_node_name
                     
                 # TODO: tree
