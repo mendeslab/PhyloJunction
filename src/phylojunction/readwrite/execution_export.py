@@ -50,7 +50,7 @@ def csv_value(value):
 
 # Reuse the established tree serializers, remapping their row ordinals to replicate/path
 # coordinates. No temporary DAG nodes or second per-replicate graph are created.
-def tree_files(results, write_nex_states=False, bit_format=False):
+def tree_files(results, write_nex_states=False, bit_format=False, write_stub_counts=False):
     from phylojunction.readwrite.pj_write import prep_data_df, prep_data_filepaths_dfs
     outputs = {}
     for name in results.model.name_node_dict:
@@ -58,6 +58,20 @@ def tree_files(results, write_nex_states=False, bit_format=False):
                    for path, value in elements(values) if isinstance(value, AnnotatedTree)]
         if not entries:
             continue
+        if write_stub_counts:
+            # Node labels identify edges within each tree; the union of columns preserves
+            # different topologies, with absent labels left empty rather than assigned zero.
+            rows = []
+            for replicate, path, tree in entries:
+                tree.populate_n_stubs_on_branches_of_rec_tr()
+                counts = {nd.label: nd.n_stub for nd in tree.tree_reconstructed if nd.label is not None}
+                if '@replicate' in counts or '@element' in counts:
+                    raise ValueError("Tree labels conflict with stub-table identifier columns.")
+                rows.append({'@replicate': replicate, '@element': path, **counts})
+            table = pd.DataFrame(rows)
+            for column in table.columns[2:]:
+                table[column] = table[column].astype('Int64')
+            add_output(outputs, name + '_n_stub.tsv', table)
         records = [(name, [v for _, _, v in entries], 1, True, True, len(entries))]
         scalar, trees = prep_data_df(records, write_nex_states, bit_format)
         filenames, contents = prep_data_filepaths_dfs(scalar, trees)
@@ -80,7 +94,7 @@ def tree_files(results, write_nex_states=False, bit_format=False):
 # Stage every output in memory before opening files. Combined CSV requires identical
 # complete shapes; MCON records preserve lists and omit synthetic replicate variables.
 def write_results(directory, results, prefix='', output_format='separate-csv',
-                  write_nex_states=False, bit_format=False):
+                  write_nex_states=False, bit_format=False, write_stub_counts=False):
     if output_format not in FORMATS:
         raise ValueError(f'Unknown output format: {output_format}')
     columns = export_values(results)
@@ -106,7 +120,7 @@ def write_results(directory, results, prefix='', output_format='separate-csv',
             rows = [{'@replicate': i, '@element': path_text(path), name: csv_value(value)}
                     for i, vector in enumerate(values, 1) for path, value in elements(vector)]
             add_output(outputs, name + '.csv', pd.DataFrame(rows))
-    for filename, content in tree_files(results, write_nex_states, bit_format).items():
+    for filename, content in tree_files(results, write_nex_states, bit_format, write_stub_counts).items():
         add_output(outputs, filename, content)
     for name in columns:
         stats = summaries(results.values(name))

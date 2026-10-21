@@ -27,7 +27,7 @@ def execute_pj_script(
         a_random_seed: ty.Optional[int] = None,
         tr_dag_nd_names: ty.Optional[str] = None,
         smap_attr_name: ty.Optional[str] = None, runs: int = 1,
-        output_format: str = 'separate-csv') -> None:
+        output_format: str = 'separate-csv', write_stub_counts: bool = False) -> None:
     """
     Execute .pj script.
 
@@ -94,7 +94,7 @@ def execute_pj_script(
                 os.mkdir(data_dir)
 
             if write_data:
-                write_results(data_dir, results, prefix, output_format, write_nex, bit_format)
+                write_results(data_dir, results, prefix, output_format, write_nex, bit_format, write_stub_counts)
 
             if write_smap:
                 if not tr_dag_nd_names:
@@ -230,6 +230,8 @@ def call_cli() -> None:
         default=None,
         help="Name of the attribute being stochastically mapped (e.g., 'state').")
 
+    parser.add_argument('-nstub', '--stub-count-output', action='store_true',
+                        help='With -d, write per-tree stub counts with replicate and element identifiers')
     parser.add_argument('--runs', type=int, default=1, help='Number of model replicates')
     parser.add_argument('--output-format', choices=tuple(FORMATS), default='separate-csv',
                         help='Separate files (CSV), Combined (CSV), or JSON (MCON)')
@@ -241,6 +243,7 @@ def call_cli() -> None:
         user_prefix=args.prefix,
         out_dir=args.out_dir,
         write_data=args.write_data,
+        write_stub_counts=args.stub_count_output,
         write_smap=args.write_smap,
         write_figures=args.write_figures,
         # write_inference=args.write_inference,

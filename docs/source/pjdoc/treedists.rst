@@ -216,3 +216,12 @@ GUI summaries describe the selected complete or reconstructed topology. Ages rem
 units in both views. Exported statistics and comparison/coverage calculations are independent
 of the display selection. Python plotting also accepts ``branch_rate_attr`` to color edges by
 a continuous rate attribute without replacing biological trait annotations.
+
+Exporting stub counts
+~~~~~~~~~~~~~~~~~~~~
+
+Add ``--stub-count-output`` (or ``-nstub``) alongside ``-d`` to write one
+``<variable>_n_stub.tsv`` table per tree-valued variable. Rows identify the model replicate
+and nested vector element; columns give reconstructed-edge stub counts by node label.
+A missing node is an empty cell, not a zero count. In Python, use
+``write_results(..., write_stub_counts=True)``. This option does not depend on GUI views.

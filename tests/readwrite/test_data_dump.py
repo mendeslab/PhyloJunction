@@ -21,6 +21,23 @@ __email__ = "fmendes@lsu.edu"
 
 class TestDataDump(unittest.TestCase):
 
+    # Stub tables need tree labels plus replicate/vector identities, unlike scalar CSV.
+    # Exercise the final exporter so annotation loss and nested paths cannot be hidden.
+    def test_stub_tables_and_rate_annotations(self):
+        source = 't <- read_tree(string="((A[&alive=true]:1,X[&alive=false,sampled=false]:.2):1,B[&alive=true]:2);", is_complete=true)[1]\nout ~ iid(2, gamma_spike_clock(t, "rate", .1, 0, 2, [1,1]))\n'
+        result = compile_model(source).execute(runs=2, random_seed=2)
+        before = result.value('out')[0].rec_str()
+        with tempfile.TemporaryDirectory() as directory:
+            write_results(directory, result, write_stub_counts=True)
+            table = pd.read_csv(Path(directory) / 'out_n_stub.tsv', sep='\t')
+            self.assertEqual(list(table['@replicate']), [1, 1, 2, 2])
+            self.assertEqual(list(table['@element']), ['[1]', '[2]', '[1]', '[2]'])
+            self.assertEqual(list(table['A']), [1, 1, 1, 1])
+            self.assertEqual(list(table['B']), [0, 0, 0, 0])
+            self.assertTrue(any('rate=' in path.read_text() for path in Path(directory).glob('*')
+                                if path.is_file()))
+        self.assertEqual(result.value('out')[0].rec_str(), before)
+
     # Legacy dataframe checks do not cover replicate/vector boundaries or MCON nesting.
     # Retain these contracts while both tabular and nested replicate exports are supported.
     def test_execution_formats(self):
