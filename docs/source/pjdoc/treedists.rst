@@ -179,3 +179,9 @@ status resolves near-present fossils even when branch lengths are rounded; lengt
 The default, ``is_complete=false``, reads an already reconstructed tree: every tip is sampled,
 and living status is inferred from depth. Explicit living-status annotations or unsampled tips
 are rejected in this mode. Both modes return a list of trees; select one with ``[1]``.
+
+``n_rec_branches(tree)`` counts reconstructed edges with a parent and duration greater than
+that tree's numerical tolerance. Sampled-ancestor marker edges are excluded. Edges on either
+side of an observation remain separate. Branch-specific vectors follow preorder traversal.
+Hidden-speciation counts (``n_stub``) belong to each reconstructed edge separately; observations
+do not transfer counts from their incoming edge to their continuing edge.

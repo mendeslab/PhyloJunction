@@ -1919,6 +1919,79 @@ class AnnotatedTree(dp.Tree):
 
         return self.tree_reconstructed
 
+    def populate_n_stubs_on_branches_of_rec_tr(self) -> None:
+        """Populate n_stub for branches of the reconstructed tree.
+
+        This method is not called upon initialization of class,
+        but rather when information about branches' stubs is required,
+        e.g., when a Gamma-spike clock model is used somewhere in the
+        DAG.
+
+        The reconstructed tree's root/seed node always ends up with
+        'n_stub == 0' here -- not as a special case, but because the
+        root has no reconstructed parent for the accumulation loop
+        below to walk up from in the first place (see 'is_real_branch',
+        module-level, for the full reasoning on why this is
+        structural, not a convention, and why it holds even when the
+        root is reached via a chain of direct ancestors above it).
+
+        There is no return and only a side-effect (each node in the
+        reconstructed tree has a member 'n_stub' initialized and
+        populated.
+        """
+
+        if not self.tree_reconstructed:
+            self.extract_reconstructed_tree(plotting_overhead=False)
+
+        # Each edge counts genuine splits on its own complete-tree path. A sampled
+        # ancestor separates two segments but contributes no split and moves no counts
+        # between them. The reconstructed root has no incoming path to count.
+        for rec_nd in self.tree_reconstructed.preorder_node_iter():
+            rec_nd.n_stub = 0
+
+            complete_nd = self.tree.find_node_with_label(rec_nd.label)
+            rec_parent = rec_nd.parent_node
+
+            if rec_parent is None:
+                continue
+
+            complete_parent = self.tree.find_node_with_label(rec_parent.label)
+
+            current_nd = complete_nd.parent_node
+
+            while current_nd != complete_parent:
+                if not current_nd.is_sa_dummy_parent:
+                    rec_nd.n_stub += 1
+
+                current_nd = current_nd.parent_node
+
+    def n_rec_branches(self) -> int:
+        """Return the number of real branches in the reconstructed tree.
+
+        Counts every node of 'self.tree_reconstructed' whose incoming
+        edge is a real branch (see 'is_real_branch', module-level,
+        for exactly which ones that excludes -- notably, a lineage
+        bisected by a sampled ancestor contributes two real branches,
+        not one, as long as both segments have non-zero length).
+
+        Always operates on the reconstructed tree (extracting it
+        first, if not already done) -- unlike the complete tree, the
+        reconstructed tree is what every per-branch, clock-model-style
+        quantity in PhyloJunction (stub counts, Gamma-spike rates) is
+        defined over, so "number of branches" is tied to the same
+        tree for consistency.
+
+        Returns:
+            (int): Number of real branches in the reconstructed tree.
+        """
+
+        if not self.tree_reconstructed:
+            self.extract_reconstructed_tree(plotting_overhead=False)
+
+        return sum(
+            1 for nd in self.tree_reconstructed.preorder_node_iter()
+            if is_real_branch(nd, self.epsilon))
+
     def populate_nd_attr_dict(self,
                               attrs_of_interest_list: ty.List[str],
                               attr_dict_added_separately_from_tree: bool = False) \
@@ -2199,6 +2272,68 @@ def get_node_name(nd: dp.Node) -> str:
     
     else:
         raise ec.AnnotatedTreeMissingNodeName()
+
+
+def is_real_branch(nd: dp.Node, epsilon: float) -> bool:
+    """Return whether 'nd's incoming edge is a 'real' branch.
+
+    A branch is not "real" (and so is excluded from things like
+    per-branch rate draws or branch counts) if it has no parent (the
+    root/seed node has no incoming edge at all), or if its length is
+    'None' or effectively zero (e.g., a sampled-ancestor's own
+    zero-length edge). A lineage bisected by a sampled ancestor is
+    represented as two separate edges in the reconstructed tree (the
+    dummy parent's incoming edge, and the 'is_sa_lineage' edge
+    continuing past it) -- both count as separate real branches here,
+    as long as each has non-zero length, since each really is a
+    distinct branch of the tree.
+
+    On the root/seed node specifically: this exclusion is not a
+    special case bolted on for convenience, nor a statement that the
+    root "has zero stubs" or "gets no baseline spike" as some kind of
+    assumption -- it falls out structurally from what the root *is*.
+    The reconstructed tree's root is, by construction, the oldest
+    point for which there is any retained evidence at all (the MRCA
+    of every sampled/retained node) -- so it has no reconstructed
+    parent, and therefore no incoming branch for a stub count or a
+    clock-model rate to even be defined *along*, regardless of
+    whether earlier, unobserved branching events might have happened
+    further back in the complete tree. (If an earlier branching event
+    *did* have retained descendants on both sides, that event -- not
+    the current one -- would itself be the root; if only one side was
+    retained, that event is unifurcation-suppressed away during
+    reconstruction and never becomes a distinguishable "stub on the
+    root's own branch", precisely because the root does not have
+    one.) This matches Douglas et al. (2025)'s own treatment: their
+    eqn (2.8) explicitly excludes "nodes with branch length zero...
+    i.e. sampled ancestors and the root" from the saltative-branching
+    proportion, for the same reason -- neither has a real, time-
+    bearing branch of its own for a rate or a spike to apply to. This
+    holds regardless of whether the root happens to be reached via a
+    chain of direct ancestors above it (see
+    'calculation.gamma_spike_clock_model' for why a node that is both
+    'is_sa_lineage' and a genuine bifurcation, e.g. such a root,
+    still correctly gets no baseline "+1" spike on its own incoming
+    branch either -- same underlying reason, one level down).
+
+    This is shared by every piece of code that needs to agree on
+    exactly which branches count (e.g.,
+    'calculation.gamma_spike_clock_model.populate_gamma_spike_mol_rates_on_rec_tr_branches'
+    and 'AnnotatedTree.n_rec_branches', below) so they can never drift
+    apart from one another.
+
+    Args:
+        nd (dendropy.Node): Node whose incoming edge is being checked.
+        epsilon (float): Threshold below which a branch length is
+            considered effectively zero (see 'AnnotatedTree.epsilon').
+
+    Returns:
+        (bool): Whether 'nd's incoming edge counts as a real branch.
+    """
+
+    return nd.parent_node is not None and \
+        nd.edge_length is not None and \
+        nd.edge_length > epsilon
 
 
 def get_x_coord_from_nd_heights(ann_tr: AnnotatedTree,

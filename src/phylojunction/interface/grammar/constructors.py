@@ -98,10 +98,19 @@ def read_tree(file_path=None, string=None, node_name_attr='', epoch_age_ends=Non
                           flag(is_complete), flag(keep_unsampled_alive)).generate()
 
 
+# One tree determines one branch count; ordinary vectorization handles collections.
+def n_rec_branches(tree):
+    from phylojunction.data.tree import AnnotatedTree
+    if not isinstance(tree, AnnotatedTree):
+        raise TypeError("n_rec_branches requires a tree.")
+    return tree.n_rec_branches()
+
+
 # Shapes describe calling conventions; implementations retain concrete value validation.
 Scalar, Vector = "Scalar", "Vector"
 
 CONSTRUCTORS = {
+    'n_rec_branches': (n_rec_branches, [{'tree': Scalar}]),
     'normal': (dn.DnNormal, [{
         'mean': Scalar, 'sd': Scalar,
     }]),
