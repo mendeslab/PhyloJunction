@@ -1,6 +1,14 @@
 phylojunction.distribution package
 ==================================
 
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   phylojunction.distribution.likelihood
+
 Submodules
 ----------
 
@@ -32,6 +40,14 @@ phylojunction.distribution.dn_iid module
 ----------------------------------------
 
 .. automodule:: phylojunction.distribution.dn_iid
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+phylojunction.distribution.dn_gamma_spike module
+------------------------------------------------
+
+.. automodule:: phylojunction.distribution.dn_gamma_spike
    :members:
    :undoc-members:
    :show-inheritance:

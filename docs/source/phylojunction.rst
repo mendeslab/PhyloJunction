@@ -7,6 +7,8 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
+   phylojunction.constant_function
+   phylojunction.functionality
    phylojunction.calculation
    phylojunction.data
    phylojunction.distribution

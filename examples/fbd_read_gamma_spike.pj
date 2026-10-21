@@ -1,0 +1,7 @@
+# Two reconstructed FBD trees; model replicates are selected with pjcli --runs.
+trs <- read_tree(file_path="examples/trees/two_FBD_trees.tre")
+# Mean-one relative rates: meanlog = -sdlog^2/2, with sdlog=0.5.
+n_rec_br := n_rec_branches(trs)
+br_specific_rel_rate ~ [iid(n, lognormal(-0.125, 0.5)) for n in n_rec_br]
+# Each pair supplies one tree and its own vector of rates in reconstructed preorder.
+phylo ~ [gamma_spike_clock(t, "mutation_rate", 0.001, 0.01, 2.0, r) for (t, r) in zip_strict(trs, br_specific_rel_rate)]

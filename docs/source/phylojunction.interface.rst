@@ -7,6 +7,8 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
+   phylojunction.interface.pjcli
+   phylojunction.interface.pysidegui
    phylojunction.interface.cmdbox
    phylojunction.interface.grammar
 

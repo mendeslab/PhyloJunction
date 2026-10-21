@@ -28,6 +28,14 @@ phylojunction.calculation.continuous\_sse module
    :undoc-members:
    :show-inheritance:
 
+phylojunction.calculation.gamma_spike_clock_model module
+--------------------------------------------------------
+
+.. automodule:: phylojunction.calculation.gamma_spike_clock_model
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 

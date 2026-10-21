@@ -204,7 +204,7 @@ and spike_shape must be positive. The optional ``strict_clock_when_no_stubs`` fo
 edges to the constant clock_rate; it is a diagnostic option, not the usual statistical model.
 
 Displaying rates
-~~~~~~~~~~~~~~~~
+----------------
 
 A tree with rate annotations initially displays the reconstructed tree in evolutionary-distance
 units (time × rate). Uncheck **Evolutionary distance** to use time units and enable the
@@ -218,10 +218,46 @@ of the display selection. Python plotting also accepts ``branch_rate_attr`` to c
 a continuous rate attribute without replacing biological trait annotations.
 
 Exporting stub counts
-~~~~~~~~~~~~~~~~~~~~
+---------------------
 
 Add ``--stub-count-output`` (or ``-nstub``) alongside ``-d`` to write one
 ``<variable>_n_stub.tsv`` table per tree-valued variable. Rows identify the model replicate
 and nested vector element; columns give reconstructed-edge stub counts by node label.
 A missing node is an empty cell, not a zero count. In Python, use
 ``write_results(..., write_stub_counts=True)``. This option does not depend on GUI views.
+
+Reading and mapping external trees
+----------------------------------
+
+``read_tree(file_path=...)`` reads one Newick tree per line; ``string=...`` reads a literal
+Newick tree. Specify exactly one. ``node_name_attr="index"`` uses an annotation to name nodes,
+which lets external stochastic histories refer to the same branches. ``epoch_age_ends``
+retains the existing time-slice interface. Use ``[1]`` to select one tree from the returned list.
+For example, a complete tree can distinguish sampled fossils from unsampled extinction:
+
+.. code-block:: text
+
+    trees <- read_tree(string="(living[&alive=true]:2,fossil[&alive=false,sampled=true]:1,extinct[&alive=false,sampled=false]:0.5);", is_complete=true)
+
+``read_maps(file_path, tip_attr_file_path, n_regions=1, geo=false)`` reads the external
+histories. The maps TSV identifies anagenetic and cladogenetic changes by node index; the
+tip TSV supplies tip states. ``geo=true`` interprets states as combinations of areas across
+``n_regions``. ``map_attr(tree, history, attr_name="state")`` returns a copy annotated with
+one history, leaving topology and times unchanged. A vector of histories maps the same tree
+once per history. These discrete annotations are retained when rates are added later.
+
+Runnable examples
+-----------------
+
+The first example assigns rates to two FBD trees. The second retains every external history
+as a separate mapped tree before adding rates. Use ``pjcli --runs`` to repeat the whole model.
+
+.. literalinclude:: ../../../examples/fbd_read_gamma_spike.pj
+   :language: text
+
+.. literalinclude:: ../../../examples/sse_smap_gamma_spike_clock.pj
+   :language: text
+
+The Gamma-spike model follows Douglas, Bouckaert, Harris, Carter, and Wills (2025),
+*Evolution is coupled with branching across many granularities of life*, Proceedings of the
+Royal Society B 292:20250182, https://doi.org/10.1098/rspb.2025.0182.

@@ -59,6 +59,7 @@ def call_results_plot_cli(fig_dir, results, node_range_dict, fig_obj, fig_axes, 
             raise ValueError('Replicate range is out of bounds.')
         for execution in range(start, end + 1):
             for path, value in elements(results.value(name, execution - 1)):
-                plot_values(fig_axes, [value])
+                distance = isinstance(value, pjdt.AnnotatedTree) and value.clock_model_attr_name is not None
+                plot_values(fig_axes, [value], reconstructed=distance, evolutionary_distance=distance)
                 filename = ((prefix + '_') if prefix else '') + f'{name}_replicate{execution}{path_text(path)}.png'
                 pjwrite.write_fig_to_file(str(Path(fig_dir) / filename), fig_obj)

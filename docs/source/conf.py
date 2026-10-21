@@ -28,7 +28,8 @@ def setup(app):
     app.add_css_file('css/pj_custom.css')
 
 templates_path = ['_templates']
-exclude_patterns = []
+# Included reference sections are not standalone pages (avoid duplicate labels).
+exclude_patterns = ['pjdoc/parametric.rst', 'pjdoc/treedists.rst']
 
 #####################
 # Napoleon settings #
