@@ -185,3 +185,20 @@ that tree's numerical tolerance. Sampled-ancestor marker edges are excluded. Edg
 side of an observation remain separate. Branch-specific vectors follow preorder traversal.
 Hidden-speciation counts (``n_stub``) belong to each reconstructed edge separately; observations
 do not transfer counts from their incoming edge to their continuing edge.
+
+Gamma-spike branch rates
+------------------------
+
+``gamma_spike_clock(tree, attr_name, clock_rate, spike_mean, spike_shape,
+br_specific_rel_rate, strict_clock_when_no_stubs=false)`` describes a distribution on a copy
+of one tree with rates on its reconstructed edges. Draw with ``~``. The input's times,
+traits and stochastic maps are preserved. ``br_specific_rel_rate`` is a vector in the
+preorder used by ``n_rec_branches``; generate it separately with ``iid``.
+
+The gradual component is ``clock_rate * relative_rate``. Each hidden speciation on an edge
+and each genuine parent speciation contributes a Gamma spike with mean ``spike_mean`` and
+shape ``spike_shape``. Sampling observations contribute no spike. Dividing the total spike
+size by edge duration gives its additional rate. ``spike_mean=0`` removes the spike effect.
+All parameters must be finite; relative rates and spike_mean may be zero, whereas clock_rate
+and spike_shape must be positive. The optional ``strict_clock_when_no_stubs`` forces stub-free
+edges to the constant clock_rate; it is a diagnostic option, not the usual statistical model.

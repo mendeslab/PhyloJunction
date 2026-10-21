@@ -1,3 +1,4 @@
+from phylojunction.calculation.gamma_spike_clock_model import populate_gamma_spike_mol_rates_on_rec_tr_branches
 import unittest
 from unittest.mock import patch
 from phylojunction.readwrite.pj_read import read_nwk_tree_str
@@ -22,6 +23,13 @@ class TestTreeCountStub(unittest.TestCase):
             tree.populate_n_stubs_on_branches_of_rec_tr()
             expected = {"root": 0, "D": 1, "S": 0, "A": 1, "B": 0}
             self.assertEqual({n.label: n.n_stub for n in rec}, expected)
+            with patch("numpy.random.gamma", return_value=1.0) as gamma:
+                populate_gamma_spike_mol_rates_on_rec_tr_branches(
+                    tree, 0.1, 0.01, 2.0, [1.0] * tree.n_rec_branches())
+            self.assertEqual([call.kwargs for call in gamma.call_args_list],
+                             [dict(shape=4.0, scale=0.5), dict(shape=2.0, scale=0.5),
+                              dict(shape=2.0, scale=0.5)])
+            self.assertIsNone(rec.find_node_with_taxon_label("S").spike_effect)
 
     def test_count_stubs(self):
         # We will construct the complete tree here

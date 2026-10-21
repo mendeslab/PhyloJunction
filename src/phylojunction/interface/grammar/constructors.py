@@ -7,6 +7,7 @@ from phylojunction.constant_function.ct_function_read_tree import CtFnTreeReader
 from phylojunction.interface.grammar.det_fn_map_attribute import map_attr, read_maps
 from phylojunction.distribution import dn_parametric as dn
 from phylojunction.distribution.dn_iid import DnIID
+from phylojunction.distribution.dn_gamma_spike import DnGammaSpikeClock
 from phylojunction.distribution.dn_quasse import DnQuaSSE
 from phylojunction.interface.grammar.det_fn_quasse_makers import RATE_CONSTRUCTORS
 
@@ -110,6 +111,10 @@ def n_rec_branches(tree):
 Scalar, Vector = "Scalar", "Vector"
 
 CONSTRUCTORS = {
+    'gamma_spike_clock': (DnGammaSpikeClock, [{
+        'tree': Scalar, 'attr_name': Scalar, 'clock_rate': Scalar, 'spike_mean': Scalar,
+        'spike_shape': Scalar, 'br_specific_rel_rate': Vector, 'strict_clock_when_no_stubs': Scalar,
+    }]),
     'n_rec_branches': (n_rec_branches, [{'tree': Scalar}]),
     'normal': (dn.DnNormal, [{
         'mean': Scalar, 'sd': Scalar,

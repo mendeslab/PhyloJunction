@@ -281,6 +281,7 @@ class AnnotatedTree(dp.Tree):
 
         # trees
         self.tree = a_tree
+        self.clock_model_attr_name: ty.Optional[str] = None
         self.tree_reconstructed = None
 
         # check if simulated, or specified by user

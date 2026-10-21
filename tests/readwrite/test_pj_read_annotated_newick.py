@@ -1,3 +1,4 @@
+import phylojunction.calculation.gamma_spike_clock_model as pjgsc
 import unittest
 import numpy as np
 import matplotlib
@@ -128,6 +129,35 @@ class TestReadAnnotatedNewick(unittest.TestCase):
             rec = tree.extract_reconstructed_tree(plotting_overhead=False)
             self.assertEqual({nd.taxon.label for nd in rec.leaf_node_iter()}, {"A", "F"})
             nwk = tree.tree.as_string(schema="newick", suppress_annotations=False)
+
+    def test_complete_tree_gamma_spike_end_to_end(self):
+        """Gamma-spike runs cleanly on a complete tree with a fossil tip.
+
+        No specific rate values are checked (those are covered
+        elsewhere, e.g. 'test_gamma_spike_clock_model.py') -- this
+        just confirms the whole pipeline (stub-counting, then rate
+        population) does not choke on a fossil-tip-bearing tree read
+        from an annotated Newick string, and that the fossil tip gets
+        a real rate of its own, same as any other real branch.
+        """
+
+        nwk = ("(tipa[&alive=True]:3.0,"
+               "(sa1:0.0,lineage[&alive=True]:2.0):1.0,"
+               "fossiltip[&alive=False,sampled=True]:1.5):0.0;")
+
+        ann_tr = pjr.read_nwk_tree_str(nwk, in_file=False, is_complete=True)
+
+        np.random.seed(42)
+        br_specific_rel_rates = [1.0] * ann_tr.n_rec_branches()
+        pjgsc.populate_gamma_spike_mol_rates_on_rec_tr_branches(
+            ann_tr, clock_rate=0.01, spike_mean=0.1,
+            spike_shape=2.0,
+            br_specific_rel_rates=br_specific_rel_rates)
+
+        fossiltip = ann_tr.tree_reconstructed.find_node_with_taxon_label(
+            "fossiltip")
+        self.assertIsNotNone(fossiltip.mol_rate)
+        self.assertGreater(fossiltip.mol_rate, 0.0)
 
     def test_node_names_attribute_root_label_with_no_origin(self):
         """'alternative_root_label' is the true root when there is no origin.
