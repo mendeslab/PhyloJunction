@@ -1,12 +1,13 @@
+# Run the complete model with pjcli --runs 10 (or set Replicates in Settings).
 # stochastic-node constant variables
 rv1 <- [1, 3, 4, 5, 5, 5, 5, 6, 7, 10]
 rv2 <- 3.0
 
 # stochastic-node sampled variables
-rv3 ~ normal(n=10, mean=rv2, sd=2.5)
-rv4 ~ lognormal(n=10, mean=0.0, sd=0.1)
-rv5 ~ normal(n=10, nr=2, mean=rv2, sd=2.5)
-rv6 ~ lognormal(n=10, nr=3, mean=0.0, sd=0.1)
+rv3 ~ normal(mean=rv2, sd=2.5)
+rv4 ~ lognormal(meanlog=0.0, sdlog=0.1)
+rv5 ~ iid(2, normal(mean=rv2, sd=2.5))
+rv6 ~ iid(3, lognormal(meanlog=0.0, sdlog=0.1))
 
 # deterministic-node variable ('det_birth_rate') assignment
 det_birth_rate := sse_rate(name="lambda", value=1.0, states=[0,0,0], event="w_speciation")
@@ -14,6 +15,6 @@ det_birth_rate := sse_rate(name="lambda", value=1.0, states=[0,0,0], event="w_sp
 # deterministic-node variable ('sse_stash') assignment
 stash := sse_stash(flat_rate_mat=[det_birth_rate], n_states=1, n_epochs=1)
 
-# stochastic-node sampled tree variable (at the moment, support for only one tree node in PGM when writing data to file)
-trs1 ~ discrete_sse(n=10, stash=stash, start_state=[0], stop="age", stop_value=rv2, origin="true", cond_spn="true")
-trs2 ~ discrete_sse(n=10, nr=2, stash=stash, start_state=[0], stop="age", stop_value=rv2, origin="true", cond_spn="true")
+# Stochastic tree variables; both are exported with replicate and element coordinates.
+trs1 ~ discrete_sse(stash=stash, start_state=0, stop='age', stop_value=rv2, origin='true', cond_spn='true')
+trs2 ~ iid(2, discrete_sse(stash=stash, start_state=0, stop='age', stop_value=rv2, origin='true', cond_spn='true'))

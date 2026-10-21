@@ -1,11 +1,12 @@
+from phylojunction.calculation.gamma_spike_clock_model import populate_gamma_spike_mol_rates_on_rec_tr_branches
 import unittest
 from unittest.mock import patch
 from phylojunction.readwrite.pj_read import read_nwk_tree_str
-from phylojunction.calculation.gamma_spike_clock_model import populate_gamma_spike_mol_rates_on_rec_tr_branches
 from dendropy import Tree, Node, Taxon
 
 # pj imports
 import phylojunction.data.tree as pjtr
+from phylojunction.data.trait import DiscreteTrait
 
 
 class TestTreeCountStub(unittest.TestCase):
@@ -289,7 +290,7 @@ class TestTreeCountStub(unittest.TestCase):
 
         ann_tr = pjtr.AnnotatedTree(
             tr_complete,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=True,
             max_age=max_age,
             epsilon=1e-12

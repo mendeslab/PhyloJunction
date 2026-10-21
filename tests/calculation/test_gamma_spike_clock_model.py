@@ -6,6 +6,7 @@ from dendropy import Tree, Node, Taxon
 # pj imports
 import phylojunction.readwrite.pj_read as pjr
 import phylojunction.data.tree as pjtr
+from phylojunction.data.trait import DiscreteTrait
 import phylojunction.calculation.gamma_spike_clock_model as pjgsc
 
 
@@ -35,6 +36,47 @@ class TestGammaSpike(unittest.TestCase):
         pjgsc.populate_gamma_spike_mol_rates_on_rec_tr_branches(
             tree, **(valid | {"spike_mean": 0.0, "br_specific_rel_rates": [0.0, 0.0]}))
         self.assertTrue(all(nd.mol_rate == 0.0 for nd in rec.leaf_node_iter()))
+
+    # The numerical tests do not exercise distribution objects or model repetition.
+    # This protects value-based construction and independent copies until that interface changes.
+    def test_distribution_expression_and_copies(self):
+        from phylojunction.interface.cmdbox.cmd_parse import compile_model
+        source = 'trees <- read_tree(string="(A:1,B:1);")\nrates ~ [iid(n_rec_branches(t), lognormal(0, 0.1)) for t in trees]\nd := gamma_spike_clock(trees[1], "rate", 0.1, 0, 2, rates[1])\nout ~ iid(2, d)\n'
+        result = compile_model(source).execute(runs=2, random_seed=1)
+        for replicate in range(2):
+            original = result.value('trees', replicate)[0]
+            first, second = result.value('out', replicate)
+            self.assertIsNot(first, second)
+            self.assertIsNone(original.clock_model_attr_name)
+            for node, rate in zip(first.tree_reconstructed.leaf_node_iter(), result.value('rates', replicate)[0]):
+                self.assertAlmostEqual(node.rate, 0.1 * rate)
+            self.assertIn('rate=', first.rec_str())
+
+    # QuaSSE reconstruction used to rebuild on each read, unlike discrete trees. Exercise
+    # the shared consumer entry point so repeated display/export preparation retains rates.
+    def test_continuous_rate_annotations_survive_reads(self):
+        from phylojunction.distribution.dn_quasse import DnQuaSSE
+        from phylojunction.distribution.dn_gamma_spike import DnGammaSpikeClock
+        from phylojunction.calculation.continuous_sse import ConstantRate
+        np.random.seed(9)
+        tree = DnQuaSSE(ConstantRate(2), ConstantRate(0), stop="age", stop_value=1,
+                       start_trait=0, diffusion=0.1, fossil_rate=ConstantRate(1)).draw()
+        result = DnGammaSpikeClock(tree, 'rate', .1, .01, 2, [1.] * tree.n_rec_branches()).draw()
+        rec = result.tree_reconstructed
+        text = result.rec_str()
+        from matplotlib.figure import Figure
+        from matplotlib.backends.backend_agg import FigureCanvasAgg
+        figure = Figure()
+        FigureCanvasAgg(figure)
+        axes = figure.subplots()
+        for reconstructed, distance in ((False, False), (True, False), (True, True), (False, False)):
+            result.plot_node(axes, draw_reconstructed=reconstructed, evolutionary_distance=distance)
+            figure.canvas.draw()
+            self.assertEqual(any(line.get_gid() == 'present-reference' for line in axes.lines), not distance)
+            self.assertIs(result.ensure_reconstructed_tree(), rec)
+            self.assertEqual(result.rec_str(), text)
+        result.plot_node(axes, draw_reconstructed=True, branch_rate_attr='rate')
+        figure.canvas.draw()
 
     def test_gamma_spike(self):
         # We will construct the complete tree here
@@ -296,7 +338,7 @@ class TestGammaSpike(unittest.TestCase):
 
         ann_tr = pjtr.AnnotatedTree(
             tr_complete,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=True,
             max_age=max_age,
             epsilon=1e-12
@@ -538,7 +580,7 @@ class TestGammaSpike(unittest.TestCase):
 
         ann_tr = pjtr.AnnotatedTree(
             tr_complete,
-            total_state_count=1,
+            trait=DiscreteTrait(1),
             start_at_origin=True,
             max_age=3.0,
             epsilon=1e-12
@@ -678,7 +720,7 @@ class TestGammaSpike(unittest.TestCase):
 
         ann_tr = pjtr.AnnotatedTree(
             tr_complete,
-            total_state_count=1,
+            trait=DiscreteTrait(1),
             start_at_origin=True,
             max_age=4.0,
             epsilon=1e-12
@@ -822,7 +864,7 @@ class TestGammaSpike(unittest.TestCase):
             tr_complete.taxon_namespace.add_taxon(nd.taxon)
 
         ann_tr = pjtr.AnnotatedTree(
-            tr_complete, total_state_count=1, start_at_origin=True,
+            tr_complete, trait=DiscreteTrait(1), start_at_origin=True,
             max_age=3.0, epsilon=1e-12)
 
         tr_rec = ann_tr.extract_reconstructed_tree(
@@ -1048,7 +1090,7 @@ class TestGammaSpike(unittest.TestCase):
             tr_complete.taxon_namespace.add_taxon(nd.taxon)
 
         ann_tr = pjtr.AnnotatedTree(
-            tr_complete, total_state_count=1, start_at_origin=True,
+            tr_complete, trait=DiscreteTrait(1), start_at_origin=True,
             max_age=8.7, epsilon=1e-12)
 
         tr_rec = ann_tr.extract_reconstructed_tree(

@@ -1,3 +1,4 @@
+# Run the complete model with pjcli --runs 2 (or set Replicates in Settings).
 # constant-node variable ('birth_rate0', etc.) assignment
 birth_rate0 <- 1.0
 death_rate0 <- 0.2
@@ -20,5 +21,8 @@ stash := sse_stash(flat_rate_mat=[det_birth_rate0, det_death_rate0, det_trans_ra
 
 # stochastic-node variable ('trs') assignment
 ori <- 3.0
-start_states ~ categorical(n=2, nr=2, cats=[0, 1], probs=[0.5, 0.5])
-trs ~ discrete_sse(n=2, nr=2, stash=stash, start_state=start_states, stop="age", stop_value=ori, origin="true", cond_spn="true", cond_surv="true")
+start_states ~ iid(2, categorical(cats=[0, 1], probs=[0.5, 0.5]))
+# Each tree uses its own sampled starting state.
+tr1 ~ discrete_sse(stash=stash, start_state=start_states[1], stop='age', stop_value=ori, origin='true', cond_spn='true', cond_surv='true')
+tr2 ~ discrete_sse(stash=stash, start_state=start_states[2], stop='age', stop_value=ori, origin='true', cond_spn='true', cond_surv='true')
+trs <- [tr1, tr2]

@@ -10,7 +10,7 @@
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="_static/sphinx-new-tab-link.css?v=d87cb1ac" />
-      <link rel="stylesheet" type="text/css" href="_static/css/pj_custom.css" />
+      <link rel="stylesheet" type="text/css" href="_static/css/pj_custom.css?v=b916aa57" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
@@ -21,7 +21,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="phylojunction.distribution.likelihood package" href="phylojunction.distribution.likelihood.html" />
+    <link rel="next" title="phylojunction.inference package" href="phylojunction.inference.html" />
     <link rel="prev" title="phylojunction.data package" href="phylojunction.data.html" /> 
 </head>
 
@@ -53,10 +53,8 @@
 <li class="toctree-l2 current"><a class="reference internal" href="phylojunction.html">phylojunction package</a><ul class="current">
 <li class="toctree-l3 current"><a class="reference internal" href="phylojunction.html#subpackages">Subpackages</a><ul class="current">
 <li class="toctree-l4"><a class="reference internal" href="phylojunction.calculation.html">phylojunction.calculation package</a></li>
-<li class="toctree-l4"><a class="reference internal" href="phylojunction.constant_function.html">phylojunction.constant_function package</a></li>
 <li class="toctree-l4"><a class="reference internal" href="phylojunction.data.html">phylojunction.data package</a></li>
 <li class="toctree-l4 current"><a class="current reference internal" href="#">phylojunction.distribution package</a></li>
-<li class="toctree-l4"><a class="reference internal" href="phylojunction.functionality.html">phylojunction.functionality package</a></li>
 <li class="toctree-l4"><a class="reference internal" href="phylojunction.inference.html">phylojunction.inference package</a></li>
 <li class="toctree-l4"><a class="reference internal" href="phylojunction.interface.html">phylojunction.interface package</a></li>
 <li class="toctree-l4"><a class="reference internal" href="phylojunction.pgm.html">phylojunction.pgm package</a></li>
@@ -100,33 +98,6 @@
              
   <section id="phylojunction-distribution-package">
 <h1>phylojunction.distribution package<a class="headerlink" href="#phylojunction-distribution-package" title="Link to this heading"></a></h1>
-<section id="subpackages">
-<h2>Subpackages<a class="headerlink" href="#subpackages" title="Link to this heading"></a></h2>
-<div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="phylojunction.distribution.likelihood.html">phylojunction.distribution.likelihood package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="phylojunction.distribution.likelihood.html#subpackages">Subpackages</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="phylojunction.distribution.likelihood.ODE.html">phylojunction.distribution.likelihood.ODE package</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="phylojunction.distribution.likelihood.ODE.html#submodules">Submodules</a></li>
-<li class="toctree-l4"><a class="reference internal" href="phylojunction.distribution.likelihood.ODE.html#module-phylojunction.distribution.likelihood.ODE.dn_bisse_ode">phylojunction.distribution.likelihood.ODE.dn_bisse_ode module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="phylojunction.distribution.likelihood.ODE.html#module-phylojunction.distribution.likelihood.ODE.dn_mbt_ode">phylojunction.distribution.likelihood.ODE.dn_mbt_ode module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="phylojunction.distribution.likelihood.ODE.html#module-phylojunction.distribution.likelihood.ODE">Module contents</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="phylojunction.distribution.likelihood.html#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="phylojunction.distribution.likelihood.html#module-phylojunction.distribution.likelihood.lik_dn_mbt">phylojunction.distribution.likelihood.lik_dn_mbt module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="phylojunction.distribution.likelihood.html#phylojunction.distribution.likelihood.lik_dn_mbt.prune_mbt"><code class="docutils literal notranslate"><span class="pre">prune_mbt()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="phylojunction.distribution.likelihood.html#phylojunction.distribution.likelihood.lik_dn_mbt.recursively_do_node"><code class="docutils literal notranslate"><span class="pre">recursively_do_node()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="phylojunction.distribution.likelihood.html#module-phylojunction.distribution.likelihood">Module contents</a></li>
-</ul>
-</li>
-</ul>
-</div>
-</section>
 <section id="submodules">
 <h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading"></a></h2>
 </section>
@@ -184,7 +155,8 @@ sample failing to meet condition. Defaults to ‘False’.</p></li>
 <li><p><strong>stop</strong> (<em>str</em>) – Stop condition to end sampling (simulation)
 procedure and return tree. If ‘age’, stops when age of
 either origin or is equal to ‘stop_val’ (see below).
-If “size”, stops when tree has ‘stop_val’ observed nodes.</p></li>
+If “size”, stops when tree has ‘stop_val’ observed nodes.
+Size stopping requires complete sampling (all sampling probabilities equal 1).</p></li>
 <li><p><strong>stop_val</strong> (<em>float</em>) – List of values used by ‘stop’ (see above) to
 end each of the ‘n_sim’ sampling (simulation) procedures
 and return tree. Either maximum age, or maximum count of
@@ -683,7 +655,7 @@ Defaults to ‘False’.</p></li>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="phylojunction.distribution.dn_parametric.DnLogNormal">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">phylojunction.distribution.dn_parametric.</span></span><span class="sig-name descname"><span class="pre">DnLogNormal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_samples</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_repl</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ln_mean</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ln_sd</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ln_log_space</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parent_node_tracker</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_each_list</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#phylojunction.distribution.dn_parametric.DnLogNormal" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">phylojunction.distribution.dn_parametric.</span></span><span class="sig-name descname"><span class="pre">DnLogNormal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_samples</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_repl</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ln_mean</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ln_sd</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ln_log_space</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parent_node_tracker</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#phylojunction.distribution.dn_parametric.DnLogNormal" title="Link to this definition"></a></dt>
 <dd><p>Bases: <a class="reference internal" href="phylojunction.pgm.html#phylojunction.pgm.pgm.DistrForSampling" title="phylojunction.pgm.pgm.DistrForSampling"><code class="xref py py-class docutils literal notranslate"><span class="pre">DistrForSampling</span></code></a></p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.distribution.dn_parametric.DnLogNormal.DN_NAME">
@@ -694,44 +666,18 @@ Defaults to ‘False’.</p></li>
 <dt class="sig sig-object py" id="phylojunction.distribution.dn_parametric.DnLogNormal.draw_ln">
 <span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">draw_ln</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_samples</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sd_param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_space</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float64</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span></span><a class="headerlink" href="#phylojunction.distribution.dn_parametric.DnLogNormal.draw_ln" title="Link to this definition"></a></dt>
 <dd><p>Return sample from log-normal distribution.</p>
-<p>NOTE on ‘mean_param’: this is never the arithmetic mean of the
-returned values, in either mode – scipy’s own
-‘lognorm(s, scale)’ parameterizes a log-normal by ‘s’ (sigma,
-the log-space standard deviation) and ‘scale’ (= exp(mu),
-where mu is the log-space mean), and ‘mean_param’ here always
-plays the role of ‘scale’:</p>
-<ul class="simple">
-<li><p>‘log_space=True’ (the default): ‘mean_param’ IS mu, the
-log-space mean (i.e., E[log(X)]) – this is also what R’s
-‘rlnorm(meanlog, sdlog)’ calls ‘meanlog’, and that name is
-accurate because of the “log” qualifier: it is the mean,
-but of log(X), not of X.</p></li>
-<li><p>‘log_space=False’: ‘mean_param’ is exp(mu) given directly,
-i.e., the real-space value whose log is mu. Unlike the
-‘log_space=True’ case, there is no “log” qualifier to
-signal this, which makes it easy to mistake for the
-arithmetic mean of X – it is not. exp(mu) is X’s <em>median</em>
-(medians survive the monotonic exp() transform; means do
-not). The true arithmetic mean of X is always
-‘scale * exp(s ** 2 / 2)’, which is strictly greater than
-‘scale’ (the median) whenever ‘s’ &gt; 0, and only converges to
-it as ‘s’ -&gt; 0 (by Jensen’s inequality).</p></li>
-</ul>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>n_samples</strong> (<em>int</em>) – Number of draws (sample size).</p></li>
-<li><p><strong>mean_param</strong> (<em>float</em>) – log-space mean (mu) if ‘log_space’ is
-‘True’; the real-space value exp(mu) – i.e., the
-distribution’s scale/median, NOT its arithmetic mean
-– if ‘log_space’ is ‘False’. See note above.</p></li>
+<li><p><strong>mean_param</strong> (<em>float</em>) – Mean (scale) of log-normal.</p></li>
 <li><p><strong>sd_param</strong> (<em>float</em>) – Std. deviation (shape) of log-normal
 distribution.</p></li>
 <li><p><strong>scale</strong> (<em>float</em>) – Mean (scale) of log-normal distribution in
 log-space. Defaults to 1.0.</p></li>
-<li><p><strong>log_space</strong> (<em>bool</em><em>, </em><em>optional</em>) – Flag specifying if mean of
-distribution is provided in log-space. Defaults to
-‘True’.</p></li>
+<li><p><strong>log_space</strong> (<em>bool</em><em>, </em><em>optional</em>) – If true, mean_param is the underlying normal
+mean; otherwise it is the lognormal median/scale exp(mean).
+sd_param is always the underlying normal standard deviation.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -745,7 +691,7 @@ distribution is provided in log-space. Defaults to
 
 <dl class="py method">
 <dt class="sig sig-object py" id="phylojunction.distribution.dn_parametric.DnLogNormal.generate">
-<span class="sig-name descname"><span class="pre">generate</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#phylojunction.distribution.dn_parametric.DnLogNormal.generate" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">generate</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#phylojunction.distribution.dn_parametric.DnLogNormal.generate" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -773,11 +719,6 @@ distribution is provided in log-space. Defaults to
 <dl class="py attribute">
 <dt class="sig sig-object py" id="phylojunction.distribution.dn_parametric.DnLogNormal.ln_sd_list">
 <span class="sig-name descname"><span class="pre">ln_sd_list</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#phylojunction.distribution.dn_parametric.DnLogNormal.ln_sd_list" title="Link to this definition"></a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="phylojunction.distribution.dn_parametric.DnLogNormal.n_each_list">
-<span class="sig-name descname"><span class="pre">n_each_list</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#phylojunction.distribution.dn_parametric.DnLogNormal.n_each_list" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
@@ -946,6 +887,46 @@ distribution is provided in log-space. Defaults to
 </dd></dl>
 
 </section>
+<section id="module-phylojunction.distribution.dn_quasse">
+<span id="phylojunction-distribution-dn-quasse-module"></span><h2>phylojunction.distribution.dn_quasse module<a class="headerlink" href="#module-phylojunction.distribution.dn_quasse" title="Link to this heading"></a></h2>
+<p>QuaSSE simulation with interchangeable numerical methods.</p>
+<p>The initial method follows diversitree/R/simulate-quasse.R. Events precede trait
+updates. The final age-limited interval and its event probability are shortened;
+size stopping omits the terminating birth and its subsequent trait update.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="phylojunction.distribution.dn_quasse.DnQuaSSE">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">phylojunction.distribution.dn_quasse.</span></span><span class="sig-name descname"><span class="pre">DnQuaSSE</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">birth_rate</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">death_rate</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop_value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_trait</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drift</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">diffusion</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'diversitree'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">500</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">runtime_limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">300</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_steps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_alive</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rng_seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sampling_prob</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cond_surv</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cond_spn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cond_obs_both_sides</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_rec_taxa</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_rec_taxa</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_n_attempts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt_max</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_nodes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">block_duration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bridge_error</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fossil_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#phylojunction.distribution.dn_quasse.DnQuaSSE" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="phylojunction.pgm.html#phylojunction.pgm.pgm.DistrForSampling" title="phylojunction.pgm.pgm.DistrForSampling"><code class="xref py py-class docutils literal notranslate"><span class="pre">DistrForSampling</span></code></a></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="phylojunction.distribution.dn_quasse.DnQuaSSE.DN_NAME">
+<span class="sig-name descname"><span class="pre">DN_NAME</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'DnQuaSSE'</span></span><a class="headerlink" href="#phylojunction.distribution.dn_quasse.DnQuaSSE.DN_NAME" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="phylojunction.distribution.dn_quasse.DnQuaSSE.generate">
+<span class="sig-name descname"><span class="pre">generate</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#phylojunction.distribution.dn_quasse.DnQuaSSE.generate" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="phylojunction.distribution.dn_quasse.DnQuaSSE.get_rev_inference_spec_info">
+<span class="sig-name descname"><span class="pre">get_rev_inference_spec_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#phylojunction.distribution.dn_quasse.DnQuaSSE.get_rev_inference_spec_info" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="phylojunction.distribution.dn_quasse.DnQuaSSE.init_check_vectorize_sample_size">
+<span class="sig-name descname"><span class="pre">init_check_vectorize_sample_size</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param_list</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#phylojunction.distribution.dn_quasse.DnQuaSSE.init_check_vectorize_sample_size" title="Link to this definition"></a></dt>
+<dd><p>Check sample size against number of provided parameter values</p>
+<p>This is the function behind the vectorization functionality</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="phylojunction.distribution.dn_quasse.DnQuaSSE.simulate">
+<span class="sig-name descname"><span class="pre">simulate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sample_idx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">deadline</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">_block_indices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#phylojunction.distribution.dn_quasse.DnQuaSSE.simulate" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
 <section id="module-phylojunction.distribution">
 <span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-phylojunction.distribution" title="Link to this heading"></a></h2>
 </section>
@@ -956,7 +937,7 @@ distribution is provided in log-space. Defaults to
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="phylojunction.data.html" class="btn btn-neutral float-left" title="phylojunction.data package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="phylojunction.distribution.likelihood.html" class="btn btn-neutral float-right" title="phylojunction.distribution.likelihood package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="phylojunction.inference.html" class="btn btn-neutral float-right" title="phylojunction.inference package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

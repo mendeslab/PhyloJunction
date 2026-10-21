@@ -1,3 +1,4 @@
+import phylojunction.calculation.gamma_spike_clock_model as pjgsc
 import unittest
 import numpy as np
 import matplotlib
@@ -7,7 +8,6 @@ import matplotlib.pyplot as plt
 # pj imports
 import phylojunction.readwrite.pj_read as pjr
 import phylojunction.data.tree as pjtr
-import phylojunction.calculation.gamma_spike_clock_model as pjgsc
 import phylojunction.utility.exception_classes as ec
 
 __author__ = "Fabio K. Mendes"

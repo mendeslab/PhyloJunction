@@ -1,3 +1,4 @@
+from phylojunction.data.trait import DiscreteTrait
 import os
 import typing as ty
 import numpy as np
@@ -12,19 +13,20 @@ import collections
 import phylojunction.pgm.pgm as pgm
 import phylojunction.utility.exception_classes as ec
 import phylojunction.utility.helper_functions as pjh
-import phylojunction.data.sampled_ancestor as pjsa
 from phylojunction.data.tree import AnnotatedTree
+import phylojunction.data.sampled_ancestor as pjsa
 
 __author__ = "Fabio K. Mendes"
 __email__ = "fmendes@lsu.edu"
 
 
-def read_text_file(fp_string: str) -> ty.List[str]:
+def read_text_file(fp_string: str, keep_empty: bool = False) -> ty.List[str]:
     """Read and parse text file into list of strings (one per line).
 
     Args:
         fp_string (str): String containing file path to text file being
             read
+        keep_empty (bool): Preserve blank lines for script source locations.
 
     Returns:
         str: List of strings, each being a line of the input text file
@@ -36,7 +38,7 @@ def read_text_file(fp_string: str) -> ty.List[str]:
         for line in infile:
             line = line.rstrip()
 
-            if line:
+            if line or keep_empty:
                 cmd_line_list.append(line)
 
     return cmd_line_list
@@ -743,7 +745,7 @@ def read_nwk_tree_str(nwk_tree_path_or_str: str,
 
     # note the empty attribute transition dict members
     ann_tr = AnnotatedTree(dp_tr,
-                           n_states,
+                           DiscreteTrait(n_states),
                            alternative_root_label=root_alternative_label,
                            start_at_origin=is_origin,
                            tree_died=tree_died,

@@ -5,9 +5,7 @@ import typing as ty
 import numpy as np
 
 # pj imports
-import phylojunction.pgm.pgm as pgm
 import phylojunction.data.tree as pjtr
-import phylojunction.calculation.clock_model as pjclock
 
 __author__ = "Fabio K. Mendes"
 __email__ = "fmendes@lsu.edu"
@@ -55,7 +53,7 @@ def populate_gamma_spike_mol_rates_on_rec_tr_branches(
     used as a clock model for actual analyses.
 
     This function is deliberately independent of PhyloJunction's DAG
-    and grammar machinery (see 'GammaSpikeClockModel' below for that):
+    and grammar machinery (the distribution wrapper handles those):
     it operates on a single 'AnnotatedTree' instance, in place, and
     can be imported and used on its own.
 
@@ -64,9 +62,9 @@ def populate_gamma_spike_mol_rates_on_rec_tr_branches(
     convention used throughout PhyloJunction (e.g.,
     'distribution.dn_discrete_sse.DnSSE'). There is no 'seed'
     parameter here: reproducibility is controlled once, globally, by
-    whichever caller already seeded that generator -- the DAG's own
+    whichever caller already seeded that generator -- model execution's
     'random_seed' (set from a '.pj' script's '-r' CLI flag or the
-    GUI's seed field; see 'pgm.DirectedAcyclicGraph.random_seed').
+    GUI's seed field).
     Callers that are not going through the DAG (e.g., unit tests)
     must call 'numpy.random.seed(...)' themselves beforehand for
     reproducible draws.
@@ -101,27 +99,11 @@ def populate_gamma_spike_mol_rates_on_rec_tr_branches(
         spike_shape (float): Shape (S_alpha) of the Gamma
             distribution governing spike sizes (eqn 2.7). Must be
             finite and > 0.0.
-        br_specific_rel_rates (list of float): Pre-generated
-            per-branch *relative* rates (the gradual, relaxed-clock
-            component), e.g. produced by a separate
-            'distribution.dn_parametric.DnLogNormal' node via the
-            grammar's 'n_nr_from' argument pointed at an
-            'n_rec_branches' det-fn node for this same tree (see
-            'interface.grammar.dn_grammar'). Conventionally centered
-            at 1.0 in real space (e.g., a log-normal with
-            'meanlog = -sdlog**2 / 2'), so that 'clock_rate' alone
-            remains the mean absolute rate -- the same
-            identifiability convention BEAST2's UCLN relaxed clock
-            uses -- though this function itself does not enforce that
-            centering; it simply multiplies whatever is given by
-            'clock_rate'. Entries must be finite and nonnegative. Must
-            have exactly 'ann_tr.n_rec_branches()'
-            entries, one per real branch of the reconstructed tree, in
-            the same (preorder) order 'n_rec_branches' counts them in
-            -- checked directly against the tree's own actual real-
-            branch count, regardless of how 'br_specific_rel_rates'
-            was itself produced. The spike component is always still
-            drawn internally here.
+        br_specific_rel_rates (list of float): One finite nonnegative relative rate per
+            eligible reconstructed edge, in preorder. Conventionally these are centered
+            at 1 (e.g. lognormal meanlog=-sdlog**2/2), so clock_rate is the mean absolute
+            gradual rate. The model does not require that centering. Vector length must
+            match ann_tr.n_rec_branches(); sampling the vector is the caller's responsibility.
         strict_clock_when_no_stubs (bool): See above -- NOT a
             realistic model, a debugging/diagnostic device only.
             Defaults to 'False' (the model as described by Douglas et
@@ -190,7 +172,7 @@ def populate_gamma_spike_mol_rates_on_rec_tr_branches(
         # deliberate departure from Douglas et al. -- see this
         # function's docstring; a stub-free branch gets a fixed,
         # strict-clock rate instead of a relaxed-clock-plus-spike
-        # draw, and consumes no entry of 'br_specific_rel_rates'
+        # draw. Its supplied relative-rate entry is ignored; no Gamma draw is made.
         if strict_clock_when_no_stubs and rec_nd.n_stub == 0:
             rec_nd.branch_raw_rate = 1.0
             rec_nd.spike_effect = 0.0
@@ -198,7 +180,7 @@ def populate_gamma_spike_mol_rates_on_rec_tr_branches(
             continue
 
         # branch-specific relative rate, externally provided (e.g.,
-        # by a 'lognormal(n_nr_from=...)' DAG node)
+        # by an 'iid(n_rec_branches(tree), lognormal(...))' draw)
         rec_nd.branch_raw_rate = br_specific_rel_rates[this_branch_idx]
 
         # Number of Gamma-distributed spikes: one per hidden split on this segment,
@@ -209,9 +191,10 @@ def populate_gamma_spike_mol_rates_on_rec_tr_branches(
         # Inspect reconstructed topology directly: suppression can leave lineage flags stale.
         # Douglas et al. (2025), eqn 2.7, attribute the extra spike to the parent;
         # likewise, getNSpikes() in GammaSpikeModel's BranchSpikePrior.java checks
-        # node.getParent().isFake(), not the node's own children.
+        # node.getParent().isFake(), not the node's own children. An origin/unary
+        # stem is not a speciation either (it can occur in singleton reconstructions).
         n_spikes = rec_nd.n_stub
-        if not rec_nd.parent_node.is_sa_dummy_parent:
+        if not rec_nd.parent_node.is_sa_dummy_parent and rec_nd.parent_node.num_child_nodes() >= 2:
             n_spikes += 1
 
         # if there are no spikes to add (no stubs, and no baseline
@@ -245,189 +228,6 @@ def populate_gamma_spike_mol_rates_on_rec_tr_branches(
             + rec_nd.spike_effect / branch_time
             # we divide spike_effect by branch_time because the
             # spike effect is added to the final rate (see below)
-            #
-            # ((mu_c * r_i) + spike_effect) * branch_time =
-            # mu_c * branch_time + r_i * branch_time + spike_effect * branch_time
         )
 
 
-class GammaSpikeClockModel(pjclock.ClockModel):
-    """Punctuated ('Gamma-spike') relaxed molecular clock model.
-
-    Each branch's molecular rate is the sum of a gradual component
-    (an i.i.d. log-normal relaxed clock) and an abrupt, 'spike'
-    component, whose size is drawn from a Gamma distribution
-    conditioned on the number of stubs (unsampled bifurcations) on
-    that branch. See 'populate_gamma_spike_mol_rates_on_rec_tr_branches'
-    (this module) for the underlying algorithm, which this class
-    wraps as a PhyloJunction clock model.
-
-    References:
-        Douglas, J., Bouckaert, R., Harris, S.C., Carter Jr, C.W.,
-        Wills, P.R. (2025) Evolution is coupled with branching
-        across many granularities of life. Proceedings of the Royal
-        Society B, 292: 20250182.
-        https://doi.org/10.1098/rspb.2025.0182
-    """
-
-    CLOCK_MODEL_NAME = "gamma_spike_clock"
-
-    clock_rate: float
-    spike_mean: float
-    spike_shape: float
-    strict_clock_when_no_stubs: bool
-    br_specific_rel_rate_dag_node: pgm.NodeDAG
-
-    def __init__(
-            self,
-            *,
-            tree_dag_node: pgm.NodeDAG,
-            attr_name: str,
-            clock_rate: float,
-            spike_mean: float,
-            spike_shape: float,
-            br_specific_rel_rate_dag_node: pgm.NodeDAG,
-            strict_clock_when_no_stubs: bool = False) -> None:
-        """Store Gamma-spike clock-model hyperparameters.
-
-        Hyperparameter validity (e.g., 'clock_rate' > 0.0) is checked
-        when 'populate_branch_rates()' is called (via
-        'populate_gamma_spike_mol_rates_on_rec_tr_branches'), not
-        here -- except for 'br_specific_rel_rate_dag_node's own shape,
-        checked eagerly below, since a mismatch there reflects a
-        DAG-wiring mistake rather than an ordinary bad hyperparameter
-        value.
-
-        There is no 'seed' parameter -- see
-        'populate_gamma_spike_mol_rates_on_rec_tr_branches' (this
-        module) for why.
-
-        Args:
-            tree_dag_node (pgm.NodeDAG): See 'ClockModel.__init__'.
-            attr_name (str): See 'ClockModel.__init__'.
-            clock_rate (float): Mean clock (substitution) rate
-                (mu_c in Douglas et al. 2025).
-            spike_mean (float): Mean spike size (S_mu).
-            spike_shape (float): Shape (S_alpha) of the Gamma
-                distribution governing spike sizes (eqn 2.7).
-            br_specific_rel_rate_dag_node (pgm.NodeDAG): A DAG node
-                (e.g., a 'lognormal(n_nr_from=...)'-sampled one) whose
-                value holds one pre-generated list of per-branch
-                *relative* rates per tree in 'tree_dag_node', in the
-                same (sample, replicate) order -- see
-                'populate_gamma_spike_mol_rates_on_rec_tr_branches's
-                'br_specific_rel_rates' parameter for exactly how
-                these are consumed, and for the conventional (but not
-                enforced) centering at 1.0 in real space. Must have
-                the same 'sample_size'/'repl_size' as 'tree_dag_node'.
-                This model does not draw the gradual, relaxed-clock
-                component internally -- it must always be supplied
-                this way.
-            strict_clock_when_no_stubs (bool): See
-                'populate_gamma_spike_mol_rates_on_rec_tr_branches'
-                (this module) -- NOT a realistic model, a
-                debugging/diagnostic device only. Defaults to 'False'
-                (the model as described by Douglas et al.).
-
-        Raises:
-            ValueError: Is raised if 'br_specific_rel_rate_dag_node'
-                does not have the same 'sample_size'/'repl_size' as
-                'tree_dag_node'.
-        """
-
-        super().__init__(tree_dag_node=tree_dag_node, attr_name=attr_name)
-
-        if br_specific_rel_rate_dag_node.sample_size != \
-                tree_dag_node.sample_size \
-                or br_specific_rel_rate_dag_node.repl_size != \
-                tree_dag_node.repl_size:
-            raise ValueError(
-                "'br_specific_rel_rate_dag_node' has sample_size=" +
-                str(br_specific_rel_rate_dag_node.sample_size) +
-                ", repl_size=" +
-                str(br_specific_rel_rate_dag_node.repl_size) +
-                ", but 'tree_dag_node' has sample_size=" +
-                str(tree_dag_node.sample_size) + ", repl_size=" +
-                str(tree_dag_node.repl_size) +
-                " -- they must match, one relative-rate vector per "
-                "tree.")
-
-        self.clock_rate = clock_rate
-        self.spike_mean = spike_mean
-        self.spike_shape = spike_shape
-        self.strict_clock_when_no_stubs = strict_clock_when_no_stubs
-        self.br_specific_rel_rate_dag_node = br_specific_rel_rate_dag_node
-
-    def populate_branch_rates(
-            self, ann_tr: pjtr.AnnotatedTree, tree_idx: int) -> None:
-        """See 'ClockModel.populate_branch_rates'.
-
-        In addition to 'self.attr_name', this model also populates
-        'branch_raw_rate' and 'spike_effect' on every non-zero-length
-        reconstructed-tree branch -- see
-        'populate_gamma_spike_mol_rates_on_rec_tr_branches' (this
-        module) for their exact definitions.
-        """
-
-        br_specific_rel_rates = \
-            self.br_specific_rel_rate_dag_node.value[tree_idx]
-
-        populate_gamma_spike_mol_rates_on_rec_tr_branches(
-            ann_tr,
-            clock_rate=self.clock_rate,
-            spike_mean=self.spike_mean,
-            spike_shape=self.spike_shape,
-            br_specific_rel_rates=br_specific_rel_rates,
-            strict_clock_when_no_stubs=self.strict_clock_when_no_stubs)
-
-        for rec_nd in ann_tr.tree_reconstructed.preorder_node_iter():
-            setattr(rec_nd, self.attr_name, rec_nd.mol_rate)
-
-            # without this, 'self.attr_name' would be a plain Python
-            # attribute, invisible to dendropy's Newick/Nexus writers
-            # (e.g., 'AnnotatedTree.rec_str()', used by PhyloJunction's
-            # GUI to display a tree node's string value) -- those only
-            # serialize attributes a node has been explicitly told to
-            # bind, the same way 'distribution.dn_discrete_sse' binds
-            # "state"/"index" at simulation time. A branch with no
-            # rate of its own (the root, or a sampled-ancestor branch;
-            # see 'populate_gamma_spike_mol_rates_on_rec_tr_branches')
-            # serializes as '[&...,mutation_rate=None]', which is
-            # accurate, not an error.
-            rec_nd.annotations.add_bound_attribute(self.attr_name)
-
-    def init_check_vectorize_sample_size(
-            self,
-            param_list: ty.List[ty.Any] = []) -> None:
-        """Validate Gamma-spike clock hyperparameters (currently scalar-only).
-
-        FOR LATER: once per-sample vectorized clock hyperparameters
-        are supported (e.g., a different 'clock_rate' per tree
-        sample, drawn from an upstream DAG node), this method should
-        grow each scalar hyperparameter into a list of length
-        'self.n_samples', mirroring how distributions in
-        'distribution.dn_parametric' do it today. For now, every
-        hyperparameter is a plain scalar float (enforced by this
-        class' type hints), so there is nothing to vectorize.
-        """
-
-        pass
-
-    def get_rev_inference_spec_info(self) -> ty.List[str]:
-        """See 'pgm.ValueGenerator.get_rev_inference_spec_info'.
-
-        Not yet implemented: RevBayes has no known equivalent of the
-        Gamma-spike clock model (it is a 2025 BEAST2-only addition at
-        the time of writing), and PhyloJunction's own RevBayes
-        inference-script export ('pjcli --inference-output') is
-        itself still an unfinished feature (see 'pj_cli.py'). Revisit
-        this once that feature is implemented for other distributions.
-        """
-
-        raise NotImplementedError(
-            "RevBayes inference-script export is not yet implemented "
-            "for GammaSpikeClockModel.")
-
-
-if __name__ == "__main__":
-    pass

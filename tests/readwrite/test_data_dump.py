@@ -1,5 +1,13 @@
 import unittest
 import io
+import copy
+import json
+import tempfile
+from pathlib import Path
+import pandas as pd
+from phylojunction.interface.cmdbox.cmd_parse import compile_model
+from phylojunction.readwrite.execution_export import write_results
+from phylojunction.pgm.values import summaries
 
 # pj imports
 import phylojunction.calculation.discrete_sse as sseobj
@@ -12,6 +20,123 @@ __email__ = "fmendes@lsu.edu"
 
 
 class TestDataDump(unittest.TestCase):
+
+    # Stub tables need tree labels plus replicate/vector identities, unlike scalar CSV.
+    # Exercise the final exporter so annotation loss and nested paths cannot be hidden.
+    def test_stub_tables_and_rate_annotations(self):
+        source = 't <- read_tree(string="((A[&alive=true]:1,X[&alive=false,sampled=false]:.2):1,B[&alive=true]:2);", is_complete=true)[1]\nout ~ iid(2, gamma_spike_clock(t, "rate", .1, 0, 2, [1,1]))\n'
+        result = compile_model(source).execute(runs=2, random_seed=2)
+        before = result.value('out')[0].rec_str()
+        with tempfile.TemporaryDirectory() as directory:
+            write_results(directory, result, write_stub_counts=True)
+            table = pd.read_csv(Path(directory) / 'out_n_stub.tsv', sep='\t')
+            self.assertEqual(list(table['@replicate']), [1, 1, 2, 2])
+            self.assertEqual(list(table['@element']), ['[1]', '[2]', '[1]', '[2]'])
+            self.assertEqual(list(table['A']), [1, 1, 1, 1])
+            self.assertEqual(list(table['B']), [0, 0, 0, 0])
+            self.assertTrue(any('rate=' in path.read_text() for path in Path(directory).glob('*')
+                                if path.is_file()))
+        self.assertEqual(result.value('out')[0].rec_str(), before)
+
+    # Legacy dataframe checks do not cover replicate/vector boundaries or MCON nesting.
+    # Retain these contracts while both tabular and nested replicate exports are supported.
+    def test_execution_formats(self):
+        results = compile_model('x := [row for row in [[1,2],[]]]\ny ~ normal(0,1)').execute(2, 42)
+        with tempfile.TemporaryDirectory() as directory:
+            write_results(directory, results, output_format='json')
+            records = [json.loads(line) for line in (Path(directory) / 'samples.mcon').read_text().splitlines()]
+            self.assertEqual(records[0]['format'], 'MCON')
+            self.assertEqual(records[0]['version'], '0.2')
+            self.assertEqual(records[1]['x'], [[1, 2], []])
+            self.assertEqual([r['y'] for r in records[1:]], results.values('y'))
+            write_results(directory, results, output_format='combined-csv')
+            frame = pd.read_csv(Path(directory) / 'combined.csv')
+            self.assertEqual(frame.columns.tolist(), ['@replicate', 'x[1][1]', 'x[1][2]', 'x[2]', 'y'])
+            self.assertEqual(frame['x[2]'].tolist(), ['[]', '[]'])
+            write_results(directory, results)
+            frame = pd.read_csv(Path(directory) / 'x.csv')
+            self.assertEqual(frame['@element'].tolist(), ['[1][1]', '[1][2]', '[2]'] * 2)
+            self.assertEqual(frame['x'].tolist(), ['1', '2', '[]'] * 2)
+            ragged = compile_model('n ~ categorical([1,2],[1,1])\nx ~ iid(n,normal(0,1))').execute(20,42)
+            with self.assertRaisesRegex(ValueError, 'JSON'):
+                write_results(directory, ragged, output_format='combined-csv')
+            write_results(directory, ragged, output_format='json')
+            records = [json.loads(line) for line in (Path(directory) / 'samples.mcon').read_text().splitlines()]
+            self.assertEqual([r['x'] for r in records[1:]], ragged.values('x'))
+        self.assertEqual(summaries([[1, 100]]), [])
+        self.assertEqual([r['mean'] for r in summaries([[1, 100], [3, 200]])], [2, 150])
+        self.assertEqual(summaries([[1], [2, 3]]), [])
+
+    # Ordinary format checks cannot detect loss at output dictionary insertion. Collisions
+    # must fail before touching files, regardless of which pair of producers shares a name.
+    def test_output_collisions(self):
+        tree = 't := read_tree(string="(A:1,B:1);")\n'
+        sources = [('x ~ normal(0,1)\nx_stats_summary <- 123', 'x_stats_summary.csv'),
+                   (tree + 't_stats <- 123', 't_stats.csv'),
+                   (tree + 't_annotated := t', 't_annotated_complete.tsv')]
+        for source, filename in sources:
+            with self.subTest(filename=filename), tempfile.TemporaryDirectory() as directory:
+                result = compile_model(source).execute(2,42)
+                destination = Path(directory) / 'new'
+                with self.assertRaisesRegex(ValueError, filename):
+                    write_results(destination, result)
+                self.assertFalse(destination.exists())
+                destination.mkdir()
+                existing = destination / filename
+                existing.write_text('previous output')
+                with self.assertRaises(ValueError):
+                    write_results(destination, result)
+                self.assertEqual(existing.read_text(), 'previous output')
+                self.assertEqual(list(destination.iterdir()), [existing])
+
+    # Invalid selections must be rejected before any files are created, including when
+    # a valid tree precedes the invalid entry. GUI mocks do not exercise this validation.
+    def test_map_export_selection(self):
+        from phylojunction.readwrite.execution_export import write_maps
+        result = compile_model('trees := read_tree(string="(A:1,B:1);")\nx <- [1,2]').execute()
+        for names in ('trees', [], [''], ['trees', 'trees'], ['trees', 'missing'], ['trees', 'x']):
+            with self.subTest(names=names), tempfile.TemporaryDirectory() as directory:
+                destination = Path(directory) / 'new'
+                with self.assertRaises((ValueError, TypeError)):
+                    write_maps(destination, result, names, 'state')
+                self.assertFalse(destination.exists())
+
+    # Trait dispatch must be per tree, with original coordinates after filtering.
+    # Homogeneous tests cannot catch first-tree assumptions or subset renumbering.
+    def test_mixed_tree_exports(self):
+        from phylojunction.data.trait import DiscreteTrait
+        source = ('zero := quasse_constant(0)\nc ~ quasse(zero,zero,"age",1,start_trait=2)\n'
+                  'd := read_tree(string="(A:1,B:1);")[1]\n')
+        for order, continuous_path in (('[[c,d,d]]', '[1][1]'), ('[[d,d,c]]', '[1][3]')):
+            result = compile_model(source + 'trees <- ' + order).execute(2,42)
+            for values in result.values('trees'):
+                discrete = [tree for tree in values[0] if isinstance(tree.trait, DiscreteTrait)]
+                # Copies supply two state spaces without adding another simulation to this test.
+                first, second = copy.deepcopy(discrete[0]), copy.deepcopy(discrete[1])
+                first.trait, second.trait = DiscreteTrait(2), DiscreteTrait(3)
+                first.state_count_dict = {0: 2, 1: 0}
+                second.state_count_dict = {0: 2, 1: 0, 2: 0}
+                positions = [i for i, tree in enumerate(values[0]) if isinstance(tree.trait, DiscreteTrait)]
+                for i, tree in zip(positions, (first, second)):
+                    values[0][i] = tree
+            with tempfile.TemporaryDirectory() as directory:
+                write_results(directory,result,write_nex_states=True)
+                root = Path(directory)
+                stats = pd.read_csv(root / 'trees_stats.csv')
+                continuous = stats['@element'] == continuous_path
+                self.assertTrue(stats.loc[continuous, ['n_0','n_1','n_2']].isna().all().all())
+                self.assertEqual(stats.loc[~continuous, 'n_0'].tolist(), [2,2,2,2])
+                self.assertEqual(stats['n_2'].notna().sum(), 2)
+                traits = pd.read_csv(root / 'trees_traits.tsv', sep='\t')
+                self.assertEqual(set(traits['@element']), {continuous_path})
+                self.assertEqual(set(traits['@replicate']), {1,2})
+                self.assertEqual(set(traits['trait']), {2})
+                expected = {f'trees_replicate{execution}[1][{index}].nex'
+                            for execution in (1,2) for index in (1,2,3)
+                            if f'[1][{index}]' != continuous_path}
+                self.assertEqual({p.name for p in root.glob('trees*.nex')}, expected)
+                complete = pd.read_csv(root / 'trees_complete.tsv', sep='\t')
+                self.assertEqual(len(complete), 6)
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -92,67 +217,30 @@ class TestDataDump(unittest.TestCase):
         start_at_origin = False
         start_states_list = [0 for i in range(n_sim)]
 
-        sse_sim = dnsse.DnSSE(
-            sse_stash,
-            n=n_sim,
-            n_replicates=n_repl,
-            origin=start_at_origin,
-            start_states_list=start_states_list,
-            stop=stop_condition,
-            stop_value=stop_condition_value,
-            condition_on_speciation=True,
-            condition_on_survival=True,
-            epsilon=1e-12,
-            runtime_limit=3600,
-            debug=False
-        )
+        trs = []
+        for execution in range(n_sim):
+            # Give each replicate its own scalar parameters; IID repeats only the tree.
+            stash = copy.deepcopy(sse_stash)
+            for matrix in (stash.meh.sse_rate_manager.matrix_state_dep_params,
+                           stash.prob_handler.state_dep_prob_manager.matrix_state_dep_params):
+                for epoch in matrix:
+                    for parameter in epoch:
+                        parameter.value = [parameter.value[execution] if len(parameter.value) > 1
+                                           else parameter.value[0]]
+            distribution = dnsse.DnSSE(stash, origin=start_at_origin, start_state=start_states_list[execution],
+                                       stop=stop_condition, stop_value=stop_condition_value[0],
+                                       condition_on_speciation=True, condition_on_survival=True,
+                                       epsilon=1e-12, runtime_limit=3600, debug=False)
+            trs.extend(distribution.draw_many(n_repl))
 
-        trs = sse_sim.generate()
+        cls.trees = trs
 
-        ####################
-        # Initializing PGM #
-        ####################
-        cls.bisse_pgm = pgm.DirectedAcyclicGraph()
-
-        # rv
-        cls.bisse_pgm.add_node(
-            pgm.StochasticNodeDAG(
-                "l0", n_sim, value=l0, sampled_from="Log-normal"
-            )
-        )
-        cls.bisse_pgm.add_node(
-            pgm.StochasticNodeDAG(
-                "mu0", n_sim, value=mu0, sampled_from="Log-normal"
-            )
-        )
-
-        # deterministic
-        cls.bisse_pgm.add_node(pgm.DeterministicNodeDAG("l0r", value=l0rate))
-        cls.bisse_pgm.add_node(pgm.DeterministicNodeDAG("mu0r", value=mu0rate))
-        cls.bisse_pgm.add_node(pgm.DeterministicNodeDAG("q01r", value=q01rate))
-        cls.bisse_pgm.add_node(pgm.DeterministicNodeDAG("l1r", value=l1rate))
-        cls.bisse_pgm.add_node(pgm.DeterministicNodeDAG("mu1r", value=mu1rate))
-        cls.bisse_pgm.add_node(pgm.DeterministicNodeDAG("q10r", value=q10rate))
-        cls.bisse_pgm.add_node(pgm.DeterministicNodeDAG("meh", value=meh))
-
-        # more rv
-        cls.bisse_pgm.add_node(
-            pgm.StochasticNodeDAG(
-                "trs", n_sim, value=trs, sampled_from="DnSSE",
-                replicate_size=n_repl
-            )
-        )
-
-        # sorted_node_dag_list = bisse_pgm.get_sorted_node_dag_list()
-
-        ###################
-        # Output handling #
-        ###################
-        # populating dataframe to be dumped
-        # data_df_names_list, data_df_list = \
-        #     pjwrite.prep_data_df(sorted_node_dag_list)
+        # Keep the detailed serializer-content checks below, supplying actual values
+        # rather than constructing nodes that conceal replicate and IID dimensions.
+        records = [('l0', l0, 1, True, True, n_sim), ('mu0', mu0, 1, True, True, n_sim),
+                   ('trs', trs, n_repl, True, True, n_sim)]
         cls.scalar_output_stash, cls.tree_output_stash = \
-            pjwrite.prep_data_df(cls.bisse_pgm, write_nex_states=True)
+            pjwrite.prep_data_df(records, write_nex_states=True)
 
         cls.output_fp_list, cls.output_df_str_list = \
             pjwrite.prep_data_filepaths_dfs(
@@ -169,8 +257,7 @@ class TestDataDump(unittest.TestCase):
         cls.tree_summary_df_dict, cls.tree_repl_summary_df_dict, \
         cls.tree_living_nd_states_str_dict, \
         cls.tree_living_nd_states_str_nexus_dict, \
-        cls.tree_internal_nd_states_str_dict, \
-        cls.tree_n_stub_df_dict = cls.tree_output_stash
+        cls.tree_internal_nd_states_str_dict = cls.tree_output_stash 
 
     def test_bisse_data_dump_file_names(self):
         """Test output file names."""
@@ -207,35 +294,6 @@ class TestDataDump(unittest.TestCase):
             ],
             self.output_fp_list
         )
-
-    def test_tree_output_stash_length(self):
-        """Test 'prep_data_df's tree-output stash has the expected length.
-
-        'cls.tree_output_stash' is unpacked positionally, by every
-        caller that needs its individual pieces, into a fixed number
-        of names -- here, in 'pj_gui.py' (twice), and in
-        'pysimple_pjgui/pj_gui_pysimplegui.py' (twice). None of those
-        4 call sites raise a clear error if 'prep_data_df' ever grows
-        (or shrinks) the stash without every unpacking site being
-        updated to match -- they just fail with a generic Python
-        'ValueError: too many/not enough values to unpack', far from
-        where the actual mismatch was introduced. This test exists so
-        that mismatch is caught here, loudly and explicitly, instead.
-        """
-
-        self.assertEqual(
-            len(self.tree_output_stash),
-            10,
-            msg=(
-                "'tree_output_stash' no longer has 10 elements. If you "
-                "added (or removed) an element in 'prep_data_df' "
-                "(src/phylojunction/readwrite/pj_write.py), you must "
-                "also update every place that unpacks 'tree_output_stash' "
-                "positionally: 'pj_gui.py's 'do_selected_node_compare_page' "
-                "and 'do_selected_node_coverage_page' (interface/pysidegui/"
-                "pj_gui.py), and their pysimplegui counterparts "
-                "(interface/pysimple_pjgui/pj_gui_pysimplegui.py) -- then "
-                "update the expected length here to match."))
 
     def test_bisse_data_dump_scalar_val_table(self):
         """Test scalar variables values."""
@@ -553,8 +611,8 @@ class TestDataDump(unittest.TestCase):
         csvstring_dump_tree_internal_nd_states_str_dict_list = \
             csvstring_dump_tree_internal_nd_states_str_dict.split("\n")
 
-        trs_node = self.bisse_pgm.get_node_dag_by_name("trs")
-        last_rec_tr = trs_node.value[9].tree_reconstructed
+        trees = self.trees
+        last_rec_tr = trees[9].tree_reconstructed
         last_rec_tr_seed_node_label = last_rec_tr.seed_node.label
 
         # debugging

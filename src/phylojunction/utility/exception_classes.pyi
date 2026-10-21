@@ -1,6 +1,16 @@
 import typing as ty
 from _typeshed import Incomplete
 
+class ScriptEvaluationError(Exception):
+    source: str
+    source_name: str
+    line_number: int
+    variable: str | None
+    execution: int | None
+    def __init__(self, message, *, source='', source_name='<script>', line_number=1,
+                 variable=None, execution=None): ...
+    def __str__(self): ...
+
 class ScriptSyntaxError(Exception):
     cmd_line: str
     message: str

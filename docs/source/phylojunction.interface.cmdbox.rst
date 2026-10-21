@@ -9,21 +9,21 @@ phylojunction.interface.cmdbox.cmd\_parse module
 
 .. automodule:: phylojunction.interface.cmdbox.cmd_parse
    :members:
-   :show-inheritance:
    :undoc-members:
+   :show-inheritance:
 
-phylojunction.interface.cmdbox.cmd\_parse\_utils module
--------------------------------------------------------
+phylojunction.interface.cmdbox.expressions module
+-------------------------------------------------
 
-.. automodule:: phylojunction.interface.cmdbox.cmd_parse_utils
+.. automodule:: phylojunction.interface.cmdbox.expressions
    :members:
-   :show-inheritance:
    :undoc-members:
+   :show-inheritance:
 
 Module contents
 ---------------
 
 .. automodule:: phylojunction.interface.cmdbox
    :members:
-   :show-inheritance:
    :undoc-members:
+   :show-inheritance:

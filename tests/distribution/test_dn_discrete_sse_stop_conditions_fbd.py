@@ -60,20 +60,20 @@ class TestSSEStopConditionsFBD(unittest.TestCase):
         start_states_list = [0 for i in range(n_sim)]
     
         # simulations
-        dnsse = distsse.DnSSE(
-            self.sse_stash,
-            n=n_sim,
-            origin=start_at_origin,
-            start_states_list=start_states_list,
-            stop=stop_condition,
-            stop_value=stop_condition_value,
-            condition_on_survival=True,
-            epsilon=1e-12,
-            debug=False)
 
         print(("\n\nRunning TestSSEStopConditionsFBD.test_tree_size_stop_"
                "condition_origin_fbd"))
-        trs = dnsse.generate()
+        # Exercise each original stopping threshold explicitly.
+        trs = [distsse.DnSSE(
+            self.sse_stash,
+            
+            origin=start_at_origin,
+            start_state=(start_states_list)[0],
+            stop=stop_condition,
+            stop_value=stop_value,
+            condition_on_survival=True,
+            epsilon=1e-12,
+            debug=False).draw() for stop_value in stop_condition_value]
 
         tr_sizes = [ann_tr.n_extant_terminal_nodes for ann_tr in trs]
 
@@ -96,18 +96,18 @@ class TestSSEStopConditionsFBD(unittest.TestCase):
         start_states_list = [0 for i in range(n_sim)]
     
         # simulations
-        dnsse = distsse.DnSSE(self.sse_stash,
-            n=n_sim,
-            origin=start_at_origin,
-            start_states_list=start_states_list,
-            stop=stop_condition,
-            stop_value=stop_condition_value,
-            condition_on_survival=True,
-            epsilon=1e-12)
         
         print(("\n\nRunning TestSSEStopConditionsFBD.test_tree_size_stop_"
                "condition_root_fbd"))
-        trs = dnsse.generate()
+        # Exercise each original stopping threshold explicitly.
+        trs = [distsse.DnSSE(self.sse_stash,
+            
+            origin=start_at_origin,
+            start_state=(start_states_list)[0],
+            stop=stop_condition,
+            stop_value=stop_value,
+            condition_on_survival=True,
+            epsilon=1e-12).draw() for stop_value in stop_condition_value]
 
         tr_sizes = [ann_tr.n_extant_terminal_nodes for ann_tr in trs]
 
@@ -132,19 +132,19 @@ class TestSSEStopConditionsFBD(unittest.TestCase):
         # seeds_list = [i+1 for i in range(n_sim)]
     
         # simulations
-        dnsse = distsse.DnSSE(
-            self.sse_stash,
-            n=n_sim,
-            origin=start_at_origin,
-            start_states_list=start_states_list,
-            stop=stop_condition,
-            stop_value=stop_condition_value,
-            condition_on_survival=True,
-            epsilon=1e-12)
 
         print(("\n\nRunning TestSSEStopConditionsFBD.test_tree_height_"
                "stop_condition_origin_fbd"))
-        trs = dnsse.generate()
+        # Exercise each original stopping threshold explicitly.
+        trs = [distsse.DnSSE(
+            self.sse_stash,
+            
+            origin=start_at_origin,
+            start_state=(start_states_list)[0],
+            stop=stop_condition,
+            stop_value=stop_value,
+            condition_on_survival=True,
+            epsilon=1e-12).draw() for stop_value in stop_condition_value]
 
         tr_sizes = [ann_tr.origin_age for ann_tr in trs]
 
@@ -170,19 +170,19 @@ class TestSSEStopConditionsFBD(unittest.TestCase):
         # seeds_list = [i+1 for i in range(n_sim)]
     
         # simulations
-        dnsse = distsse.DnSSE(
-            self.sse_stash,
-            n=n_sim,
-            origin=start_at_origin,
-            start_states_list=start_states_list,
-            stop=stop_condition,
-            stop_value=stop_condition_value,
-            condition_on_survival=True,
-            epsilon=1e-12)
         
         print(("\n\nRunning TestSSEStopConditionsFBD.test_tree_height_"
                "stop_condition_root_fbd"))
-        trs = dnsse.generate()
+        # Exercise each original stopping threshold explicitly.
+        trs = [distsse.DnSSE(
+            self.sse_stash,
+            
+            origin=start_at_origin,
+            start_state=(start_states_list)[0],
+            stop=stop_condition,
+            stop_value=stop_value,
+            condition_on_survival=True,
+            epsilon=1e-12).draw() for stop_value in stop_condition_value]
 
         tr_sizes = [ann_tr.root_age for ann_tr in trs]
 

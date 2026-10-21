@@ -10,7 +10,7 @@
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/sphinx-new-tab-link.css?v=d87cb1ac" />
-      <link rel="stylesheet" type="text/css" href="../_static/css/pj_custom.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/pj_custom.css?v=b916aa57" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
@@ -68,12 +68,11 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#command-line-interface-cli">Command-line interface (CLI)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#sandbox-bypassing-the-interfaces">Sandbox: Bypassing the interfaces</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#lexicon">Lexicon</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#constant-functions">Constant functions</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#reading-a-tree-from-newick">Reading a tree from Newick</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#sandbox-bypassing-the-interfaces">Sandbox: Bypassing the interfaces</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#annotated-tree-traits-in-python">Annotated tree traits in Python</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#lexicon">Lexicon</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#parametric-distributions">Parametric distributions</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#uniform">Uniform</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#exponential">Exponential</a></li>
@@ -85,12 +84,7 @@
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#tree-distributions">Tree distributions</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#discrete-sse">Discrete SSE</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#deterministic-functions">Deterministic functions</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#mapping-external-annotations-onto-a-tree">Mapping external annotations onto a tree</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#counting-observable-branches">Counting observable branches</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#gamma-spike-relaxed-clock">Gamma-spike relaxed clock</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#quasse">QuaSSE</a></li>
 </ul>
 </li>
 </ul>
@@ -128,56 +122,59 @@
 <h1>Documentation<a class="headerlink" href="#documentation" title="Link to this heading"></a></h1>
 <nav class="contents local" id="contents">
 <ul class="simple">
-<li><p><a class="reference internal" href="#overview" id="id29">Overview</a></p>
+<li><p><a class="reference internal" href="#overview" id="id21">Overview</a></p>
 <ul>
-<li><p><a class="reference internal" href="#origins-and-design" id="id30">Origins and design</a></p></li>
-<li><p><a class="reference internal" href="#graphical-models" id="id31">Graphical models</a></p>
+<li><p><a class="reference internal" href="#origins-and-design" id="id22">Origins and design</a></p></li>
+<li><p><a class="reference internal" href="#graphical-models" id="id23">Graphical models</a></p>
 <ul>
-<li><p><a class="reference internal" href="#how-to-read-a-dag" id="id32">How to read a DAG?</a></p></li>
+<li><p><a class="reference internal" href="#how-to-read-a-dag" id="id24">How to read a DAG?</a></p></li>
 </ul>
 </li>
-<li><p><a class="reference internal" href="#specifying-a-model-an-example" id="id33">Specifying a model (an example)</a></p>
+<li><p><a class="reference internal" href="#specifying-a-model-an-example" id="id25">Specifying a model (an example)</a></p>
 <ul>
-<li><p><a class="reference internal" href="#multiple-samples-and-replicates" id="id34">Multiple samples and replicates</a></p></li>
+<li><p><a class="reference internal" href="#multiple-samples-and-replicates" id="id26">Multiple samples and replicates</a></p></li>
 </ul>
 </li>
 </ul>
 </li>
-<li><p><a class="reference internal" href="#graphical-user-interface-gui" id="id35">Graphical user interface (GUI)</a></p>
+<li><p><a class="reference internal" href="#graphical-user-interface-gui" id="id27">Graphical user interface (GUI)</a></p>
 <ul>
-<li><p><a class="reference internal" href="#implementation-comparison" id="id36">Implementation comparison</a></p></li>
-<li><p><a class="reference internal" href="#coverage-validation" id="id37">Coverage validation</a></p></li>
+<li><p><a class="reference internal" href="#implementation-comparison" id="id28">Implementation comparison</a></p></li>
+<li><p><a class="reference internal" href="#coverage-validation" id="id29">Coverage validation</a></p></li>
 </ul>
 </li>
-<li><p><a class="reference internal" href="#command-line-interface-cli" id="id38">Command-line interface (CLI)</a></p></li>
-<li><p><a class="reference internal" href="#sandbox-bypassing-the-interfaces" id="id39">Sandbox: Bypassing the interfaces</a></p></li>
-<li><p><a class="reference internal" href="#lexicon" id="id40">Lexicon</a></p>
+<li><p><a class="reference internal" href="#command-line-interface-cli" id="id30">Command-line interface (CLI)</a></p></li>
+<li><p><a class="reference internal" href="#sandbox-bypassing-the-interfaces" id="id31">Sandbox: Bypassing the interfaces</a></p>
 <ul>
-<li><p><a class="reference internal" href="#constant-functions" id="id41">Constant functions</a></p>
-<ul>
-<li><p><a class="reference internal" href="#reading-a-tree-from-newick" id="id42">Reading a tree from Newick</a></p></li>
+<li><p><a class="reference internal" href="#annotated-tree-traits-in-python" id="id32">Annotated tree traits in Python</a></p></li>
 </ul>
 </li>
-<li><p><a class="reference internal" href="#parametric-distributions" id="id43">Parametric distributions</a></p>
+<li><p><a class="reference internal" href="#lexicon" id="id33">Lexicon</a></p>
 <ul>
-<li><p><a class="reference internal" href="#uniform" id="id44">Uniform</a></p></li>
-<li><p><a class="reference internal" href="#exponential" id="id45">Exponential</a></p></li>
-<li><p><a class="reference internal" href="#gamma" id="id46">Gamma</a></p></li>
-<li><p><a class="reference internal" href="#normal" id="id47">Normal</a></p></li>
-<li><p><a class="reference internal" href="#log-normal" id="id48">Log-normal</a></p></li>
-<li><p><a class="reference internal" href="#categorical" id="id49">Categorical</a></p></li>
+<li><p><a class="reference internal" href="#parametric-distributions" id="id34">Parametric distributions</a></p>
+<ul>
+<li><p><a class="reference internal" href="#uniform" id="id35">Uniform</a></p></li>
+<li><p><a class="reference internal" href="#exponential" id="id36">Exponential</a></p></li>
+<li><p><a class="reference internal" href="#gamma" id="id37">Gamma</a></p></li>
+<li><p><a class="reference internal" href="#normal" id="id38">Normal</a></p></li>
+<li><p><a class="reference internal" href="#log-normal" id="id39">Log-normal</a></p></li>
+<li><p><a class="reference internal" href="#categorical" id="id40">Categorical</a></p></li>
 </ul>
 </li>
-<li><p><a class="reference internal" href="#tree-distributions" id="id50">Tree distributions</a></p>
+<li><p><a class="reference internal" href="#tree-distributions" id="id41">Tree distributions</a></p>
 <ul>
-<li><p><a class="reference internal" href="#discrete-sse" id="id51">Discrete SSE</a></p></li>
+<li><p><a class="reference internal" href="#discrete-sse" id="id42">Discrete SSE</a></p></li>
+<li><p><a class="reference internal" href="#quasse" id="id43">QuaSSE</a></p>
+<ul>
+<li><p><a class="reference internal" href="#model" id="id44">Model</a></p></li>
+<li><p><a class="reference internal" href="#diversitree-method-and-stopping" id="id45">Diversitree method and stopping</a></p></li>
+<li><p><a class="reference internal" href="#brownian-bridge-local-thinning" id="id46">Brownian bridge local thinning</a></p></li>
+<li><p><a class="reference internal" href="#observation-and-conditions" id="id47">Observation and conditions</a></p></li>
+<li><p><a class="reference internal" href="#trees-plots-and-output" id="id48">Trees, plots, and output</a></p></li>
+<li><p><a class="reference internal" href="#python-interface" id="id49">Python interface</a></p></li>
+<li><p><a class="reference internal" href="#additional-scripts" id="id50">Additional scripts</a></p></li>
 </ul>
 </li>
-<li><p><a class="reference internal" href="#deterministic-functions" id="id52">Deterministic functions</a></p>
-<ul>
-<li><p><a class="reference internal" href="#mapping-external-annotations-onto-a-tree" id="id53">Mapping external annotations onto a tree</a></p></li>
-<li><p><a class="reference internal" href="#counting-observable-branches" id="id54">Counting observable branches</a></p></li>
-<li><p><a class="reference internal" href="#gamma-spike-relaxed-clock" id="id55">Gamma-spike relaxed clock</a></p></li>
 </ul>
 </li>
 </ul>
@@ -533,62 +530,32 @@ Each example is wrapped within its own function, like so:</p>
 </div>
 </div>
 </div></blockquote>
+<section id="annotated-tree-traits-in-python">
+<h3>Annotated tree traits in Python<a class="headerlink" href="#annotated-tree-traits-in-python" title="Link to this heading"></a></h3>
+<p>Python callers describe a tree’s primary trait when constructing an <code class="docutils literal notranslate"><span class="pre">AnnotatedTree</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">phylojunction.data.tree</span><span class="w"> </span><span class="kn">import</span> <span class="n">AnnotatedTree</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">phylojunction.data.trait</span><span class="w"> </span><span class="kn">import</span> <span class="n">DiscreteTrait</span><span class="p">,</span> <span class="n">ContinuousTrait</span>
+
+<span class="c1"># Given DendroPy trees with the corresponding node attributes and status flags:</span>
+<span class="n">discrete</span> <span class="o">=</span> <span class="n">AnnotatedTree</span><span class="p">(</span><span class="n">discrete_tree</span><span class="p">,</span> <span class="n">DiscreteTrait</span><span class="p">(</span><span class="n">states</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+<span class="n">continuous</span> <span class="o">=</span> <span class="n">AnnotatedTree</span><span class="p">(</span><span class="n">continuous_tree</span><span class="p">,</span> <span class="n">ContinuousTrait</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>The default node attribute names are <code class="docutils literal notranslate"><span class="pre">state</span></code> and <code class="docutils literal notranslate"><span class="pre">trait</span></code>, respectively. Both descriptions
+accept an explicit name, such as <code class="docutils literal notranslate"><span class="pre">DiscreteTrait(states=2,</span> <span class="pre">name=&quot;habitat&quot;)</span></code> or
+<code class="docutils literal notranslate"><span class="pre">ContinuousTrait(name=&quot;body_size&quot;)</span></code>. The named attribute must already exist on the
+nodes; a description does not rename attributes or their Newick annotations.</p>
+<p>The descriptions are immutable. To update metadata, replace <code class="docutils literal notranslate"><span class="pre">tree.trait</span></code>; this does not
+recompute cached counts. Plotting uses the described attribute by default (<code class="docutils literal notranslate"><span class="pre">None</span></code>), while
+an explicit plotting attribute selects that name literally.</p>
+<p>This Python interface replaces the constructor’s <code class="docutils literal notranslate"><span class="pre">total_state_count</span></code> and
+<code class="docutils literal notranslate"><span class="pre">continuous_trait</span></code> arguments, and the tree’s <code class="docutils literal notranslate"><span class="pre">state_count</span></code> and <code class="docutils literal notranslate"><span class="pre">continuous_trait</span></code>
+members. Discrete counts are available as <code class="docutils literal notranslate"><span class="pre">tree.trait.states</span></code>; both descriptions provide
+<code class="docutils literal notranslate"><span class="pre">tree.trait.name</span></code>. The <em>phylojunction</em> scripting language is unchanged.</p>
+</section>
 </section>
 <section id="lexicon">
 <h2>Lexicon<a class="headerlink" href="#lexicon" title="Link to this heading"></a></h2>
-<section id="constant-functions">
-<h3>Constant functions<a class="headerlink" href="#constant-functions" title="Link to this heading"></a></h3>
-<p>In addition to plain constant values (e.g., <code class="docutils literal notranslate"><span class="pre">birth_rate</span> <span class="pre">&lt;-</span> <span class="pre">1.0</span></code>), the <code class="docutils literal notranslate"><span class="pre">&lt;-</span></code> operator can also call a small number of “named” constant functions, which build something more involved than a single literal value from the arguments given to them.</p>
-<section id="reading-a-tree-from-newick">
-<span id="read-tree"></span><h4>Reading a tree from Newick<a class="headerlink" href="#reading-a-tree-from-newick" title="Link to this heading"></a></h4>
-<p>Constant function <code class="docutils literal notranslate"><span class="pre">read_tree</span></code> builds a tree from a Newick string (perhaps obtained from a different simulator, or from an empirical study).
-After a tree is read in with this function, it can be annotated (e.g., with stochastic mappings using <code class="docutils literal notranslate"><span class="pre">map_attr</span></code>) or transformed (e.g., scaled by a clock model).</p>
-<div class="literal-block-wrapper docutils container" id="id11">
-<div class="code-block-caption"><span class="caption-text"><strong>Example command.</strong> Reading a tree from a Newick string, provided directly inline.</span><a class="headerlink" href="#id11" title="Link to this code"></a></div>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">trs</span> <span class="o">&lt;-</span> <span class="n">read_tree</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">string</span><span class="o">=</span><span class="s2">"(nd1:2.0,nd2:2.0):0.0;"</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<p>The parameters for <code class="docutils literal notranslate"><span class="pre">read_tree</span></code> are:</p>
-<blockquote>
-<div><div class="line-block">
-<div class="line"><code class="docutils literal notranslate"><span class="pre">n</span></code> (integer, optional): Number of samples in the provided file (see <code class="docutils literal notranslate"><span class="pre">file_path``below).</span> <span class="pre">Behaves</span> <span class="pre">in</span> <span class="pre">one</span> <span class="pre">of</span> <span class="pre">exactly</span> <span class="pre">two</span> <span class="pre">ways:</span> <span class="pre">if</span> <span class="pre">neither</span> <span class="pre">``n</span></code> nor <code class="docutils literal notranslate"><span class="pre">nr</span></code> is given at all, every tree string found (see <code class="docutils literal notranslate"><span class="pre">file_path</span></code> below) goes straight into <code class="docutils literal notranslate"><span class="pre">n</span></code> (never into <code class="docutils literal notranslate"><span class="pre">nr</span></code>) with no further input needed; if <code class="docutils literal notranslate"><span class="pre">n</span></code> and/or <code class="docutils literal notranslate"><span class="pre">nr</span></code> <em>is</em> given (even as <code class="docutils literal notranslate"><span class="pre">n=1</span></code>), <code class="docutils literal notranslate"><span class="pre">n</span></code> <span class="math notranslate nohighlight">\(\times\)</span> <code class="docutils literal notranslate"><span class="pre">nr</span></code> must equal how many tree strings are provided in <code class="docutils literal notranslate"><span class="pre">file_path</span></code>. Defaults to 1.</div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">nr</span></code> (integer, optional): Number of replicates per sample. See <code class="docutils literal notranslate"><span class="pre">n</span></code> above for the same two possible behaviors that will also apply to <code class="docutils literal notranslate"><span class="pre">nr</span></code>. Defaults to 1.</div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">file_path</span></code> (string, required unless <code class="docutils literal notranslate"><span class="pre">string</span></code> is given): Path to a file containing one or more Newick tree strings, one per line. Mutually exclusive with <code class="docutils literal notranslate"><span class="pre">string</span></code> (which only ever holds a single tree).</div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">string</span></code> (string, required unless <code class="docutils literal notranslate"><span class="pre">file_path</span></code> is given): A single Newick tree string, provided directly. Mutually exclusive with <code class="docutils literal notranslate"><span class="pre">file_path</span></code>.</div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">node_name_attr</span></code> (string, optional): Name of an NHX annotation (e.g., <code class="docutils literal notranslate"><span class="pre">[&amp;index=9]</span></code>) to relabel every node in the tree by. This is needed to cross-reference the tree’s nodes against a user-provided annotation, such as a stochastic map (see <code class="docutils literal notranslate"><span class="pre">map_attr</span></code> on the deterministic functions page), by whatever node indexing the user employed.</div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">epoch_age_ends</span></code> (positive real vector, optional): The ages of epoch ends, oldest to youngest, omitting the youngest (which is added by default). This parameter is needed for plotting epoch boundaries, but for nothing else. Also, see <code class="docutils literal notranslate"><span class="pre">sse_stash</span></code>’s parameter of the same name (see the tree distributions page).</div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">is_complete</span></code> (string boolean, optional): Whether the Newick string represents a <em>complete</em> tree (both sampled and unsampled lineages), rather than an already-reconstructed tree (PhyloJunction’s default assumption, under which every terminal node is assumed sampled). When <code class="docutils literal notranslate"><span class="pre">&quot;true&quot;</span></code>, every leaf <strong>must</strong> carry explicit <code class="docutils literal notranslate"><span class="pre">&amp;alive=</span></code> or <code class="docutils literal notranslate"><span class="pre">&amp;sampled=</span></code> annotations (e.g., <code class="docutils literal notranslate"><span class="pre">nd1[&amp;alive=True,sampled=True]:2.0</span></code>), since branch lengths and depth alone cannot otherwise distinguish a fossil tip (dead, but sampled) from an unsampled extinction. Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;false&quot;</span></code>. When left at its default, neither annotation is ever consulted – <code class="docutils literal notranslate"><span class="pre">alive</span></code>/<code class="docutils literal notranslate"><span class="pre">sampled</span></code> are deduced purely from depth/construction instead – so an explicit <code class="docutils literal notranslate"><span class="pre">&amp;alive=</span></code> of either value, or an explicit <code class="docutils literal notranslate"><span class="pre">&amp;sampled=False</span></code>, on any leaf is rejected outright (an error is raised) rather than silently ignored, since either is most likely a sign that <code class="docutils literal notranslate"><span class="pre">is_complete=&quot;true&quot;</span></code> should have been passed instead.</div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">keep_unsampled_alive</span></code> (string boolean, optional): Only meaningful when <code class="docutils literal notranslate"><span class="pre">is_complete=&quot;true&quot;</span></code>. A terminal node that is alive may or not have been sampled, so if <code class="docutils literal notranslate"><span class="pre">&amp;sampled=False</span></code>, that terminal node is removed by default. Users may on occasion, however, keep a terminal node that they know exist but was not sampled – <code class="docutils literal notranslate"><span class="pre">keep_unsampled_alive</span></code> makes it so unsampled but living terminal nodes are not ignored (as an extinct or unsampled node would normally be) in any manipulation involving the reconstructed tree associated with the (complete) tree provided to <code class="docutils literal notranslate"><span class="pre">read_tree()</span></code>. Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;false&quot;</span></code>.</div>
-</div>
-</div></blockquote>
-<p>The example below shows how to read several trees written in a file specified by <code class="docutils literal notranslate"><span class="pre">file_path</span></code>. Because neither <code class="docutils literal notranslate"><span class="pre">n</span></code> nor <code class="docutils literal notranslate"><span class="pre">nr</span></code> are specified, all trees are read into <code class="docutils literal notranslate"><span class="pre">n</span></code>:</p>
-<div class="literal-block-wrapper docutils container" id="id12">
-<div class="code-block-caption"><span class="caption-text"><strong>Example command.</strong> A two-line file read with neither ‘n’ nor ‘nr’ given: both trees become two samples (not replicates) of ‘trs’.</span><a class="headerlink" href="#id12" title="Link to this code"></a></div>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">trs</span> <span class="o">&lt;-</span> <span class="n">read_tree</span><span class="p">(</span><span class="n">file_path</span><span class="o">=</span><span class="s2">"examples/trees/two_FBD_trees.tre"</span><span class="p">)</span>
-<span class="c1"># 'two_FBD_trees.tre' holds two lines, each a Newick tree string,</span>
-<span class="c1"># so 'trs' now has sample_size=2, repl_size=1 -- as if 'n=2' had</span>
-<span class="c1"># been written explicitly</span>
-</pre></div>
-</div>
-</div>
-<p>Giving <code class="docutils literal notranslate"><span class="pre">n</span></code> and/or <code class="docutils literal notranslate"><span class="pre">nr</span></code> explicitly, on the other hand, allows one to build replication (per sample) into the model design:</p>
-<div class="literal-block-wrapper docutils container" id="id13">
-<div class="code-block-caption"><span class="caption-text"><strong>Example command.</strong> The same file, but with explicit ‘n=1, nr=2’ specifying two replicates for one sample.</span><a class="headerlink" href="#id13" title="Link to this code"></a></div>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">trs</span> <span class="o">&lt;-</span> <span class="n">read_tree</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">nr</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">file_path</span><span class="o">=</span><span class="s2">"examples/trees/two_FBD_trees.tre"</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<p>Below, an example of reading in a complete tree from an annotated Newick string. The tree here is a 5-taxon fossilized birth-death (FBF) tree.
-It has one direct (sampled) ancestor (‘sa1’), one fossil tip (‘nd6’, dead but sampled), one unsampled extinct lineage (‘nd2’), and two living taxa (‘nd3’, ‘nd5’):</p>
-<div class="literal-block-wrapper docutils container" id="id14">
-<div class="code-block-caption"><span class="caption-text"><strong>Example command.</strong> Reading a complete FBD tree whose terminal nodes have been annotated for ‘&amp;alive=’/’&amp;sampled=’ as required.</span><a class="headerlink" href="#id14" title="Link to this code"></a></div>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">trs</span> <span class="o">&lt;-</span> <span class="n">read_tree</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">string</span><span class="o">=</span><span class="s2">"((sa1[&amp;alive=False,sampled=True]:0.0,((nd3[&amp;alive=True,sampled=True]:0.7008060330779379,(nd5[&amp;alive=True,sampled=True]:0.43018486984623605,nd6[&amp;alive=False,sampled=True]:0.10676020530326771)nd4_nd4:0.27062116323170177)nd1_nd1:0.3777323878021377,nd2[&amp;alive=False,sampled=False]:0.15074253577213667)root_root:0.41924114926716083)brosc_dummy1:0.5022204298527637)origin_origin:0.0;"</span><span class="p">,</span> <span class="n">is_complete</span><span class="o">=</span><span class="s2">"true"</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-</section>
-</section>
 <section id="parametric-distributions">
 <h3>Parametric distributions<a class="headerlink" href="#parametric-distributions" title="Link to this heading"></a></h3>
 <p>PhyloJunction ships with a (growing) number of parametric distributions.
@@ -605,8 +572,8 @@ On this page you will find examples of how to invoke the available distributions
 <div class="line"><code class="docutils literal notranslate"><span class="pre">max</span></code> (real number, required): Upper bound (inclusive).</div>
 </div>
 </div></blockquote>
-<div class="literal-block-wrapper docutils container" id="id15">
-<div class="code-block-caption"><span class="caption-text"><strong>Example command.</strong> Specifying two samples of a twice replicated uniformly distributed random variable <span class="math notranslate nohighlight">\(x\)</span>, from -1.0 and 1.0.</span><a class="headerlink" href="#id15" title="Link to this code"></a></div>
+<div class="literal-block-wrapper docutils container" id="id11">
+<div class="code-block-caption"><span class="caption-text"><strong>Example command.</strong> Specifying two samples of a twice replicated uniformly distributed random variable <span class="math notranslate nohighlight">\(x\)</span>, from -1.0 and 1.0.</span><a class="headerlink" href="#id11" title="Link to this code"></a></div>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">~</span> <span class="n">unif</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">nr</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="nb">min</span><span class="o">=-</span><span class="mf">1.0</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -623,8 +590,8 @@ On this page you will find examples of how to invoke the available distributions
 <div class="line"><code class="docutils literal notranslate"><span class="pre">rate_parameterization</span></code> (string boolean, optional): Whether the value passed in <code class="docutils literal notranslate"><span class="pre">rate</span></code> is the distribution’s rate. Defaults to “true”.</div>
 </div>
 </div></blockquote>
-<div class="literal-block-wrapper docutils container" id="id16">
-<div class="code-block-caption"><span class="caption-text"><strong>Example command.</strong> Specifying two samples of a twice replicated exponentially (scale <span class="math notranslate nohighlight">\(\frac{1}{\lambda}=1.0\)</span>) distributed random variable <span class="math notranslate nohighlight">\(x\)</span>.</span><a class="headerlink" href="#id16" title="Link to this code"></a></div>
+<div class="literal-block-wrapper docutils container" id="id12">
+<div class="code-block-caption"><span class="caption-text"><strong>Example command.</strong> Specifying two samples of a twice replicated exponentially (scale <span class="math notranslate nohighlight">\(\frac{1}{\lambda}=1.0\)</span>) distributed random variable <span class="math notranslate nohighlight">\(x\)</span>.</span><a class="headerlink" href="#id12" title="Link to this code"></a></div>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">~</span> <span class="n">exponential</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">nr</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">rate</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">rate_parameterization</span><span class="o">=</span><span class="s2">"false"</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -642,8 +609,8 @@ On this page you will find examples of how to invoke the available distributions
 <div class="line"><code class="docutils literal notranslate"><span class="pre">rate_parameterization</span></code> (string boolean, optional): Whether the value passed in <code class="docutils literal notranslate"><span class="pre">scale</span></code> is the distribution’s rate. Defaults to “false”.</div>
 </div>
 </div></blockquote>
-<div class="literal-block-wrapper docutils container" id="id17">
-<div class="code-block-caption"><span class="caption-text"><strong>Example command.</strong> Specifying two samples of a twice replicated gamma-distributed (shape <span class="math notranslate nohighlight">\(k=10.0\)</span>, scale <span class="math notranslate nohighlight">\(\theta=1.0\)</span>) random variable <span class="math notranslate nohighlight">\(x\)</span>.</span><a class="headerlink" href="#id17" title="Link to this code"></a></div>
+<div class="literal-block-wrapper docutils container" id="id13">
+<div class="code-block-caption"><span class="caption-text"><strong>Example command.</strong> Specifying two samples of a twice replicated gamma-distributed (shape <span class="math notranslate nohighlight">\(k=10.0\)</span>, scale <span class="math notranslate nohighlight">\(\theta=1.0\)</span>) random variable <span class="math notranslate nohighlight">\(x\)</span>.</span><a class="headerlink" href="#id13" title="Link to this code"></a></div>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">~</span> <span class="n">gamma</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">nr</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -660,8 +627,8 @@ On this page you will find examples of how to invoke the available distributions
 <div class="line"><code class="docutils literal notranslate"><span class="pre">sd</span></code> (positive real, required): Standard deviation (scale) of distribution.</div>
 </div>
 </div></blockquote>
-<div class="literal-block-wrapper docutils container" id="id18">
-<div class="code-block-caption"><span class="caption-text"><strong>Example command.</strong> Specifying two samples of a twice replicated normally (mean <span class="math notranslate nohighlight">\(\mu=0.0\)</span>, standard deviation <span class="math notranslate nohighlight">\(\sigma=1.0\)</span>) distributed random variable <span class="math notranslate nohighlight">\(x\)</span>.</span><a class="headerlink" href="#id18" title="Link to this code"></a></div>
+<div class="literal-block-wrapper docutils container" id="id14">
+<div class="code-block-caption"><span class="caption-text"><strong>Example command.</strong> Specifying two samples of a twice replicated normally (mean <span class="math notranslate nohighlight">\(\mu=0.0\)</span>, standard deviation <span class="math notranslate nohighlight">\(\sigma=1.0\)</span>) distributed random variable <span class="math notranslate nohighlight">\(x\)</span>.</span><a class="headerlink" href="#id14" title="Link to this code"></a></div>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">~</span> <span class="n">normal</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">nr</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">mean</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -669,27 +636,19 @@ On this page you will find examples of how to invoke the available distributions
 </section>
 <section id="log-normal">
 <h4>Log-normal<a class="headerlink" href="#log-normal" title="Link to this heading"></a></h4>
-<p>The function for assigning a log-normal (<code class="docutils literal notranslate"><span class="pre">lognormal</span></code>) distribution to a random variable has six parameters:</p>
+<p>The function for assigning a log-normal (<code class="docutils literal notranslate"><span class="pre">lognormal</span></code>) distribution to a random variable has five parameters:</p>
 <blockquote>
 <div><div class="line-block">
-<div class="line"><code class="docutils literal notranslate"><span class="pre">n</span></code> (integer, optional): Number of samples to draw (samples are i.i.d.). Defaults to 1. Mutually exclusive with <code class="docutils literal notranslate"><span class="pre">n_nr_from</span></code>.</div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">nr</span></code> (integer, optional): Number of replicates to draw per sample. Defaults to 1. Mutually exclusive with <code class="docutils literal notranslate"><span class="pre">n_nr_from</span></code>.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">n</span></code> (integer, optional): Number of samples to draw (samples are i.i.d.). Defaults to 1.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">nr</span></code> (integer, optional): Number of replicates to draw per sample. Defaults to 1.</div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">meanlog</span></code> (real, required): Mean (location) of distribution over the logarithm of the random variable.</div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">sdlog</span></code> (positive real, required): Standard deviation (scale) of distribution over the logarithm of the random variable.</div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">log_space</span></code> (string boolean, optional): Whether the value of <code class="docutils literal notranslate"><span class="pre">mean</span></code> is in log-space. Defaults to “true”.</div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">n_nr_from</span></code> (string, optional): Name of a DAG node (e.g., an <code class="docutils literal notranslate"><span class="pre">n_rec_branches</span></code> node; see the deterministic functions page) whose own (sample, replicate) shape is copied to draw this many log-normal values instead – one value per branch, for example, rather than a hand-picked <code class="docutils literal notranslate"><span class="pre">n</span></code>/<code class="docutils literal notranslate"><span class="pre">nr</span></code>. Mutually exclusive with <code class="docutils literal notranslate"><span class="pre">n</span></code>/<code class="docutils literal notranslate"><span class="pre">nr</span></code>.</div>
 </div>
 </div></blockquote>
-<div class="literal-block-wrapper docutils container" id="id19">
-<div class="code-block-caption"><span class="caption-text"><strong>Example command.</strong> Specifying two samples of a twice replicated log-normally (mean log(<span class="math notranslate nohighlight">\(\mu)=-3.25\)</span>, standard deviation <span class="math notranslate nohighlight">\(\sigma=0.25\)</span>) distributed random variable <span class="math notranslate nohighlight">\(x\)</span>.</span><a class="headerlink" href="#id19" title="Link to this code"></a></div>
+<div class="literal-block-wrapper docutils container" id="id15">
+<div class="code-block-caption"><span class="caption-text"><strong>Example command.</strong> Specifying two samples of a twice replicated log-normally (mean log(<span class="math notranslate nohighlight">\(\mu)=-3.25\)</span>, standard deviation <span class="math notranslate nohighlight">\(\sigma=0.25\)</span>) distributed random variable <span class="math notranslate nohighlight">\(x\)</span>.</span><a class="headerlink" href="#id15" title="Link to this code"></a></div>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">~</span> <span class="n">lognormal</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">mean</span><span class="o">=-</span><span class="mf">3.25</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mf">0.25</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="literal-block-wrapper docutils container" id="id20">
-<div class="code-block-caption"><span class="caption-text"><strong>Example command.</strong> Drawing one log-normal value per real branch of a tree, via ‘n_nr_from’.</span><a class="headerlink" href="#id20" title="Link to this code"></a></div>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">n_rec_br</span> <span class="o">:=</span> <span class="n">n_rec_branches</span><span class="p">(</span><span class="n">tree</span><span class="o">=</span><span class="n">trs</span><span class="p">)</span>
-<span class="n">br_specific_rel_rate</span> <span class="o">~</span> <span class="n">lognormal</span><span class="p">(</span><span class="n">n_nr_from</span><span class="o">=</span><span class="n">n_rec_br</span><span class="p">,</span> <span class="n">meanlog</span><span class="o">=-</span><span class="mf">0.125</span><span class="p">,</span> <span class="n">sdlog</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">log_space</span><span class="o">=</span><span class="s2">"true"</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -705,8 +664,8 @@ On this page you will find examples of how to invoke the available distributions
 <div class="line"><code class="docutils literal notranslate"><span class="pre">probs</span></code> (real number, required): Probability of each category (must add up to 1.0).</div>
 </div>
 </div></blockquote>
-<div class="literal-block-wrapper docutils container" id="id21">
-<div class="code-block-caption"><span class="caption-text"><strong>Example command.</strong> Specifying two samples of a twice replicated random variable representing to two equiprobable categories,</span><a class="headerlink" href="#id21" title="Link to this code"></a></div>
+<div class="literal-block-wrapper docutils container" id="id16">
+<div class="code-block-caption"><span class="caption-text"><strong>Example command.</strong> Specifying two samples of a twice replicated random variable representing to two equiprobable categories,</span><a class="headerlink" href="#id16" title="Link to this code"></a></div>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">~</span> <span class="n">categorical</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">nr</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">cats</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span> <span class="n">probs</span><span class="o">=</span><span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">])</span>
 </pre></div>
 </div>
@@ -716,7 +675,7 @@ On this page you will find examples of how to invoke the available distributions
 <section id="tree-distributions">
 <h3>Tree distributions<a class="headerlink" href="#tree-distributions" title="Link to this heading"></a></h3>
 <p>Phylogenetic tree stochastic nodes can be added to a model’s DAG using tree distributions.
-At the moment, PhyloJunction comes with one tree distribution that produce a variety of tree types.</p>
+PhyloJunction provides discrete SSE and continuous-trait QuaSSE tree distributions.</p>
 <section id="discrete-sse">
 <h4>Discrete SSE<a class="headerlink" href="#discrete-sse" title="Link to this heading"></a></h4>
 <p>Discrete SSE (<code class="docutils literal notranslate"><span class="pre">discrete_sse</span></code>) stands for discrete state-dependent speciation and extinction process, a general model that includes many popular special cases documented below.</p>
@@ -724,8 +683,8 @@ At the moment, PhyloJunction comes with one tree distribution that produce a var
 <p>The implementation and usage of <code class="docutils literal notranslate"><span class="pre">discrete_sse</span></code> in PhyloJunction is very flexible and takes inspiration from Tim Vaughan’s great <a class="reference external" href="https://tgvaughan.github.io/remaster/" rel="noreferrer" target="_blank">ReMASTER</a> simulator program: a model with any number of rates of whatever types may be specified.
 Of course, this flexibility comes at the price of user responsibility!</p>
 <p>SSE rates are added to a DAG by passing deterministic function <code class="docutils literal notranslate"><span class="pre">sse_rate</span></code> a stochastic or constant node containing a rate’s value (the value can also be passed directly):</p>
-<div class="literal-block-wrapper docutils container" id="id22">
-<div class="code-block-caption"><span class="caption-text"><strong>Script excerpt 1.</strong> Command in <em>phylojunction</em> to add a birth rate (deterministic node) to the DAG.</span><a class="headerlink" href="#id22" title="Link to this code"></a></div>
+<div class="literal-block-wrapper docutils container" id="id17">
+<div class="code-block-caption"><span class="caption-text"><strong>Script excerpt 1.</strong> Command in <em>phylojunction</em> to add a birth rate (deterministic node) to the DAG.</span><a class="headerlink" href="#id17" title="Link to this code"></a></div>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">birth_rate</span> <span class="o">~</span> <span class="n">exponential</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">nr</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">rate</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
 
 <span class="n">det_birth_rate</span> <span class="o">:=</span> <span class="n">sse_rate</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"lambda"</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">birth_rate</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="s2">"speciation"</span><span class="p">)</span>
@@ -760,8 +719,8 @@ Of course, this flexibility comes at the price of user responsibility!</p>
 <p><span class="underline">Sampling probabilities</span></p>
 <p>The discrete SSE model in PhyloJunction supports not only state-dependent rates, but also state-dependent sampling probabilities.
 Specifying SSE probabilities can be done like so:</p>
-<div class="literal-block-wrapper docutils container" id="id23">
-<div class="code-block-caption"><span class="caption-text"><strong>Script excerpt 2.</strong> Command in the <em>phylojunction</em> language to add a sampling probability parameter (deterministic node) to the DAG.</span><a class="headerlink" href="#id23" title="Link to this code"></a></div>
+<div class="literal-block-wrapper docutils container" id="id18">
+<div class="code-block-caption"><span class="caption-text"><strong>Script excerpt 2.</strong> Command in the <em>phylojunction</em> language to add a sampling probability parameter (deterministic node) to the DAG.</span><a class="headerlink" href="#id18" title="Link to this code"></a></div>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">det_sampling_prob</span> <span class="o">:=</span> <span class="n">sse_prob</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"rho"</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">state</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 <span class="c1"># by setting the value to 1.0, we assume complete sampling!</span>
 </pre></div>
@@ -793,8 +752,8 @@ This is accomplished with deterministic function <code class="docutils literal n
 <p>The discrete SSE model in PhyloJunction is a “skyline” model, that is, it allows both state-dependent rates and parameters to vary over time (i.e., to be time-heterogeneous).
 In the presence of time-heterogeneity, these parameters are assumed to vary according to a user-defined piecewise constant function (this is coded into the model via the <code class="docutils literal notranslate"><span class="pre">value</span></code> and <code class="docutils literal notranslate"><span class="pre">epoch</span></code> parameters of <code class="docutils literal notranslate"><span class="pre">sse_rate</span></code> and <code class="docutils literal notranslate"><span class="pre">sse_prob</span></code>).
 The limits of each “piece” of that function are given by the argument to <code class="docutils literal notranslate"><span class="pre">epoch_age_ends</span></code> (see above).</p>
-<div class="literal-block-wrapper docutils container" id="id24">
-<div class="code-block-caption"><span class="caption-text"><strong>Script excerpt 3.</strong> Command in the <em>phylojunction</em> language to organize rate and probability parameters into a stash (a deterministic node in the DAG).</span><a class="headerlink" href="#id24" title="Link to this code"></a></div>
+<div class="literal-block-wrapper docutils container" id="id19">
+<div class="code-block-caption"><span class="caption-text"><strong>Script excerpt 3.</strong> Command in the <em>phylojunction</em> language to organize rate and probability parameters into a stash (a deterministic node in the DAG).</span><a class="headerlink" href="#id19" title="Link to this code"></a></div>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">det_birth_rate1</span> <span class="o">:=</span> <span class="n">sse_rate</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"lambda1"</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="s2">"speciation"</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 <span class="n">det_birth_rate2</span> <span class="o">:=</span> <span class="n">sse_rate</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"lambda2"</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="s2">"speciation"</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
 
@@ -827,8 +786,8 @@ The parameters of this function are:</p>
 </div>
 </div></blockquote>
 <p>Below, an example of assigning a discrete SSE to a stochastic DAG node representing phylogenetic tree samples:</p>
-<div class="literal-block-wrapper docutils container" id="id25">
-<div class="code-block-caption"><span class="caption-text"><strong>Script excerpt 4.</strong> Commands in <em>phylojunction</em> to build a discrete SSE distribution and assign it to a stochastic DAG node.</span><a class="headerlink" href="#id25" title="Link to this code"></a></div>
+<div class="literal-block-wrapper docutils container" id="id20">
+<div class="code-block-caption"><span class="caption-text"><strong>Script excerpt 4.</strong> Commands in <em>phylojunction</em> to build a discrete SSE distribution and assign it to a stochastic DAG node.</span><a class="headerlink" href="#id20" title="Link to this code"></a></div>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">det_birth_rate1</span> <span class="o">:=</span> <span class="n">sse_rate</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"lambda1"</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="s2">"speciation"</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 <span class="n">det_birth_rate2</span> <span class="o">:=</span> <span class="n">sse_rate</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"lambda2"</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="s2">"speciation"</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
 
@@ -852,89 +811,390 @@ The parameters of this function are:</p>
 </ol>
 </div></blockquote>
 </section>
-</section>
-<section id="deterministic-functions">
-<h3>Deterministic functions<a class="headerlink" href="#deterministic-functions" title="Link to this heading"></a></h3>
-<p>PhyloJunction also ships with a number of deterministic functions (assigned with the <code class="docutils literal notranslate"><span class="pre">:=</span></code> operator), which introduce no stochasticity of their own – they transform, combine, or annotate values already stored elsewhere in the DAG.
-On this page you will find the deterministic functions involved in annotating a tree and applying a relaxed-clock model to it.
-Every function below takes an already-built tree as its <code class="docutils literal notranslate"><span class="pre">tree</span></code> argument – normally one read in with the <a class="reference internal" href="#read-tree"><span class="std std-ref">Reading a tree from Newick</span></a> constant function, on the constant functions page.</p>
-<section id="mapping-external-annotations-onto-a-tree">
-<h4>Mapping external annotations onto a tree<a class="headerlink" href="#mapping-external-annotations-onto-a-tree" title="Link to this heading"></a></h4>
-<p>Deterministic function <code class="docutils literal notranslate"><span class="pre">map_attr</span></code> takes a tree (read in with <a class="reference internal" href="#read-tree"><span class="std std-ref">Reading a tree from Newick</span></a> and its <code class="docutils literal notranslate"><span class="pre">node_name_attr</span></code> argument) and “paints” it with a discrete-state history computed by an outside tool – a stochastic character map, for example – whose mid-branch (anagenetic) and cladogenetic state changes are given in a separate maps file.
-The tree itself is left untouched topologically; only its <code class="docutils literal notranslate"><span class="pre">at_dict</span></code>/<code class="docutils literal notranslate"><span class="pre">clado_at_dict</span></code>/<code class="docutils literal notranslate"><span class="pre">node_attr_dict</span></code> members (the per-node attribute bookkeeping used when plotting, or when combined with a clock model, see <code class="docutils literal notranslate"><span class="pre">gamma_spike_clock</span></code> below) are populated.</p>
-<div class="literal-block-wrapper docutils container" id="id26">
-<div class="code-block-caption"><span class="caption-text"><strong>Example command.</strong> Reading a tree by node index, then mapping a GeoSSE stochastic map onto it.</span><a class="headerlink" href="#id26" title="Link to this code"></a></div>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">trs</span> <span class="o">&lt;-</span> <span class="n">read_tree</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">file_path</span><span class="o">=</span><span class="s2">"examples/trees_maps_files/geosse_dummy_tree2.tre"</span><span class="p">,</span> <span class="n">node_name_attr</span><span class="o">=</span><span class="s2">"index"</span><span class="p">)</span>
-<span class="n">mapped_trs</span> <span class="o">:=</span> <span class="n">map_attr</span><span class="p">(</span><span class="n">tree</span><span class="o">=</span><span class="n">trs</span><span class="p">,</span> <span class="n">fun</span><span class="o">=</span><span class="s2">"smap"</span><span class="p">,</span> <span class="n">maps_file_path</span><span class="o">=</span><span class="s2">"examples/trees_maps_files/geosse_dummy_tree2_maps.tsv"</span><span class="p">,</span> <span class="n">tip_attr_file_path</span><span class="o">=</span><span class="s2">"examples/trees_maps_files/geosse_dummy_tree2_tip_states.tsv"</span><span class="p">,</span> <span class="n">n_regions</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">geo</span><span class="o">=</span><span class="s2">"true"</span><span class="p">)</span>
+<section id="quasse">
+<h4>QuaSSE<a class="headerlink" href="#quasse" title="Link to this heading"></a></h4>
+<p>QuaSSE couples a real-valued Brownian trait to trait-dependent speciation, extinction and optional fossil sampling.
+Two simulation methods are available: the default <code class="docutils literal notranslate"><span class="pre">diversitree</span></code> approximation and
+<code class="docutils literal notranslate"><span class="pre">local_thinning</span></code>, which evaluates rates at Brownian-bridge candidate traits and has an
+explicit probability-error budget under the assumptions below.</p>
+<p>With PhyloJunction installed, run these commands from the repository root (where
+<code class="docutils literal notranslate"><span class="pre">examples/</span></code> is located):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pjcli<span class="w"> </span>examples/quasse.pj<span class="w"> </span>-d<span class="w"> </span>-f<span class="w"> </span><span class="s1">'trees;1-2'</span><span class="w"> </span>-r<span class="w"> </span><span class="m">42</span><span class="w"> </span>-o<span class="w"> </span>/tmp/quasse-output
+pjcli<span class="w"> </span>examples/quasse_size.pj<span class="w"> </span>-d<span class="w"> </span>-r<span class="w"> </span><span class="m">42</span><span class="w"> </span>-o<span class="w"> </span>/tmp/quasse-size
+pjcli<span class="w"> </span>examples/quasse_conditioned.pj<span class="w"> </span>-d<span class="w"> </span>-r<span class="w"> </span><span class="m">42</span><span class="w"> </span>-o<span class="w"> </span>/tmp/quasse-conditioned
+pjcli<span class="w"> </span>examples/quasse_local_thinning.pj<span class="w"> </span>-d<span class="w"> </span>-r<span class="w"> </span><span class="m">42</span><span class="w"> </span>-o<span class="w"> </span>/tmp/quasse-local
 </pre></div>
 </div>
-</div>
-<p>The parameters for <code class="docutils literal notranslate"><span class="pre">map_attr</span></code> are:</p>
-<blockquote>
-<div><div class="line-block">
-<div class="line"><code class="docutils literal notranslate"><span class="pre">tree</span></code> (string, required): Name of the DAG node holding the tree(s) to be mapped (normally a <a class="reference internal" href="#read-tree"><span class="std std-ref">Reading a tree from Newick</span></a> node, with <code class="docutils literal notranslate"><span class="pre">node_name_attr</span></code> set so nodes can be cross-referenced by the index the external tool used).</div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">fun</span></code> (string, required): The kind of mapping being applied. Currently, the only supported value is <code class="docutils literal notranslate"><span class="pre">&quot;smap&quot;</span></code> (a stochastic character map).</div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">maps_file_path</span></code> (string, required): Path to a tab-separated file listing every anagenetic and cladogenetic state change along the tree (one row per change), by node index.</div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">tip_attr_file_path</span></code> (string, required): Path to a tab-separated file listing each tip’s own (node-index, state) pair.</div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">n_regions</span></code> (positive integer, optional): Number of discrete areas/regions, if the state space is a GeoSSE-style combination of presence/absence across regions. Defaults to 1.</div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">geo</span></code> (string boolean, optional): Whether the state space should be interpreted as GeoSSE-style (presence/absence across <code class="docutils literal notranslate"><span class="pre">n_regions</span></code> regions) rather than a plain, flat set of discrete states. Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;false&quot;</span></code>.</div>
-</div>
-</div></blockquote>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>The resulting mapped attribute is currently always named <code class="docutils literal notranslate"><span class="pre">&quot;state&quot;</span></code> (hard-coded), regardless of any other argument – there is no way yet to map onto, or name, a different per-node attribute.</p>
-</div>
-</section>
-<section id="counting-observable-branches">
-<h4>Counting observable branches<a class="headerlink" href="#counting-observable-branches" title="Link to this heading"></a></h4>
-<p>Deterministic function <code class="docutils literal notranslate"><span class="pre">n_rec_branches</span></code> counts a tree’s observable branches (every branch of its <em>reconstructed</em> topology, excluding the root and any zero-length branch – see <code class="docutils literal notranslate"><span class="pre">is_real_branch</span></code> in the code).
-The output of this function is a simple tree summary statistic, but as a DAG node, it does carry information about the number of samples and replicates of the trees that got summarized. This information can then be used in later model specification steps (e.g., <code class="docutils literal notranslate"><span class="pre">n_nr_from</span></code> argument of parametric distributions such as <code class="docutils literal notranslate"><span class="pre">lognormal</span></code>; see Gamma-spike example below).</p>
-<div class="literal-block-wrapper docutils container" id="id27">
-<div class="code-block-caption"><span class="caption-text"><strong>Example command.</strong> Counting a tree’s real branches, then drawing one log-normal value per branch.</span><a class="headerlink" href="#id27" title="Link to this code"></a></div>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">n_rec_br</span> <span class="o">:=</span> <span class="n">n_rec_branches</span><span class="p">(</span><span class="n">tree</span><span class="o">=</span><span class="n">trs</span><span class="p">)</span>
-<span class="n">br_specific_rel_rate</span> <span class="o">~</span> <span class="n">lognormal</span><span class="p">(</span><span class="n">n_nr_from</span><span class="o">=</span><span class="n">n_rec_br</span><span class="p">,</span> <span class="n">meanlog</span><span class="o">=-</span><span class="mf">0.125</span><span class="p">,</span> <span class="n">sdlog</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">log_space</span><span class="o">=</span><span class="s2">"true"</span><span class="p">)</span>
+<p>Each <code class="docutils literal notranslate"><span class="pre">.pj</span></code> statement must occupy one line. <code class="docutils literal notranslate"><span class="pre">-d</span></code> writes data; <code class="docutils literal notranslate"><span class="pre">-f</span></code> selects figures.
+The GUI’s normal tree display also colors continuous terminal traits.</p>
+<section id="model">
+<h5>Model<a class="headerlink" href="#model" title="Link to this heading"></a></h5>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span># Brownian diffusion is variance per unit time. All commands occupy one line.
+birth := quasse_logistic(y0=0.4, y1=0.8, midpoint=0.0, slope=2.0)
+death := quasse_logistic(y0=0.02, y1=0.1, midpoint=1.0, slope=2.0)
+trees ~ quasse(n=2, nr=2, birth_rate=birth, death_rate=death, start_trait=0.0, drift=0.0, diffusion=0.1, stop="age", stop_value=3.0, method="diversitree", k=500)
 </pre></div>
 </div>
-</div>
-<p>The only parameter for <code class="docutils literal notranslate"><span class="pre">n_rec_branches</span></code> is:</p>
-<blockquote>
-<div><div class="line-block">
-<div class="line"><code class="docutils literal notranslate"><span class="pre">tree</span></code> (string, required): Name of the DAG node holding the tree(s) whose branches are to be counted.</div>
-</div>
-</div></blockquote>
-</section>
-<section id="gamma-spike-relaxed-clock">
-<h4>Gamma-spike relaxed clock<a class="headerlink" href="#gamma-spike-relaxed-clock" title="Link to this heading"></a></h4>
-<p>Deterministic function <code class="docutils literal notranslate"><span class="pre">gamma_spike_clock</span></code> implements the Gamma-spike punctuated relaxed-clock model of Douglas et al. (2025), annotating a tree’s <em>reconstructed</em> branches with a new, continuous rate attribute (e.g., <code class="docutils literal notranslate"><span class="pre">&quot;mutation_rate&quot;</span></code>) that combines:</p>
-<blockquote>
-<div><ol class="lowerroman simple">
-<li><p>branch-specific “raw” rates from the relaxed-clock component, supplied via <code class="docutils literal notranslate"><span class="pre">br_specific_rel_rate</span></code>, and</p></li>
-<li><p>a punctuated component, the “spike effect” tied to the number of accumulated anagenetic “stubs” (unobserved speciation/extinction/direct-ancestor-sampling events) on each branch.</p></li>
-</ol>
-</div></blockquote>
-<p>The clock model reads a tree’s topology and branch lengths (the tree should be a chronogram with branch lengths measured in absolute time). Any pre-existing discrete-state annotations (e.g., from <code class="docutils literal notranslate"><span class="pre">map_attr</span></code>, above) are left untouched on the returned, independently-copied tree.</p>
-<div class="literal-block-wrapper docutils container" id="id28">
-<div class="code-block-caption"><span class="caption-text"><strong>Example command.</strong> Drawing a relaxed-clock rate first (via ‘n_rec_branches’/’lognormal’), then applying the Gamma-spike clock model.</span><a class="headerlink" href="#id28" title="Link to this code"></a></div>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">n_rec_br</span> <span class="o">:=</span> <span class="n">n_rec_branches</span><span class="p">(</span><span class="n">tree</span><span class="o">=</span><span class="n">trs</span><span class="p">)</span>
-<span class="n">br_specific_rel_rate</span> <span class="o">~</span> <span class="n">lognormal</span><span class="p">(</span><span class="n">n_nr_from</span><span class="o">=</span><span class="n">n_rec_br</span><span class="p">,</span> <span class="n">meanlog</span><span class="o">=-</span><span class="mf">0.125</span><span class="p">,</span> <span class="n">sdlog</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">log_space</span><span class="o">=</span><span class="s2">"true"</span><span class="p">)</span>
-<span class="n">phylo</span> <span class="o">:=</span> <span class="n">gamma_spike_clock</span><span class="p">(</span><span class="n">tree</span><span class="o">=</span><span class="n">trs</span><span class="p">,</span> <span class="n">attr_name</span><span class="o">=</span><span class="s2">"mutation_rate"</span><span class="p">,</span> <span class="n">clock_rate</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">spike_mean</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">spike_shape</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">br_specific_rel_rate</span><span class="o">=</span><span class="n">br_specific_rel_rate</span><span class="p">)</span>
+<p>Download <a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/quasse.pj" rel="noreferrer" target="_blank">quasse.pj</a>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">quasse_logistic</span></code> matches Java SSE’s link function:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>f(x) = y0 + (y1 − y0) / (1 + exp(slope × (midpoint − x)))
 </pre></div>
 </div>
+<p>The plateau values are finite and nonnegative. The midpoint and slope are finite. Either
+slope sign and either plateau ordering are supported. Equal plateaus produce a rate independent
+of the trait. Rate functions have no explicit time dependence; rates change as traits evolve.</p>
+<p>Other rate families are available for speciation, extinction or fossil sampling:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 45.0%" />
+<col style="width: 55.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Constructor and required arguments</p></th>
+<th class="head"><p>Rate at trait x</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">quasse_constant(rate)</span></code></p></td>
+<td><p>rate</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">quasse_gaussian(baseline,</span> <span class="pre">center_rate,</span> <span class="pre">center,</span> <span class="pre">width)</span></code></p></td>
+<td><p>baseline + (center_rate − baseline) exp(−z²/2), z = (x − center)/width</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">quasse_step(left,</span> <span class="pre">right,</span> <span class="pre">threshold)</span></code></p></td>
+<td><p>left when x &lt; threshold; right otherwise, including equality</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">quasse_linear(intercept,</span> <span class="pre">slope)</span></code></p></td>
+<td><p>max(0, intercept + slope × x)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">quasse_skew_gaussian(baseline,</span> <span class="pre">amplitude,</span> <span class="pre">location,</span> <span class="pre">width,</span> <span class="pre">skew)</span></code></p></td>
+<td><p>baseline + 2 amplitude exp(−z²/2) Φ(skew × z), z = (x − location)/width</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">quasse_quadratic(baseline,</span> <span class="pre">strength,</span> <span class="pre">center)</span></code></p></td>
+<td><p>baseline + strength × (x − center)²</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">quasse_absolute(baseline,</span> <span class="pre">strength,</span> <span class="pre">center)</span></code></p></td>
+<td><p>baseline + strength × abs(x − center)</p></td>
+</tr>
+</tbody>
+</table>
+<p>Supply arguments by name in scripts. All parameters must be finite; rate levels, amplitudes
+and strengths must be nonnegative, and widths positive. Locations, slopes, skew and the linear
+intercept can have either sign. Gaussian curves include troughs when <code class="docutils literal notranslate"><span class="pre">center_rate</span> <span class="pre">&lt;</span> <span class="pre">baseline</span></code>.
+Φ is the standard normal cumulative distribution function. The asymmetric peak’s <code class="docutils literal notranslate"><span class="pre">location</span></code>
+and <code class="docutils literal notranslate"><span class="pre">amplitude</span></code> are not generally its peak position and height; <code class="docutils literal notranslate"><span class="pre">skew=0</span></code> gives a symmetric
+Gaussian peak. All constructor parameters are constant through time within a simulation.</p>
+<p>Every constructor accepts optional <code class="docutils literal notranslate"><span class="pre">cap</span></code>: the evaluated rate is min(cap, f(x)). The cap must
+be finite and nonnegative, may be below the baseline, and may be zero. It broadcasts with the
+other parameters. Without it, linear, quadratic and absolute-value rates remain unbounded
+when their slope or strength is nonzero. There is no hidden upper truncation.</p>
+<p>An explicit cap changes the biological model; computational resource limits do not cap rates.
+For example, pure branching Brownian motion with quadratic speciation can have an infinite
+expected population after a finite time even though each finite-time population is finite
+almost surely. A large realization or exceeded node budget is not proof of infinitely many
+nodes. General birth–death models should not be assigned an explosion classification from
+these runtime checks.</p>
+<p>The trait increment over duration δ has mean <code class="docutils literal notranslate"><span class="pre">drift</span> <span class="pre">×</span> <span class="pre">δ</span></code> and variance <code class="docutils literal notranslate"><span class="pre">diffusion</span> <span class="pre">×</span> <span class="pre">δ</span></code>.
+<code class="docutils literal notranslate"><span class="pre">diffusion</span></code> is variance per unit time, not a standard deviation. Drift and diffusion are
+independent of the trait and constant through time within each simulation.
+Zero diffusion is supported.
+Each tree starts with one lineage at the origin. Daughters inherit the parent’s trait and
+then evolve independently. Optional <code class="docutils literal notranslate"><span class="pre">fossil_rate</span></code> supplies a rate object for non-destructive
+sampling along each lineage, in observations per lineage per unit time. It defaults to zero
+(<code class="docutils literal notranslate"><span class="pre">None</span></code> in Python), accepts every rate family, and broadcasts at length one or <code class="docutils literal notranslate"><span class="pre">n</span></code>.
+Fossils record the exact trait at sampling; they do not remove the lineage or reset its trait.
+Sampling at death, removal probabilities and measurement error are not supported.</p>
+<p>Rate-constructor parameters broadcast to a common vector length. Distribution model
+parameters, rate objects, <code class="docutils literal notranslate"><span class="pre">stop_value</span></code>, and <code class="docutils literal notranslate"><span class="pre">sampling_prob</span></code> have length one or <code class="docutils literal notranslate"><span class="pre">n</span></code>.
+Each of the <code class="docutils literal notranslate"><span class="pre">n</span></code> samples has <code class="docutils literal notranslate"><span class="pre">nr</span></code> independent replicates using the same parameter values;
+output ordering is sample first, then replicate. Rejected trees do not resample DAG parents.</p>
+</section>
+<section id="diversitree-method-and-stopping">
+<h5>Diversitree method and stopping<a class="headerlink" href="#diversitree-method-and-stopping" title="Link to this heading"></a></h5>
+<p>At the current living traits, compute total birth–death–sampling rate R. A full step has duration
+1/(kR), and one event occurs with probability 1/k. Choose the event type and lineage using
+the current rates. Apply the event first, then extend and evolve the resulting living
+lineages. A newborn daughter therefore evolves during that step, while a dead lineage does not.
+A fossil records the start-of-step trait and its continuing lineage evolves for the whole step.</p>
+<p>For <code class="docutils literal notranslate"><span class="pre">stop=&quot;age&quot;</span></code>, shorten the final interval to the remaining duration δ and use event
+probability Rδ. Surviving branches end exactly at the observation age. Completely extinct
+trees retain the actual extinction times, with node ages measured relative to observation.</p>
+<p>For <code class="docutils literal notranslate"><span class="pre">stop=&quot;size&quot;</span></code>, N counts <strong>sampled living tips</strong>. The initial lineage receives a
+Bernoulli(<code class="docutils literal notranslate"><span class="pre">sampling_prob</span></code>) mark. At birth, one randomly chosen daughter inherits its parent’s
+mark and the other receives an independent fresh mark. Thus a birth adds zero or one to
+the sampled count. A sampled death subtracts one; fossils preserve the continuing mark.</p>
+<p>Stop immediately before a proposed birth would increase that count from N to N+1, omitting
+that birth and its following trait update. Merely reaching N does not stop the simulation:
+zero-increment births can occur at N and sampled deaths can lower the count again. Do not
+resample marks at the end. <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">&lt;</span> <span class="pre">sampling_prob</span> <span class="pre">&lt;=</span> <span class="pre">1</span></code> is required for size stopping; zero
+is permitted for age stopping. All living lineages, including unsampled ones, evolve and
+count toward <code class="docutils literal notranslate"><span class="pre">max_alive</span></code>. Zero sampled tips with living lineages is not extinction.
+If survival conditioning is disabled, extinct outcomes can also be returned.</p>
+<p>On a fixed biological tree independent of the marks, these leaf marks are independent
+Bernoulli draws. The flag-dependent stopping time conditions their distribution; the
+returned size-stopped tree is defined by this marked process, not independent post-sampling
+of a tree stopped by its total living count. At complete sampling the old behavior is preserved.</p>
+<p>The interior algorithm follows <code class="docutils literal notranslate"><span class="pre">diversitree/R/simulate-quasse.R</span></code>. Intentional differences are:</p>
+<ul class="simple">
+<li><p>The final age-limited interval and event probability are shortened, preventing overshoot.</p></li>
+<li><p>Size stopping omits diffusion after the terminating birth, matching PhyloJunction’s convention.</p></li>
+<li><p>No artificial initial branch length of 1e-8 is added; genuine zero-length branches are valid.</p></li>
+<li><p>Tree storage, observation sampling, and conditioning use PhyloJunction’s conventions.</p></li>
+</ul>
+<p>The method is approximate. Increasing <code class="docutils literal notranslate"><span class="pre">k</span></code> generally improves resolution at greater cost;
+<code class="docutils literal notranslate"><span class="pre">k</span></code> does not specify an absolute time-step tolerance. It defaults to 500 and must be an integer
+at least one. The default method is <code class="docutils literal notranslate"><span class="pre">&quot;diversitree&quot;</span></code>.</p>
+<p>Optional <code class="docutils literal notranslate"><span class="pre">dt_max</span></code> is a positive finite duration. When supplied, each interval is at most
+min(1/(kR), dt_max, remaining age), with event probability R times that interval. This can
+resolve trait changes where present rates are small, but is not an error tolerance or an exact
+simulation method. Step discontinuities and rapidly varying or unbounded rates require
+resolution checks using smaller <code class="docutils literal notranslate"><span class="pre">dt_max</span></code> and larger <code class="docutils literal notranslate"><span class="pre">k</span></code>. Omitting it preserves the original
+step selection for positive total rates.</p>
+</section>
+<section id="brownian-bridge-local-thinning">
+<h5>Brownian bridge local thinning<a class="headerlink" href="#brownian-bridge-local-thinning" title="Link to this heading"></a></h5>
+<p>Select <code class="docutils literal notranslate"><span class="pre">method=&quot;local_thinning&quot;</span></code> and supply a positive finite <code class="docutils literal notranslate"><span class="pre">block_duration</span></code> in the
+model’s time units. Each living lineage samples a Brownian endpoint up to that duration away.
+The endpoints and a Brownian-bridge tail bound define a likely containing trait interval.
+The sum of bounds on birth, death and fossil rates over that interval bounds a Poisson proposal process.
+At each candidate time the simulator samples the actual intermediate trait from the stored
+bridge and selects birth, death, fossil sampling or rejection using actual rates.
+Rejected candidates and fossil events retain the same endpoint and proposal bound. Sampling
+only replaces the living node by its continuing child; it does not allocate another bridge
+or error allowance. At birth the parent ends at that time and its daughters evolve independently.
+There is no one-event-per-step restriction and no requirement that rates change slowly.</p>
+<p>Longer blocks save endpoint work but can enlarge proposal bounds and increase rejected
+candidates. Thus <code class="docutils literal notranslate"><span class="pre">block_duration</span></code> primarily controls cost. It need not be extremely small
+for accuracy. Local thinning does not use <code class="docutils literal notranslate"><span class="pre">dt_max</span></code> or <code class="docutils literal notranslate"><span class="pre">k</span></code>: a supplied <code class="docutils literal notranslate"><span class="pre">dt_max</span></code> or
+nondefault <code class="docutils literal notranslate"><span class="pre">k</span></code> is rejected; the inherited default <code class="docutils literal notranslate"><span class="pre">k=500</span></code> is ignored.</p>
+<p><code class="docutils literal notranslate"><span class="pre">bridge_error</span></code> defaults to <code class="docutils literal notranslate"><span class="pre">1e-8</span></code> and must be finite and strictly between zero and one.
+It budgets excursions outside the likely trait regions across a complete <code class="docutils literal notranslate"><span class="pre">generate()</span></code>
+call, including every sample, replicate, biological rejection and numerical restart.
+Block j receives probability allowance δ/[j(j+1)], whose infinite sum is δ.
+A direct <code class="docutils literal notranslate"><span class="pre">simulate()</span></code> call gets its own budget. Separate calls start new budgets.
+All existing rate families are supported, including uncapped linear, quadratic and
+absolute-value functions: a finite local bound suffices, without a global rate cap.</p>
+<p>A finite evaluated total rate exceeding its proposal bound automatically restarts the
+current tree with the same model parameters. RNG progression, error budget, deadline and
+remaining work allowance persist. Completed earlier trees are retained. This does not
+consume a biological rejection attempt. A loose valid bound merely wastes candidate work;
+an invalid bound can miss events, so restarting does not make this an exact sampler.</p>
+<p>With exact arithmetic and sampling, valid interval bounds, and a terminating, nonexplosive
+reference process, the total variation distance from the exact complete output law is at
+most <code class="docutils literal notranslate"><span class="pre">bridge_error</span></code>. The coupling agrees until the first region excursion, which also
+covers detected violations and their restarts. This is an absolute probability bound,
+not a relative bound on population means or other unbounded statistics. It is not a claim
+of second-order convergence in block duration. Floating-point error and computational
+interruptions are outside this guarantee. Biological rejection-limit failure is included
+as an output; discarding failures and conditioning on success needs a separate bound
+(at most 2δ/p, capped at one, where p is exact success probability and both are positive).</p>
+<p>Age stopping ends living branches exactly at the requested age. Size stopping retains the
+same N-to-N+1 convention as diversitree, but uses the continuous candidate birth time and
+advances every unfinished bridge to that time. The stored future endpoints are retained
+when sampling final traits. Both methods use the same inherited marks for size stopping and
+independent end-of-simulation sampling for age stopping. The probability bound includes the
+marked stopping law: before a region excursion, shared mark draws give identical stopping
+decisions. Adding fossil intensity to the same region’s bound needs no extra error allowance.</p>
+<p>The derivation and assumptions are in <code class="docutils literal notranslate"><span class="pre">TODO/simulator.tex</span></code> in the source repository.</p>
+</section>
+<section id="observation-and-conditions">
+<h5>Observation and conditions<a class="headerlink" href="#observation-and-conditions" title="Link to this heading"></a></h5>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25.0%" />
+<col style="width: 15.0%" />
+<col style="width: 60.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Argument</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Meaning</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">sampling_prob</span></code></p></td>
+<td><p>1</p></td>
+<td><p>Independent terminal sampling for age stopping; inherited Bernoulli marks for size stopping</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">cond_surv</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;true&quot;</span></code></p></td>
+<td><p>Require at least one living lineage</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">cond_spn</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;false&quot;</span></code></p></td>
+<td><p>Require a retained speciation event</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">cond_obs_both_sides</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;false&quot;</span></code></p></td>
+<td><p>Require living sampled descendants on both sides of the original root</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">min_rec_taxa</span></code></p></td>
+<td><p>0</p></td>
+<td><p>Minimum living sampled-tip count, for age stopping</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">max_rec_taxa</span></code></p></td>
+<td><p>unbounded</p></td>
+<td><p>Maximum living sampled-tip count, for age stopping</p></td>
+</tr>
+</tbody>
+</table>
+<p>Equal count bounds request an exact observed count. Sampling precedes these checks.
+Survival does not imply observation: with <code class="docutils literal notranslate"><span class="pre">sampling_prob=0</span></code>, a surviving tree has no sampled living
+tips, but may retain fossil observations. Root-side checks use the original root, before pruning can replace it.
+For unconditional age-based simulation set <code class="docutils literal notranslate"><span class="pre">cond_surv=&quot;false&quot;</span></code> and leave other conditions unset.
+Explicit reconstructed-taxon count bounds with size stopping are errors. Fossils do not
+satisfy living-tip count, root-side or survival conditions; sampling alone is not speciation.</p>
+<p>Rejected attempts use fresh simulation randomness with unchanged model parameters. Rare or
+impossible conditions can exhaust the rejection budget. Limits are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25.0%" />
+<col style="width: 15.0%" />
+<col style="width: 60.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Argument</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Scope</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">max_n_attempts</span></code></p></td>
+<td><p>200</p></td>
+<td><p>Total rejected attempts across one <code class="docutils literal notranslate"><span class="pre">generate()</span></code> call</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">runtime_limit</span></code></p></td>
+<td><p>300 seconds</p></td>
+<td><p>Entire <code class="docutils literal notranslate"><span class="pre">generate()</span></code> call, including retries</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">max_steps</span></code></p></td>
+<td><p>1,000,000</p></td>
+<td><p>Diversitree steps or local queue actions per attempt, shared across numerical restarts</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">max_alive</span></code></p></td>
+<td><p>100,000</p></td>
+<td><p>Living lineages per attempt</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">max_nodes</span></code></p></td>
+<td><p>unset</p></td>
+<td><p>All nodes per attempt, including extinct nodes, fossils, sampling dummy nodes, origin and initial lineage</p></td>
+</tr>
+</tbody>
+</table>
+<p>All limits are positive; count limits are integers. Reaching the rejection budget raises an
+error. Except for the finite local bound-exceedance recovery described above, numerical
+failures and exceeded resource limits raise errors without retry. In particular, transiently
+exceeding <code class="docutils literal notranslate"><span class="pre">max_rec_taxa</span></code> does not reject an attempt.</p>
+<p><code class="docutils literal notranslate"><span class="pre">max_nodes</span></code> is checked before creating the initial two nodes or the two new nodes at a birth or fossil event.
+The omitted size-stopping birth does not consume nodes. This is a memory safeguard, not an
+infinite-population detector; hitting it raises an error without returning a truncated tree.</p>
+<p>When all three rate functions are identically zero, age stopping uses a direct Brownian
+transition, even with <code class="docutils literal notranslate"><span class="pre">dt_max</span></code> set. Identically zero birth and death rates make size stopping
+unreachable even if fossil sampling is positive.
+For diversitree, if the total rate is zero only at the current traits (including underflow), supply
+<code class="docutils literal notranslate"><span class="pre">dt_max</span></code> so traits can advance and rates be reevaluated; without it, simulation raises an error.
+Local thinning instead renews Brownian blocks even when a local proposal bound is zero.</p>
+</section>
+<section id="trees-plots-and-output">
+<h5>Trees, plots, and output<a class="headerlink" href="#trees-plots-and-output" title="Link to this heading"></a></h5>
+<p>Complete trees retain extinct and unsampled tips. Reconstructed trees retain paths to sampled
+living tips and fossils, including fossils with extinct or unobserved descendants and trees
+with fossils alone. A lone fossil retains its original age and origin-to-observation stem. All complete-tree nodes carry the trait at that node’s time; no full trait trajectory is
+stored. Black branches and colored terminal markers show traits using a continuous colorbar.
+Ancestral fossils appear as trait-colored markers along their continuing branches; terminal
+fossils have their own rows. <code class="docutils literal notranslate"><span class="pre">sa_along_branches=False</span></code> gives every fossil its own row.
+The complete tree’s terminal range, including fossils, determines colors in both views.
+Plotting uses no randomness. An empty reconstructed tree displays <code class="docutils literal notranslate"><span class="pre">No</span> <span class="pre">sampled</span> <span class="pre">tips</span></code>.</p>
+<p>Data output includes complete/reconstructed Newick tables, annotated variants, generic tree
+summaries, and <code class="docutils literal notranslate"><span class="pre">&lt;node&gt;_traits.tsv</span></code>. The trait table has columns <code class="docutils literal notranslate"><span class="pre">sample</span></code>, <code class="docutils literal notranslate"><span class="pre">replicate</span></code>, <code class="docutils literal notranslate"><span class="pre">node</span></code>,
+<code class="docutils literal notranslate"><span class="pre">trait</span></code>, <code class="docutils literal notranslate"><span class="pre">alive</span></code>, and <code class="docutils literal notranslate"><span class="pre">sampled</span></code>; sample and replicate indices start at one. It includes internal
+nodes and the origin as well as living and extinct tips. Discrete state tables and discrete
+NEXUS character matrices are not generated for these trees.</p>
+<p><code class="docutils literal notranslate"><span class="pre">&lt;node&gt;_fossils.tsv</span></code> contains <code class="docutils literal notranslate"><span class="pre">sample</span></code>, <code class="docutils literal notranslate"><span class="pre">replicate</span></code>, <code class="docutils literal notranslate"><span class="pre">node</span></code>, <code class="docutils literal notranslate"><span class="pre">time</span></code>, <code class="docutils literal notranslate"><span class="pre">age</span></code>, <code class="docutils literal notranslate"><span class="pre">trait</span></code>.
+Indices are one-based, <code class="docutils literal notranslate"><span class="pre">time</span></code> is forward from the origin, and <code class="docutils literal notranslate"><span class="pre">age</span></code> is relative to the
+simulation horizon. There is one row per fossil in the complete tree, or a header-only table
+when none occur. Annotated Newick identifies fossils with <code class="docutils literal notranslate"><span class="pre">is_sa</span></code> and sampling nodes with
+<code class="docutils literal notranslate"><span class="pre">is_sa_dummy_parent</span></code>. The generic <code class="docutils literal notranslate"><span class="pre">Direct</span> <span class="pre">ancestor</span> <span class="pre">count</span></code> counts all fossil observations,
+including those made terminal by reconstruction. <code class="docutils literal notranslate"><span class="pre">Total</span> <span class="pre">taxon</span> <span class="pre">count</span></code> retains its existing
+biological-terminal meaning.</p>
+<p>QuaSSE RevBayes inference export is not supported and fails before script generation.</p>
+</section>
+<section id="python-interface">
+<h5>Python interface<a class="headerlink" href="#python-interface" title="Link to this heading"></a></h5>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">phylojunction.calculation.continuous_sse</span><span class="w"> </span><span class="kn">import</span> <span class="n">LogisticRate</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">phylojunction.distribution.dn_quasse</span><span class="w"> </span><span class="kn">import</span> <span class="n">DnQuaSSE</span>
+
+<span class="n">simulator</span> <span class="o">=</span> <span class="n">DnQuaSSE</span><span class="p">(</span>
+    <span class="n">birth_rate</span><span class="o">=</span><span class="n">LogisticRate</span><span class="p">(</span><span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">),</span>
+    <span class="n">death_rate</span><span class="o">=</span><span class="n">LogisticRate</span><span class="p">(</span><span class="mf">0.02</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">),</span>
+    <span class="n">stop</span><span class="o">=</span><span class="s2">"size"</span><span class="p">,</span> <span class="n">stop_value</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">diffusion</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">rng_seed</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">trees</span> <span class="o">=</span> <span class="n">simulator</span><span class="o">.</span><span class="n">generate</span><span class="p">()</span>
+</pre></div>
 </div>
-<p>The parameters for <code class="docutils literal notranslate"><span class="pre">gamma_spike_clock</span></code> are:</p>
-<blockquote>
-<div><div class="line-block">
-<div class="line"><code class="docutils literal notranslate"><span class="pre">tree</span></code> (string, required): Name of the DAG node holding the tree(s) to annotate with clock-model rates.</div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">attr_name</span></code> (string, required): Name of the new per-branch attribute to populate (e.g., <code class="docutils literal notranslate"><span class="pre">&quot;mutation_rate&quot;</span></code>).</div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">clock_rate</span></code> (positive real, required): The mean absolute substitution rate (to scale the branch-specific raw rates).</div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">br_specific_rel_rate</span></code> (string, required): Name of a DAG node holding branch-specific raw rates (one raw rate per branch; conventionally centered at 1.0 in real space, e.g. from <code class="docutils literal notranslate"><span class="pre">lognormal(n_nr_from=...)</span></code>, above) – this is how the relaxed-clock component’s own distribution and hyperparameters are chosen, independently, in the script.</div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">spike_mean</span></code> (positive real, required): Mean of the Gamma-distributed punctuated “spike” component.</div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">spike_shape</span></code> (positive real, required): Shape of the Gamma-distributed punctuated “spike” component.</div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">strict_clock_when_no_stubs</span></code> (string boolean, optional): When <code class="docutils literal notranslate"><span class="pre">&quot;true&quot;</span></code>, a branch with no accumulated stubs is pinned to a fixed, strict-clock rate. This is <strong>not</strong> a realistic model of molecular evolution – it exists only as a debugging/diagnostic device (e.g., to make the rarer, stub-affected branches stand out when coloring a tree by <code class="docutils literal notranslate"><span class="pre">attr_name</span></code>). Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;false&quot;</span></code>.</div>
+<p><code class="docutils literal notranslate"><span class="pre">generate()</span></code> applies conditions and returns a list. <code class="docutils literal notranslate"><span class="pre">simulate(sample_idx=0)</span></code> returns one
+attempt after observation sampling, without rejection conditioning. The Python constructor’s
+<code class="docutils literal notranslate"><span class="pre">rng_seed</span></code> and CLI <code class="docutils literal notranslate"><span class="pre">-r</span></code> use NumPy’s existing global random stream; instances do not own
+independent random generators.</p>
+<p>The Python rate classes are <code class="docutils literal notranslate"><span class="pre">ConstantRate</span></code>, <code class="docutils literal notranslate"><span class="pre">LogisticRate</span></code>, <code class="docutils literal notranslate"><span class="pre">GaussianRate</span></code>, <code class="docutils literal notranslate"><span class="pre">StepRate</span></code>,
+<code class="docutils literal notranslate"><span class="pre">LinearRate</span></code>, <code class="docutils literal notranslate"><span class="pre">SkewGaussianRate</span></code>, <code class="docutils literal notranslate"><span class="pre">QuadraticRate</span></code> and <code class="docutils literal notranslate"><span class="pre">AbsoluteRate</span></code>, all in
+<code class="docutils literal notranslate"><span class="pre">phylojunction.calculation.continuous_sse</span></code>. They accept the same named arguments as the
+script constructors and evaluate NumPy arrays or scalars. Their shared <code class="docutils literal notranslate"><span class="pre">RateFunction</span></code>
+interface exposes <code class="docutils literal notranslate"><span class="pre">is_identically_zero</span></code> and <code class="docutils literal notranslate"><span class="pre">upper_bound</span></code> (a conservative finite bound,
+or <code class="docutils literal notranslate"><span class="pre">None</span></code> when unavailable). A zero rate at one trait is not an identically zero function.
+<code class="docutils literal notranslate"><span class="pre">bound_on_interval(left,</span> <span class="pre">right)</span></code> returns a finite conservative bound on a closed finite
+interval, including zero-width intervals, or raises <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> if unavailable.
+Positive bounds have an outward floating-point guard; this is not certified interval arithmetic.</p>
+</section>
+<section id="additional-scripts">
+<h5>Additional scripts<a class="headerlink" href="#additional-scripts" title="Link to this heading"></a></h5>
+<p>Size stopping (<a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/quasse_size.pj" rel="noreferrer" target="_blank">quasse_size.pj</a>):</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span># Return ten living tips, immediately before the birth that would produce eleven.
+birth := quasse_logistic(y0=0.4, y1=0.8, midpoint=0.0, slope=2.0)
+death := quasse_logistic(y0=0.02, y1=0.1, midpoint=1.0, slope=2.0)
+trees ~ quasse(n=2, birth_rate=birth, death_rate=death, diffusion=0.1, stop="size", stop_value=10, cond_surv="true", method="diversitree", k=500)
+</pre></div>
 </div>
-</div></blockquote>
-<p>Below, a complete worked example: two FBD trees in Newick format stored in a file to be read as one sample with two replicates (<code class="docutils literal notranslate"><span class="pre">n=1,</span> <span class="pre">nr=2</span></code> – see <a class="reference internal" href="#read-tree"><span class="std std-ref">Reading a tree from Newick</span></a>), with the Gamma-spike clock model applied to each, as in <a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/fbd_read_gamma_spike.pj" rel="noreferrer" target="_blank">examples/fbd_read_gamma_spike.pj</a>.
-A version of this same pipeline applied to a tree additionally “painted” with a stochastic map (via <code class="docutils literal notranslate"><span class="pre">map_attr</span></code>) can be found in <a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/sse_smap_gamma_spike_clock.pj" rel="noreferrer" target="_blank">examples/sse_smap_gamma_spike_clock.pj</a>.</p>
+<p>Conditioning on observed tip count
+(<a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/quasse_conditioned.pj" rel="noreferrer" target="_blank">quasse_conditioned.pj</a>):</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span># Fix age, sample each survivor independently, and retain exactly three observed tips.
+birth := quasse_logistic(y0=0.4, y1=0.8, midpoint=0.0, slope=2.0)
+death := quasse_logistic(y0=0.02, y1=0.1, midpoint=1.0, slope=2.0)
+trees ~ quasse(n=2, birth_rate=birth, death_rate=death, diffusion=0.1, stop="age", stop_value=3.0, sampling_prob=0.8, min_rec_taxa=3, max_rec_taxa=3, method="diversitree", k=500)
+</pre></div>
+</div>
+<p>Bounded and explicitly unbounded rates
+(<a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/quasse_rates.pj" rel="noreferrer" target="_blank">quasse_rates.pj</a>):</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span># Caps change rates; max_nodes only aborts excessive allocations. dt_max is a duration.
+bounded := quasse_gaussian(baseline=0.1, center_rate=0.8, center=0, width=1, cap=0.6)
+unbounded := quasse_quadratic(baseline=0.1, strength=0.05, center=0)
+death := quasse_constant(rate=0.02)
+bounded_trees ~ quasse(birth_rate=bounded, death_rate=death, diffusion=0.1, stop="age", stop_value=2, dt_max=0.01, max_nodes=10000)
+unbounded_trees ~ quasse(birth_rate=unbounded, death_rate=death, diffusion=0.1, stop="age", stop_value=2, dt_max=0.01, max_nodes=10000)
+</pre></div>
+</div>
+<p>Local thinning with uncapped quadratic speciation
+(<a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/quasse_local_thinning.pj" rel="noreferrer" target="_blank">quasse_local_thinning.pj</a>):</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span># Uncapped quadratic speciation with Brownian bridge local thinning.
+b := quasse_quadratic(baseline=0.6,strength=0.05,center=0)
+d := quasse_constant(rate=0.2)
+trees ~ quasse(n=2,nr=2,birth_rate=b,death_rate=d,stop="age",stop_value=2,start_trait=0,drift=0,diffusion=1,method="local_thinning",block_duration=0.5,bridge_error=0.00000001,cond_surv="false",max_nodes=10000)
+</pre></div>
+</div>
+<p>Fossil sampling and incomplete size sampling
+(<a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/quasse_fossils.pj" rel="noreferrer" target="_blank">quasse_fossils.pj</a>):</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>birth := quasse_constant(rate=.5)
+death := quasse_constant(rate=.2)
+fossil := quasse_constant(rate=1)
+mixed ~ quasse(n=2,nr=2,birth_rate=birth,death_rate=death,fossil_rate=fossil,stop="age",stop_value=2,diffusion=.5,sampling_prob=.5,cond_surv="false",method="local_thinning",block_duration=.5,max_nodes=10000)
+fossil_only ~ quasse(n=2,nr=2,birth_rate=birth,death_rate=death,fossil_rate=fossil,stop="age",stop_value=2,diffusion=.5,sampling_prob=0,cond_surv="false",method="local_thinning",block_duration=.5,max_nodes=10000)
+sampled_size ~ quasse(n=2,nr=2,birth_rate=birth,death_rate=death,fossil_rate=fossil,stop="size",stop_value=5,diffusion=.5,sampling_prob=.5,method="local_thinning",block_duration=.5,max_nodes=10000)
+</pre></div>
+</div>
+<p>The three calls produce mixed observations, fossil-only observations, and size-stopped trees
+with exactly five sampled living tips. The last call can retain additional unsampled living
+tips and any number of fossils; neither contributes to its target count.</p>
+</section>
 </section>
 </section>
 </section>
