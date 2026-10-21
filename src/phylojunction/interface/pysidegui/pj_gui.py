@@ -1034,8 +1034,10 @@ class GUIMainWindow(QMainWindow):
                     pass
 
                 else:
-                    # initializing plot
-                    self.ui.ui_pages.compare_page_matplotlib_widget.initialize_axes(disabled_yticks=False)
+                    # Seaborn uses category tick positions to set horizontal limits;
+                    # installing an empty tick list can put both violins outside the viewport.
+                    self.ui.ui_pages.compare_page_matplotlib_widget.initialize_axes(
+                        disabled_yticks=False, disabled_xticks=False)
                     self.ui.ui_pages.compare_page_matplotlib_widget.fig.canvas.draw()
                     fig_obj = self.ui.ui_pages.compare_page_matplotlib_widget.fig
                     fig_axes = self.ui.ui_pages.compare_page_matplotlib_widget.axes

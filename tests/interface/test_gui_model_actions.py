@@ -27,6 +27,35 @@ class TestModelActions(unittest.TestCase):
         self.controls.cmd_prompt.setText(text)
         self.window.parse_cmd_update_gui()
 
+    # Layout tests do not check data visibility. Exercise the Compare drawing path with
+    # fixed data to protect category limits; retire this if Compare stops using violins.
+    def test_comparison_violin_bodies_inside_viewport(self):
+        import pandas as pd
+        from matplotlib.collections import PolyCollection
+
+        self.enter('x ~ normal(0, 1)')
+        w, u = self.window, self.controls
+        u.compare_node_list.setCurrentItem(
+            u.compare_node_list.findItems('x', Qt.MatchFlag.MatchExactly)[0])
+        w.do_selected_node_compare_page()
+        w.pj_comparison_df['x'] = [1.0, 2.0, 3.0]
+        w.other_comparison_df = pd.DataFrame({
+            'program': ['Other'] * 3, 'sample': [1, 2, 3],
+            'replicate': [1] * 3, 'x': [2.0, 3.0, 4.0]})
+        w.draw_violin()
+
+        axes = u.compare_page_matplotlib_widget.axes
+        bodies = [artist for artist in axes.collections if isinstance(artist, PolyCollection)]
+        self.assertEqual(len(bodies), 2)
+        left, right = axes.get_xlim()
+        for body in bodies:
+            self.assertTrue(body.get_paths())
+            for path in body.get_paths():
+                self.assertGreater(len(path.vertices), 0)
+                self.assertGreaterEqual(path.vertices[:, 0].min(), left)
+                self.assertLessEqual(path.vertices[:, 0].max(), right)
+        self.assertEqual([tick.get_text() for tick in axes.get_xticklabels()], ['PJ', 'Other'])
+
     # Real sampled trees exercise control state and summary topology together; redraw tests
     # alone cannot detect forcing a reconstructed plot while displaying complete counts.
     def test_rate_views_and_statistics(self):
