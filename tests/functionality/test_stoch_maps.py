@@ -57,6 +57,11 @@ class TestStochMaps(unittest.TestCase):
                               "examples/trees_maps_files/geosse_dummy_tree2_tip_states.tsv",
                               n_regions=2, geo=True)
         mapped = [map_attr(tree, history) for history in histories]
+        for value in mapped:
+            expected = {state: sum(getattr(nd, value.trait.name) == state
+                                   for nd in value.tree.leaf_node_iter())
+                        for state in range(value.trait.states)}
+            self.assertEqual({state: value.state_count_dict[state] for state in expected}, expected)
         self.assertEqual(tree.trait, DiscreteTrait(1, name="habitat"))
         for result in mapped:
             self.assertEqual(result.trait, DiscreteTrait(3, name="habitat"))

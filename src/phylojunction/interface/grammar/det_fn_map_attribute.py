@@ -30,4 +30,12 @@ def map_attr(tree, history, attr_name=None):
     mapped = copy.deepcopy(tree)
     mapped.trait = DiscreteTrait(history.state2bit_lookup.n_states, name=mapped.trait.name)
     history.apply(mapped, attr_name)
+    # The history changes the biological states and possibly their alphabet. Counts made
+    # by the reader describe the old states; rebuild them before summaries/export use them.
+    if attr_name is None or attr_name == mapped.trait.name:
+        for name in ('state_count_dict', 'extant_terminal_state_count_dict',
+                     'extant_terminal_sampled_state_count_dict', 'extinct_terminal_state_count_dict',
+                     'sa_state_count_dict'):
+            setattr(mapped, name, dict.fromkeys(range(-1, mapped.trait.states), 0))
+        mapped._count_node_states()
     return mapped
