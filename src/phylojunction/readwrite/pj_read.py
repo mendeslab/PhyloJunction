@@ -14,6 +14,7 @@ import phylojunction.pgm.pgm as pgm
 import phylojunction.utility.exception_classes as ec
 import phylojunction.utility.helper_functions as pjh
 from phylojunction.data.tree import AnnotatedTree
+import phylojunction.data.sampled_ancestor as pjsa
 
 __author__ = "Fabio K. Mendes"
 __email__ = "fmendes@lsu.edu"
@@ -221,6 +222,8 @@ def read_nwk_tree_str(nwk_tree_path_or_str: str,
                       in_file: bool = True,
                       node_names_attribute: str = "",
                       n_states: int = 1,
+                      is_complete: bool = False,
+                      keep_unsampled_alive: bool = False,
                       epsilon: float = 1e-12) \
         -> AnnotatedTree:
     """Read Newick tree string directly or in provided file.
@@ -234,11 +237,109 @@ def read_nwk_tree_str(nwk_tree_path_or_str: str,
             argument (True) or if Newick string is being passed directly
             (False). Defaults to 'True'.
         node_names_attribute (str): Defaults to empty string "".
+        is_complete (bool): If 'False' (the default), the Newick string
+            is treated as already being the *reconstructed* tree --
+            every leaf is sampled by construction, no annotations
+            needed *or* consulted at all: 'alive' is inferred purely
+            from depth (a leaf at the tree's maximum depth is extant;
+            any other leaf is a fossil sample -- no '&alive='
+            annotation required, or looked at, either way), and
+            'is_sa' from branch length (a zero-length leaf is a direct
+            ancestor). Because neither is ever actually read from an
+            annotation in this mode, an explicit '&alive=' of either
+            value on any leaf is rejected outright (not only when it
+            happens to disagree with the depth-based inference), and
+            so is an explicit '[&sampled=False]' (every leaf of an
+            already-reconstructed tree is sampled, by definition) --
+            both raise 'AnnotatedTreeIncorrectAnnotationError' rather
+            than being silently ignored, since either is most likely
+            a sign that 'is_complete="true"' should have been passed
+            instead. If 'True', the
+            Newick string is treated as a *complete* tree (as a
+            simulator would produce, including lineages that were
+            never sampled) -- PhyloJunction will not try to infer
+            which terminal branches are alive or sampled from branch
+            lengths alone: a fossil may be arbitrarily close to the
+            present, and rounded branch lengths can obscure its age.
+            The annotations restore biological status without changing
+            branch lengths. Every
+            non-direct-ancestor leaf must carry an explicit
+            '[&alive=True]'/'[&alive=False]' NHX annotation, and, for
+            any leaf so annotated 'alive=False', an explicit
+            '[&sampled=True]'/'[&sampled=False]' one too (to
+            distinguish a sampled fossil tip from an unsampled
+            extinction event) -- see 'keep_unsampled_alive' for the
+            symmetric case on the 'alive=True' side. A missing
+            required annotation raises
+            'AnnotatedTreeMissingNodeAnnotationError'; an explicit
+            annotation that contradicts a structural invariant (an
+            internal node marked alive/sampled, or a direct ancestor
+            marked alive) raises 'AnnotatedTreeIncorrectAnnotationError'.
+        keep_unsampled_alive (bool): Only consulted when
+            'is_complete' is 'True'. An alive leaf explicitly
+            annotated '[&sampled=False]' is, by default ('False'),
+            treated the same way an unsampled extinction would be
+            (i.e., it will be pruned away when the reconstructed tree
+            is extracted). If 'True', such a leaf is instead kept
+            ('sampled' forced back to 'True'), letting a known-but-
+            unsampled living taxon be represented without it being
+            discarded from the reconstructed tree.
 
     Returns:
         AnnotatedTree with populated attributes dictionary
             (i.e., a dendropy.Tree that has been annotated)
     """
+
+    def _get_bool_annotation(
+            nd: dp.Node, attr_name: str, nd_name: str) -> ty.Optional[bool]:
+        """Return a node's boolean NHX annotation, or 'None' if absent.
+
+        Dendropy auto-casts bare 'True'/'False' Newick comment values
+        (e.g. '[&alive=True]') into real Python bools already; this
+        also tolerates the equivalent quoted/differently-cased string
+        forms.
+
+        Uses 'get_value' rather than bracket indexing
+        ('nd.annotations[attr_name]') deliberately: the latter
+        auto-*creates* a new, blank annotation on 'nd' as a side
+        effect of merely looking it up when absent (dendropy's
+        'AnnotationSet.__getitem__' does this), which would otherwise
+        leave every internal node (this function is also called, for
+        validation, on internal nodes that never had '&alive='/
+        '&sampled=' in the Newick string at all) with a stray,
+        empty '[&alive=,sampled=]' annotation the next time this
+        tree's string representation is generated.
+        """
+
+        ann_val = nd.annotations.get_value(attr_name, "")
+
+        if ann_val == "":
+            return None
+
+        if isinstance(ann_val, bool):
+            return ann_val
+
+        ann_str = str(ann_val).strip().lower()
+
+        if ann_str == "true":
+            return True
+
+        if ann_str == "false":
+            return False
+
+        raise ec.AnnotatedTreeIncorrectAnnotationError(
+            "Node '" + nd_name + "'s '&" + attr_name + "=' annotation "
+            "must be 'True' or 'False', but was '" + str(ann_val) + "'.")
+
+    def _reject_contradictory_annotation(
+            nd: dp.Node, attr_name: str, nd_name: str,
+            forbidden_value: bool, reason: str) -> None:
+        """Raise if 'nd' has an explicit, contradictory annotation."""
+
+        if _get_bool_annotation(nd, attr_name, nd_name) is forbidden_value:
+            raise ec.AnnotatedTreeIncorrectAnnotationError(
+                "Node '" + nd_name + "' was annotated '&" + attr_name +
+                "=" + str(forbidden_value) + "', but " + reason + ".")
 
     tr_str: str = str()
     node_attr_dict = collections.defaultdict(
@@ -303,22 +404,77 @@ def read_nwk_tree_str(nwk_tree_path_or_str: str,
             nd_name = "nd" + node_names_attribute_val
             with_attribute = True
 
+        # used in error messages below -- prefer the node's own,
+        # already-parsed taxon label (e.g. "fossiltip") over the
+        # generic, auto-numbered 'nd_name' placeholder, which is only
+        # ever turned into this node's actual label/taxon later on,
+        # well after the validation calls that need to identify it
+        nd_identity = nd.taxon.label if nd.taxon is not None else nd_name
+
         nd.is_sa_lineage = False
         nd.is_sa_dummy_parent = False
 
         # (1) seed node (origin and/or root)
         if nd is dp_tr.seed_node:
             nd.state = 0
-            nd.is_sa_dummy_parent = False
             nd.is_sa = False
             nd.alive = False
             nd.sampled = False
-            
+
+            # same dummy-parent-of-a-direct-ancestor detection as any
+            # other internal node gets below (see "(2) not seed node")
+            # -- a direct ancestor can perfectly well branch off right
+            # at the seed itself (e.g. a fossil sampled very early on,
+            # with the rest of the tree as its only sibling), and
+            # leaving this hardcoded to 'False' regardless left
+            # 'get_y_coord_from_n_obs_nodes' with no node left to
+            # (mis-)compute a y-coordinate for: a seed node with
+            # exactly one non-SA child is neither recognized as a
+            # dummy parent (so the "average with origin" branch does
+            # not apply) nor has two children itself (so the
+            # bifurcating-node branch does not apply either), leaving
+            # it silently missing from the returned dict -- surfacing
+            # downstream as a 'KeyError' in '_draw_clade' when
+            # plotting the complete tree
+            nd.is_sa_dummy_parent = False
+            for ch_nd in nd.child_node_iter():
+                if abs(ch_nd.edge_length) <= epsilon:
+                    nd.is_sa_dummy_parent = True
+                    break
+
+            # the seed node is itself an internal node (the origin or
+            # the root) -- it can never be alive nor sampled, so an
+            # explicit, contradictory annotation on it is rejected
+            # the same way as for any other internal node
+            if is_complete:
+                _reject_contradictory_annotation(
+                    nd, "alive", nd_identity, True,
+                    "internal nodes (including the origin/root) are "
+                    "never alive")
+                _reject_contradictory_annotation(
+                    nd, "sampled", nd_identity, True,
+                    "internal nodes (including the origin/root) are "
+                    "never sampled")
+
             if not with_attribute:
                 nd_name = ("origin" if is_origin else "root")
 
-            if nd_name == "root":
+            # the seed node is the root itself whenever there is no
+            # separate origin above it -- true regardless of
+            # 'with_attribute', unlike the 'nd_name == "root"' check
+            # this replaces, which only ever matched when
+            # 'with_attribute' was False (since 'nd_name' is instead
+            # the node_names_attribute-derived name, e.g. "nd0", in
+            # that case) -- leaving 'seen_root' permanently False and
+            # letting the "root!" block below (for sub-seed internal
+            # nodes) misfire on every later non-dummy-parent internal
+            # node it saw, repeatedly overwriting
+            # 'root_alternative_label' with the wrong node
+            if not is_origin:
                 seen_root = True
+
+                if with_attribute:
+                    root_alternative_label = nd_name
 
             if nd.taxon is None:
                 nd.taxon = dp.Taxon(label=nd_name)
@@ -356,27 +512,135 @@ def read_nwk_tree_str(nwk_tree_path_or_str: str,
                     # dp_tr.taxon_namespace.add_taxon(nd.taxon)
                     root_alternative_label = nd_name
 
-            # annotate node as sampled ancestor or not
-            if abs(nd.edge_length) <= epsilon:
-                nd.is_sa_dummy_parent = False
-                nd.is_sa = True
-                nd.sampled = True
+                # internal nodes are never alive nor sampled -- reject
+                # an explicit, contradictory annotation on this node
+                # (never inferred from one: 'nd.alive'/'nd.sampled'
+                # above are always 'False' for internal nodes,
+                # regardless)
+                if is_complete:
+                    _reject_contradictory_annotation(
+                        nd, "alive", nd_identity, True,
+                        "internal nodes are never alive")
+                    _reject_contradictory_annotation(
+                        nd, "sampled", nd_identity, True,
+                        "internal nodes are never sampled")
 
+            # leaf node
             else:
-                nd.is_sa = False
-                nd.sampled = False
-        
-            # annotate node as alive or not
-            if abs(nd.distance_from_root() - root_height) <= epsilon:
-                nd.alive = True
-                nd.sampled = True
+                # direct (sampled) ancestor: zero-length branch --
+                # by definition always sampled, never alive,
+                # regardless of 'is_complete'/annotations
+                if abs(nd.edge_length) <= epsilon:
+                    nd.is_sa_dummy_parent = False
+                    nd.is_sa = True
+                    nd.sampled = True
+                    nd.alive = False
 
-            else:
-                nd.alive = False
-                nd.sampled = False
+                    if is_complete:
+                        _reject_contradictory_annotation(
+                            nd, "alive", nd_identity, True,
+                            "direct (sampled) ancestors are never "
+                            "alive")
+                        _reject_contradictory_annotation(
+                            nd, "sampled", nd_identity, False,
+                            "direct (sampled) ancestors are always "
+                            "sampled, by definition")
 
-            # annotate as sa_lineage
-            if nd.parent_node.is_sa_dummy_parent:
+                    else:
+                        _reject_contradictory_annotation(
+                            nd, "sampled", nd_identity, False,
+                            "a non-complete tree ('is_complete=\"false\"', "
+                            "the default) represents an already-"
+                            "reconstructed process, so every leaf -- "
+                            "including a direct (sampled) ancestor -- "
+                            "must be sampled, by definition")
+
+                # ordinary terminal branch (non-zero length)
+                else:
+                    nd.is_sa = False
+
+                    # Complete-tree annotations preserve biological status even when
+                    # rounded lengths cannot distinguish a near-present fossil from
+                    # a living tip. They do not change the branch lengths.
+                    if is_complete:
+                        alive_ann = _get_bool_annotation(
+                            nd, "alive", nd_identity)
+
+                        if alive_ann is None:
+                            raise ec.AnnotatedTreeMissingNodeAnnotationError(
+                                nd_identity, "alive")
+
+                        nd.alive = alive_ann
+
+                        if nd.alive:
+                            sampled_ann = _get_bool_annotation(
+                                nd, "sampled", nd_identity)
+
+                            # an explicit '&sampled=False' on an alive
+                            # leaf is honored (i.e., this leaf will be
+                            # pruned away like an unsampled extinction
+                            # would be) unless the caller explicitly
+                            # asked to keep it anyway
+                            if sampled_ann is False and \
+                                    not keep_unsampled_alive:
+                                nd.sampled = False
+
+                            else:
+                                nd.sampled = True
+
+                        else:
+                            sampled_ann = _get_bool_annotation(
+                                nd, "sampled", nd_identity)
+
+                            if sampled_ann is None:
+                                raise \
+                                    ec.AnnotatedTreeMissingNodeAnnotationError(
+                                        nd_identity, "sampled")
+
+                            nd.sampled = sampled_ann
+
+                    # reconstructed tree (default): every leaf is
+                    # already sampled by construction; 'alive' is
+                    # inferred from depth (True at the tree's maximum
+                    # depth, False otherwise) -- neither is ever
+                    # consulted from an annotation in this mode, so an
+                    # explicit '&alive=' of either value is rejected
+                    # outright (not just when it happens to disagree
+                    # with the depth-based inference), the same way
+                    # an explicit '&sampled=False' already is -- both
+                    # are most likely a sign that 'is_complete="true"'
+                    # should have been passed instead
+                    else:
+                        if _get_bool_annotation(
+                                nd, "alive", nd_identity) is not None:
+                            raise ec.AnnotatedTreeIncorrectAnnotationError(
+                                "Node '" + nd_identity + "' was annotated "
+                                "with an explicit '&alive=' value, but a "
+                                "non-complete tree ('is_complete=\"false\"', "
+                                "the default) never consults it -- 'alive' "
+                                "is always deduced from depth instead. "
+                                "This usually means 'is_complete=\"true\"' "
+                                "should have been passed instead.")
+
+                        _reject_contradictory_annotation(
+                            nd, "sampled", nd_identity, False,
+                            "a non-complete tree ('is_complete=\"false\"', "
+                            "the default) represents an already-"
+                            "reconstructed process, so every leaf must "
+                            "be sampled, by definition")
+
+                        nd.sampled = True
+
+                        if abs(nd.distance_from_root() - root_height) \
+                                <= epsilon:
+                            nd.alive = True
+
+                        else:
+                            nd.alive = False
+
+            # Only the continuing child is an SA lineage. It can itself be a dummy
+            # parent when two sampling events occur on the same lineage.
+            if nd.parent_node.is_sa_dummy_parent and not nd.is_sa:
                 nd.is_sa_lineage = True
 
             # internal and no name provided
@@ -426,16 +690,70 @@ def read_nwk_tree_str(nwk_tree_path_or_str: str,
     #     print(nd is dp_tr.seed_node)
     #     print(nd.parent_node)
 
+    # build 'sa_lineage_dict' *before* constructing 'ann_tr' -- every
+    # direct (sampled) ancestor was already identified above (a
+    # zero-length leaf). 'AnnotatedTree.__init__' derives
+    # 'n_sa_nodes'/'sa_obs_nodes_labels' from this dict automatically
+    # (see '_count_sampled_ancestors'); without it, both would
+    # silently stay at 0/empty, which has a real, visible consequence
+    # beyond just those two attributes' own display:
+    # 'tree.get_y_coord_from_n_obs_nodes's phylogram-specific
+    # ('sa_along_branches=False') branches used to size their plot
+    # directly off of 'n_sa_nodes'.
+    #
+    # 'tree.plot_ann_tree's own SA-dot-drawing code ('_draw_clade')
+    # also looks up 'sa_lineage_dict'/'rec_tr_sa_lineage_dict' (the
+    # latter derived from the former during
+    # 'extract_reconstructed_tree') for both the complete and
+    # reconstructed tree views -- direct ancestors are deliberately
+    # excluded from getting their own row there (on the assumption
+    # that they are drawn as dots along their lineage's branch
+    # instead -- see 'sa_along_branches'), so without a populated
+    # 'sa_lineage_dict', a Newick-read tree's direct ancestors would
+    # silently disappear from both views entirely (no row, and no
+    # dot either).
+    sa_lineage_dict: ty.DefaultDict[str, ty.List[pjsa.SampledAncestor]] = \
+        collections.defaultdict(list)
+
+    for nd in dp_tr.leaf_node_iter():
+        if not nd.is_sa:
+            continue
+
+        # the lineage node is this SA's sibling under their shared
+        # dummy parent -- the *other* child, whichever it is
+        lineage_sibling = None
+        for sib in nd.parent_node.child_nodes():
+            if sib is not nd:
+                lineage_sibling = sib
+                break
+
+        if lineage_sibling is None:
+            continue
+
+        global_time = nd.distance_from_root()
+
+        sa_lineage_dict[lineage_sibling.label].append(
+            pjsa.SampledAncestor(
+                nd.label,
+                lineage_sibling.label,
+                global_time,
+                age=root_height - global_time,
+                time_to_lineage_node=lineage_sibling.edge_length))
+
+    # Fossil-only trees have no living tips but can still have observed samples.
+    tree_died = not any(nd.alive and not nd.is_sa for nd in dp_tr.leaf_node_iter())
+
     # note the empty attribute transition dict members
     ann_tr = AnnotatedTree(dp_tr,
                            DiscreteTrait(n_states),
                            alternative_root_label=root_alternative_label,
                            start_at_origin=is_origin,
-                           tree_died=False,
+                           tree_died=tree_died,
                            read_as_newick_string=True,
                            at_dict=dict(),
-                           clado_at_dict=dict())
-    
+                           clado_at_dict=dict(),
+                           sa_lineage_dict=dict(sa_lineage_dict))
+
     ann_tr.node_attr_dict = node_attr_dict
 
     return ann_tr

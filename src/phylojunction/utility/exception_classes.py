@@ -771,6 +771,29 @@ class AnnotatedTreeIncorrectAnnotationError(Exception):
         return self.message
 
 
+class AnnotatedTreeMissingNodeAnnotationError(Exception):
+    message: str
+
+    def __init__(self, nd_name: str, attr_name: str) -> None:
+        self.message = (
+            "Node '" + nd_name + "' has no '&" + attr_name + "=True' or "
+            "'&" + attr_name + "=False' annotation in the provided "
+            "Newick string. When 'read_tree's 'is_complete' argument is "
+            "\"true\", every leaf must be explicitly annotated with its "
+            "'" + attr_name + "' status -- PhyloJunction will not try "
+            "to infer it from branch lengths alone. Please add an "
+            "explicit '[&" + attr_name + "=True]' or "
+            "'[&" + attr_name + "=False]' comment to this node in the "
+            "Newick string, or use 'is_complete=\"false\"' (the "
+            "default) if the tree you are providing is already the "
+            "reconstructed tree (i.e., every one of its leaves is "
+            "already known to be sampled).")
+        super().__init__(self.message)
+
+    def __str__(self) -> str:
+        return self.message
+
+
 class AnnotatedTreeNodeMissingAttrError(Exception):
     message: str
 

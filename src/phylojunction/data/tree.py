@@ -393,6 +393,8 @@ class AnnotatedTree(dp.Tree):
 
         # node counting
         self.n_extant_terminal_nodes = 0
+        self.n_extinct_sampled_terminal_nodes = 0
+        self.extinct_sampled_terminal_nodes_labels = ()
         self.n_extinct_terminal_nodes = 0
         self.n_extant_sampled_terminal_nodes = 0
         self.n_sa_nodes = 0
@@ -778,12 +780,14 @@ class AnnotatedTree(dp.Tree):
         correctly.
 
         The initialization side-effects are on:
-            (i)   self.n_extant_terminal_nodes
-            (ii)  self.n_extant_sampled_terminal_nodes
-            (iii) self.n_extinct_terminal_nodes
-            (iv)  self.extant_terminal_nodes_labels
-            (v)   self.extant_sampled_terminal_nodes_labels
-            (vi)  self.extinct_terminal_nodes_labels
+            (i)    self.n_extant_terminal_nodes
+            (ii)   self.n_extant_sampled_terminal_nodes
+            (iii)  self.n_extinct_terminal_nodes
+            (iv)   self.n_extinct_sampled_terminal_nodes
+            (v)    self.extant_terminal_nodes_labels
+            (vi)   self.extant_sampled_terminal_nodes_labels
+            (vii)  self.extinct_terminal_nodes_labels
+            (viii) self.extinct_sampled_terminal_nodes_labels
         """
 
         if isinstance(self.trait, ContinuousTrait):
@@ -803,11 +807,32 @@ class AnnotatedTree(dp.Tree):
         extant_terminal_nd_labels_list: ty.List[str] = []
         extinct_terminal_nd_labels_list: ty.List[str] = []
         extant_sampled_terminal_nd_labels_list: ty.List[str] = []
+        extinct_sampled_terminal_nd_labels_list: ty.List[str] = []
+
+        # Imported trees already have biological flags restored by the reader. In particular,
+        # a near-present fossil must not become living just because its depth is maximal.
+        # Count sampled status separately, and exclude SA observations by their own flag.
+        if self.tree_read_as_newick:
+            for nd in self.tree.leaf_node_iter():
+                if nd.is_sa:
+                    continue
+                if nd.alive:
+                    self.n_extant_terminal_nodes += 1
+                    extant_terminal_nd_labels_list.append(nd.taxon.label)
+                    if nd.sampled:
+                        self.n_extant_sampled_terminal_nodes += 1
+                        extant_sampled_terminal_nd_labels_list.append(nd.taxon.label)
+                else:
+                    self.n_extinct_terminal_nodes += 1
+                    extinct_terminal_nd_labels_list.append(nd.taxon.label)
+                    if nd.sampled:
+                        self.n_extinct_sampled_terminal_nodes += 1
+                        extinct_sampled_terminal_nd_labels_list.append(nd.taxon.label)
 
         # tree died!
         #
         # no extant taxa, so counting extinct terminal nodes only
-        if self.tree_died:
+        elif self.tree_died:
             # no root, single lineage from origin died
             if self.brosc_node:
                 self.n_extinct_terminal_nodes = 1  # brosc node
@@ -839,15 +864,8 @@ class AnnotatedTree(dp.Tree):
                     # nd.distance_from_root() returns distance to seed
                     if abs(self.seed_age - nd.distance_from_root()) \
                             <= self.epsilon:
-                        if self.tree_read_as_newick:
-                            self.n_extant_terminal_nodes += 1
-                            self.n_extant_sampled_terminal_nodes += 1
-                            extant_terminal_nd_labels_list. \
-                                append(nd.taxon.label)
-
-                        # if tree was created via simulation
-                        # (and .alive has been set as an attribute)
-                        elif nd.alive:
+                        # tree was created via simulation, with .alive set
+                        if nd.alive:
                             self.n_extant_terminal_nodes += 1
                             extant_terminal_nd_labels_list.append(nd.label)
 
@@ -861,17 +879,16 @@ class AnnotatedTree(dp.Tree):
                     # if terminal node's path is not maximal, it must
                     # have gone extinct
                     else:
-                        if self.tree_read_as_newick:
-                            self.n_extinct_terminal_nodes += 1
-                            extinct_terminal_nd_labels_list \
-                                .append(nd.taxon.label)
-
-                        # if tree was created via simulation
-                        # (and .alive a member of Node)
-                        elif not nd.alive:
+                        # tree was created via simulation, with .alive set
+                        if not nd.alive:
                             self.n_extinct_terminal_nodes += 1
                             extinct_terminal_nd_labels_list \
                                 .append(nd.label)
+
+                            if hasattr(nd, "sampled") and nd.sampled:
+                                self.n_extinct_sampled_terminal_nodes += 1
+                                extinct_sampled_terminal_nd_labels_list \
+                                    .append(nd.label)
 
                         else:
                             raise ec.AnnotatedTreeIncorrectAnnotationError(
@@ -891,6 +908,8 @@ class AnnotatedTree(dp.Tree):
             tuple(extant_sampled_terminal_nd_labels_list)
         self.extinct_terminal_nodes_labels = \
             tuple(extinct_terminal_nd_labels_list)
+        self.extinct_sampled_terminal_nodes_labels = \
+            tuple(extinct_sampled_terminal_nd_labels_list)
 
     def _count_sampled_ancestors(self) -> None:
         """Count direct (sampled) ancestor nodes.
@@ -1446,6 +1465,16 @@ class AnnotatedTree(dp.Tree):
                     if not int_nd_complete_tr.is_leaf():
                         rec_tr_nd_name = recur_to_find_rec_tr_node(int_nd_complete_tr)
 
+                        # entire descendant subtree of this SA lineage node
+                        # also went extinct -- the SA already exists as a
+                        # standalone tip in the reconstructed tree (its
+                        # dummy parent was collapsed by
+                        # suppress_unifurcations), so there is no surviving
+                        # lineage node left to annotate; nothing to do here,
+                        # same as the is_leaf() case above
+                        if rec_tr_nd_name == "":
+                            continue
+
                         rec_tr_nd = \
                             self.tree_reconstructed.find_node_with_label(rec_tr_nd_name)
                         rec_tr_nd.is_sa_lineage = True
@@ -1464,8 +1493,6 @@ class AnnotatedTree(dp.Tree):
                             )
                             self.rec_tr_sa_lineage_dict = to_insert
 
-    # Prune continuous trees using observation flags, preserving traits and true node ages.
-    # Fossils remain observations even when their continuing lineage is pruned; node flags carry their identity.
     def _extract_continuous_reconstructed_tree(self, require_obs_both_sides=None):
         require_both = (self.condition_on_obs_both_sides_root if require_obs_both_sides is None
                         else require_obs_both_sides)
@@ -1544,9 +1571,9 @@ class AnnotatedTree(dp.Tree):
                 reconstructed tree extracted from AnnotatedTree's
                 instance owning the method call.
         """
+
         if isinstance(self.trait, ContinuousTrait):
             return self._extract_continuous_reconstructed_tree(require_obs_both_sides)
-
 
         if not self.tree_reconstructed:
             ##################################
@@ -1562,17 +1589,32 @@ class AnnotatedTree(dp.Tree):
             self.rec_tr_root_node_label = self.rec_tr_root_node.label
             self.rec_tr_root_age = self.node_ages_dict[self.rec_tr_root_node_label]
 
-            # if tree went extinct, return empty new tree
+            # if tree went extinct, return empty new tree -- a dead,
+            # but sampled (fossil) tip still counts as "something
+            # retained", same as an extant sample or a direct
+            # ancestor, so it must be included here too, or a
+            # fossil-only tree would incorrectly be treated as having
+            # nothing to reconstruct
             # if (self.n_extant_terminal_nodes + self.n_sa_nodes) <= 1:
-            if (self.n_extant_sampled_terminal_nodes + self.n_sa_nodes) == 0:
+            if (self.n_extant_sampled_terminal_nodes +
+                    self.n_extinct_sampled_terminal_nodes +
+                    self.n_sa_nodes) == 0:
                 return dp.Tree()
 
             # filter_fn = lambda nd: \
             #     nd.is_sa or (nd.is_leaf() and nd.alive and nd.sampled)
 
+            # a sampled leaf survives regardless of whether it is
+            # alive or dead -- a dead, sampled leaf is a fossil tip
+            # (e.g. read from an annotated Newick string via
+            # 'read_tree's 'is_complete' argument -- see
+            # 'readwrite.pj_read.read_nwk_tree_str'), which belongs in
+            # the reconstructed tree exactly as much as an extant
+            # sample does; only a dead, *unsampled* lineage should be
+            # pruned away
             def filter_fn(nd):
                 return nd.is_sa or \
-                       (nd.is_leaf() and nd.alive and nd.sampled) or \
+                       (nd.is_leaf() and nd.sampled) or \
                        nd.is_sa_dummy_parent
                 # return nd.is_sa or (nd.is_leaf() and nd.alive and nd.sampled)
 
@@ -1595,6 +1637,20 @@ class AnnotatedTree(dp.Tree):
                 root_node = \
                     self.tree_reconstructed.find_node_with_taxon_label("root")
 
+            # tree was read in with a 'node_name_attr' (e.g., to
+            # cross-reference externally-computed stochastic maps),
+            # so the root's literal label is not "root" -- it is
+            # whatever 'alternative_root_label' holds instead
+            if root_node is None and self.alternative_root_label:
+                root_node = \
+                    self.tree_reconstructed.find_node_with_label(
+                        self.alternative_root_label)
+
+                if root_node is None:
+                    root_node = \
+                        self.tree_reconstructed.find_node_with_taxon_label(
+                            self.alternative_root_label)
+
             if root_node:
                 root_node_distance_from_seed = \
                     root_node.distance_from_root()
@@ -1613,7 +1669,8 @@ class AnnotatedTree(dp.Tree):
 
                 # double-checking we're looking at just internal
                 # nodes that are not the root
-                if internal_nd.label not in ("root", "origin"):
+                if internal_nd.label not in \
+                        ("root", "origin", self.alternative_root_label):
                     # we set int_node_deeper_than_root if
                     # (i) we haven't looked at any internal nodes yet,
                     # i.e., smallest_distance == 0.0,
@@ -1740,7 +1797,8 @@ class AnnotatedTree(dp.Tree):
                         # if so, it is because there must be a sampled ancestor
                         # before the root, so we need to re-root above complete
                         # tree's root
-                        if rec_tree_mrca_label != "root":
+                        if rec_tree_mrca_label not in \
+                                ("root", self.alternative_root_label):
                             rec_mrca_node = \
                                 self.tree_reconstructed \
                                     .find_node_with_label(rec_tree_mrca_label)
@@ -1860,7 +1918,7 @@ class AnnotatedTree(dp.Tree):
                         sa.age = self.rec_tr_root_age - sa.global_time
 
         return self.tree_reconstructed
-   
+
     def populate_nd_attr_dict(self,
                               attrs_of_interest_list: ty.List[str],
                               attr_dict_added_separately_from_tree: bool = False) \

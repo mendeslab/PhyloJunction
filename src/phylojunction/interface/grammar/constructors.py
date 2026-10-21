@@ -88,12 +88,14 @@ def discrete_sse(stash, stop, stop_value, start_state=0, origin=True, cond_spn=F
 
 
 # Reading one or several trees always returns a list; [1] explicitly selects one tree.
-def read_tree(file_path=None, string=None, node_name_attr='', epoch_age_ends=None):
+def read_tree(file_path=None, string=None, node_name_attr='', epoch_age_ends=None,
+              is_complete=False, keep_unsampled_alive=False):
     if (file_path is None) == (string is None):
         raise ValueError("Specify exactly one of file_path or string.")
     return CtFnTreeReader(file_path if file_path is not None else string,
                           node_name_attr, file_path is not None,
-                          [] if epoch_age_ends is None else epoch_age_ends).generate()
+                          [] if epoch_age_ends is None else epoch_age_ends,
+                          flag(is_complete), flag(keep_unsampled_alive)).generate()
 
 
 # Shapes describe calling conventions; implementations retain concrete value validation.
@@ -151,6 +153,7 @@ CONSTRUCTORS = {
     }]),
     'read_tree': (read_tree, [{
         'file_path': Scalar, 'string': Scalar, 'node_name_attr': Scalar, 'epoch_age_ends': Vector,
+        'is_complete': Scalar, 'keep_unsampled_alive': Scalar,
     }]),
     'map_attr': (map_attr, [{'tree': Scalar, 'history': Scalar, 'attr_name': Scalar}]),
     'read_maps': (read_maps, [{'file_path': Scalar, 'tip_attr_file_path': Scalar,

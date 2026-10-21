@@ -166,3 +166,16 @@ inside comprehensions. History node identifiers must match the tree's ``index`` 
 ``node_name_attr="index"`` reads those identifiers from the Newick annotations.
 
 .. include:: quasse.rst
+
+Reading complete trees
+----------------------
+
+``read_tree(..., is_complete=true)`` restores biological status from Newick annotations.
+Each ordinary tip requires ``alive=true`` or ``alive=false``; dead tips additionally require
+``sampled=true`` or ``sampled=false``. Sampled fossil tips survive reconstruction. Explicit
+status resolves near-present fossils even when branch lengths are rounded; lengths are unchanged.
+``keep_unsampled_alive=true`` treats explicitly unsampled living tips as sampled for reconstruction.
+
+The default, ``is_complete=false``, reads an already reconstructed tree: every tip is sampled,
+and living status is inferred from depth. Explicit living-status annotations or unsampled tips
+are rejected in this mode. Both modes return a list of trees; select one with ``[1]``.

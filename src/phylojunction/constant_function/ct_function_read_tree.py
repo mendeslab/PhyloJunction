@@ -32,8 +32,11 @@ class CtFnTreeReader(pgm.ConstantFn):
                  tr_fp_or_str: str,
                  node_name_attr: str,
                  in_file: bool,
-                 list_time_slice_age_ends: ty.Optional[ty.List[float]] = None) -> None:
+                 list_time_slice_age_ends: ty.Optional[ty.List[float]] = None,
+                 is_complete: bool = False, keep_unsampled_alive: bool = False) -> None:
 
+        self.is_complete = is_complete
+        self.keep_unsampled_alive = keep_unsampled_alive
         self.node_name_attr = node_name_attr
         self.in_file = in_file
 
@@ -107,7 +110,8 @@ class CtFnTreeReader(pgm.ConstantFn):
                 ann_tr = pjr.read_nwk_tree_str(
                     tr_str,
                     in_file=False,
-                    node_names_attribute=self.node_name_attr)
+                    node_names_attribute=self.node_name_attr,
+                    is_complete=self.is_complete, keep_unsampled_alive=self.keep_unsampled_alive)
                 
                 generated_values.append(ann_tr)
 
