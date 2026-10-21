@@ -14,8 +14,9 @@ class TestControlFlow(unittest.TestCase):
         container = controls.plot_controls
         container.setParent(None)
         widgets = [controls.one_sample_radio, controls.all_samples_radio,
-                   controls.reconstructed_tree_check, controls.sample_idx_spin,
+                   controls.reconstructed_tree_check, controls.evolutionary_distance_check, controls.sample_idx_spin,
                    controls.repl_idx_spin, controls.save_pgm_node_plot]
+        controls.evolutionary_distance_check.show()
         controls.reconstructed_tree_check.setChecked(True)
         controls.sample_idx_spin.setValue(12)
         layout = container.layout()

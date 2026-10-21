@@ -173,6 +173,9 @@ class GUIMainWindow(QMainWindow):
         # Selection changes include keyboard navigation as well as mouse clicks.
         self.ui.ui_pages.node_list.currentItemChanged.connect(
             lambda current, previous: self._display_selected_node())
+        self._distance_node = None
+        self._time_reconstructed = False
+        self.ui.ui_pages.evolutionary_distance_check.toggled.connect(self._distance_changed)
         self.ui.ui_pages.reconstructed_tree_check.toggled.connect(
             self.refresh_selected_node_display_plot_spin)
 
@@ -391,9 +394,9 @@ class GUIMainWindow(QMainWindow):
             rendered.append(str(value))
         self.ui.ui_pages.values_content.setText('\n'.join(rendered))
         if len(values) == 1 and isinstance(values[0], pjdt.AnnotatedTree):
-            text = tabulate(values[0].get_stats_dict().items(), tablefmt='plain')
+            text = tabulate(values[0].get_stats_dict(reconstructed=display_reconstructed).items(), tablefmt='plain')
         else:
-            rows = summaries(values) if path is not None else []
+            rows = summaries(values, reconstructed=display_reconstructed) if path is not None else []
             text = tabulate(rows, headers='keys', tablefmt='plain') if rows else ''
         self.ui.ui_pages.summary_content.setText(text)
 
@@ -401,7 +404,8 @@ class GUIMainWindow(QMainWindow):
     def selected_node_plot(self, fig_obj, fig_axes, node_dag, do_all_samples,
                            sample_idx=None, repl_idx=0, repl_size=1, draw_reconstructed=False):
         values, _ = self.selected_values(node_dag.node_name, sample_idx, repl_idx, do_all_samples)
-        plot_values(fig_axes, values, draw_reconstructed)
+        plot_values(fig_axes, values, draw_reconstructed,
+                    self.ui.ui_pages.evolutionary_distance_check.isChecked())
         fig_obj.canvas.draw()
 
     # The first selector chooses a replicate; the second enumerates explicit leaf paths.
@@ -410,6 +414,37 @@ class GUIMainWindow(QMainWindow):
         index = max(0, min(self.ui.ui_pages.sample_idx_spin.value() - 1, results.n_executions - 1))
         count = len(list(elements(results.value(node_name, index))))
         return results.model.name_node_dict[node_name], results.n_executions, count
+
+    # Distance requires reconstructed rates. Preserve the independent time-view choice
+    # while the disabled reconstruction control accurately reflects what is displayed.
+    def _distance_changed(self, checked):
+        u = self.ui.ui_pages
+        if checked:
+            self._time_reconstructed = u.reconstructed_tree_check.isChecked()
+        with QSignalBlocker(u.reconstructed_tree_check):
+            u.reconstructed_tree_check.setChecked(True if checked else self._time_reconstructed)
+            u.reconstructed_tree_check.setEnabled(not checked)
+        self.refresh_selected_node_display_plot_spin()
+
+    # Initialize only on a variable switch, not a redraw or replicate change. Rate metadata
+    # controls availability; it does not change the tree, statistics, or export settings.
+    def _sync_distance_control(self, name, sample, element):
+        u = self.ui.ui_pages
+        values, _ = self.selected_values(name, sample, element)
+        available = bool(values and isinstance(values[0], pjdt.AnnotatedTree)
+                         and values[0].clock_model_attr_name is not None)
+        with QSignalBlocker(u.evolutionary_distance_check), QSignalBlocker(u.reconstructed_tree_check):
+            if name != self._distance_node:
+                if not u.evolutionary_distance_check.isChecked():
+                    self._time_reconstructed = u.reconstructed_tree_check.isChecked()
+                u.evolutionary_distance_check.setChecked(available)
+                u.reconstructed_tree_check.setChecked(True if available else self._time_reconstructed)
+                self._distance_node = name
+            elif not available and u.evolutionary_distance_check.isChecked():
+                u.evolutionary_distance_check.setChecked(False)
+                u.reconstructed_tree_check.setChecked(self._time_reconstructed)
+            u.evolutionary_distance_check.setVisible(available)
+            u.reconstructed_tree_check.setEnabled(not u.evolutionary_distance_check.isChecked())
 
     def do_selected_node_dag_page(self, spin_buttons_clicked: bool = False):
         """
@@ -452,6 +487,8 @@ class GUIMainWindow(QMainWindow):
 
             sample_idx = self.ui.ui_pages.sample_idx_spin.value() - 1
             repl_idx = self.ui.ui_pages.repl_idx_spin.value() - 1
+            self._sync_distance_control(selected_node_name, sample_idx, repl_idx)
+            do_reconstructed = self.ui.ui_pages.reconstructed_tree_check.isChecked()
 
             ###############
             # Now do node #
@@ -630,6 +667,8 @@ class GUIMainWindow(QMainWindow):
         sample, replicate = u.sample_idx_spin.value(), u.repl_idx_spin.value()
         all_samples = u.all_samples_radio.isChecked()
         reconstructed = u.reconstructed_tree_check.isChecked()
+        distance = u.evolutionary_distance_check.isChecked()
+        time_reconstructed = self._time_reconstructed
         u.resample_model.setEnabled(False)
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
@@ -643,7 +682,8 @@ class GUIMainWindow(QMainWindow):
             # No callbacks may draw an intermediate selection or out-of-range sample.
             with ExitStack() as blocked:
                 for widget in (u.node_list, u.sample_idx_spin, u.repl_idx_spin,
-                               u.one_sample_radio, u.all_samples_radio, u.reconstructed_tree_check):
+                               u.one_sample_radio, u.all_samples_radio, u.reconstructed_tree_check,
+                               u.evolutionary_distance_check):
                     blocked.enter_context(QSignalBlocker(widget))
                 self.clean_disable_everything()
                 u.resample_model.setEnabled(False)
@@ -677,6 +717,9 @@ class GUIMainWindow(QMainWindow):
                     if u.repl_idx_spin.isEnabled():
                         u.repl_idx_spin.setValue(replicate)
                     u.reconstructed_tree_check.setChecked(reconstructed)
+                    u.evolutionary_distance_check.setChecked(distance)
+                    self._time_reconstructed = time_reconstructed
+                    self._distance_node = u.node_list.currentItem().text()
             try:
                 self.do_selected_node_dag_page(spin_buttons_clicked=True)
                 self._run_completed(seed)
@@ -1145,6 +1188,11 @@ class GUIMainWindow(QMainWindow):
         self.ui.ui_pages.cmd_log_textbox.setText(cmd_hist_str)
 
     def clean_disable_everything(self, user_reset=False):
+        self._distance_node = None
+        with QSignalBlocker(self.ui.ui_pages.evolutionary_distance_check):
+            self.ui.ui_pages.evolutionary_distance_check.setChecked(False)
+            self.ui.ui_pages.evolutionary_distance_check.hide()
+        self.ui.ui_pages.reconstructed_tree_check.setEnabled(True)
         if user_reset:
             cmd_hist_str: str = ""
 

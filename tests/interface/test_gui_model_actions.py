@@ -27,6 +27,28 @@ class TestModelActions(unittest.TestCase):
         self.controls.cmd_prompt.setText(text)
         self.window.parse_cmd_update_gui()
 
+    # Real sampled trees exercise control state and summary topology together; redraw tests
+    # alone cannot detect forcing a reconstructed plot while displaying complete counts.
+    def test_rate_views_and_statistics(self):
+        self.enter('t <- read_tree(string="((A[&alive=true]:1,X[&alive=false,sampled=false]:0.2):1,B[&alive=true]:2);", is_complete=true)[1]')
+        self.enter('out ~ gamma_spike_clock(t, "rate", .1, 0, 2, [1,1])')
+        u = self.controls
+        u.node_list.setCurrentItem(u.node_list.findItems('out', Qt.MatchFlag.MatchExactly)[0])
+        self.assertTrue(u.evolutionary_distance_check.isChecked())
+        self.assertTrue(u.reconstructed_tree_check.isChecked())
+        self.assertFalse(u.reconstructed_tree_check.isEnabled())
+        tree = self.window.gui_modeling.results.value('out')
+        self.assertEqual(tree.get_stats_dict(reconstructed=True)['Total taxon count'], 2)
+        self.assertEqual(int(tree.get_stats_dict()['Total taxon count']), 3)
+        self.assertNotIn('Origin age', u.summary_content.toPlainText())
+        u.evolutionary_distance_check.setChecked(False)
+        self.assertTrue(u.reconstructed_tree_check.isEnabled())
+        u.reconstructed_tree_check.setChecked(False)
+        self.assertIn('Origin age', u.summary_content.toPlainText())
+        u.evolutionary_distance_check.setChecked(True)
+        u.evolutionary_distance_check.setChecked(False)
+        self.assertFalse(u.reconstructed_tree_check.isChecked())
+
     def test_display_controls_redraw_without_sampling(self):
         self.enter('x ~ [normal(mu,1) for mu in [0,1]]')
         self.enter('y ~ normal([0,1],1)')

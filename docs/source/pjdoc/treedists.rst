@@ -202,3 +202,17 @@ size by edge duration gives its additional rate. ``spike_mean=0`` removes the sp
 All parameters must be finite; relative rates and spike_mean may be zero, whereas clock_rate
 and spike_shape must be positive. The optional ``strict_clock_when_no_stubs`` forces stub-free
 edges to the constant clock_rate; it is a diagnostic option, not the usual statistical model.
+
+Displaying rates
+~~~~~~~~~~~~~~~~
+
+A tree with rate annotations initially displays the reconstructed tree in evolutionary-distance
+units (time × rate). Uncheck **Evolutionary distance** to use time units and enable the
+**Reconstructed** checkbox. Switching back to time restores its previous reconstruction choice.
+Rates are currently assigned only to reconstructed edges, so complete-tree distance plots are
+unavailable. The present-time reference line appears only in time views.
+
+GUI summaries describe the selected complete or reconstructed topology. Ages remain in time
+units in both views. Exported statistics and comparison/coverage calculations are independent
+of the display selection. Python plotting also accepts ``branch_rate_attr`` to color edges by
+a continuous rate attribute without replacing biological trait annotations.

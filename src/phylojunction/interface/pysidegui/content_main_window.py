@@ -10,7 +10,7 @@ from PySide6.QtWidgets import QStackedWidget  # type: ignore
 from PySide6.QtWidgets import QLabel  # type: ignore
 from PySide6.QtWidgets import QSpacerItem  # type: ignore
 from PySide6.QtWidgets import QSizePolicy  # type: ignore
-from PySide6.QtWidgets import QSpinBox, QComboBox
+from PySide6.QtWidgets import QSpinBox, QComboBox, QCheckBox
 from phylojunction.readwrite.execution_export import FORMATS
 from PySide6.QtWidgets import QMessageBox  # type: ignore
 
@@ -249,12 +249,15 @@ class ContentGUIMainWindow(object):
         # Install the wrapping layout after Designer has created the existing controls.
         # Height-for-width lets the parent reserve only the rows currently needed.
         controls = self.ui_pages
+        controls.evolutionary_distance_check = QCheckBox("Evolutionary distance", controls.plot_controls)
+        controls.evolutionary_distance_check.setToolTip("Draw reconstructed edges with length time × rate")
+        controls.evolutionary_distance_check.hide()
         flow = QFlowLayout(controls.plot_controls)
         flow.setContentsMargins(0, 0, 0, 0)
         flow.setHorizontalSpacing(6)
         flow.setVerticalSpacing(6)
         for widget in (controls.one_sample_radio, controls.all_samples_radio,
-                       controls.reconstructed_tree_check, controls.sample_idx_spin,
+                       controls.reconstructed_tree_check, controls.evolutionary_distance_check, controls.sample_idx_spin,
                        controls.repl_idx_spin, controls.save_pgm_node_plot):
             flow.addWidget(widget)
 

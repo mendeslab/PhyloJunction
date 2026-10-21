@@ -2120,7 +2120,7 @@ class AnnotatedTree(dp.Tree):
                           distance_attr=self.clock_model_attr_name if evolutionary_distance else None,
                           branch_rate_attr=branch_rate_attr)
 
-    def get_stats_dict(self) -> ty.Dict[str, ty.Union[int, float]]:
+    def get_stats_dict(self, reconstructed: bool = False) -> ty.Dict[str, ty.Union[int, float]]:
         """Get dictionary with AnnotatedTree's summary stats.
 
         This method is required whenever the user asks for a DAG node
@@ -2130,6 +2130,19 @@ class AnnotatedTree(dp.Tree):
             (dict): Dictionary with summary statistic names as keys
             and their values as values.
         """
+
+        if reconstructed:
+            tree = self.ensure_reconstructed_tree()
+            # An attached fossil is an observation along an edge, not a terminal tip.
+            # QuaSSE can retain an SA as a terminal fossil after its continuation is pruned.
+            leaves = [nd for nd in tree.leaf_node_iter() if nd.label is not None]
+            ancestors = [nd for nd in leaves if nd.is_sa and nd.parent_node is not None
+                         and nd.parent_node.is_sa_dummy_parent and nd.edge_length <= self.epsilon]
+            tips = [nd for nd in leaves if nd not in ancestors]
+            living = sum(nd.alive for nd in tips)
+            return {"Root age": self.rec_tr_root_age, "Total taxon count": len(tips),
+                    "Extant taxon count": living, "Extinct taxon count": len(tips) - living,
+                    "Direct ancestor count": len(ancestors)}
 
         ks = ["Origin age",
               "Root age",

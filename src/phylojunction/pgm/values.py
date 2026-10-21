@@ -23,7 +23,7 @@ def shape(value):
 
 # Summary rows compare the same element across replicates, never elements within a run.
 # Ragged vectors have no automatic correspondence; their values remain displayable/exportable.
-def summaries(values):
+def summaries(values, reconstructed=False):
     if len(values) < 2 or any(shape(v) != shape(values[0]) for v in values[1:]):
         return []
     rows = []
@@ -32,7 +32,7 @@ def summaries(values):
         entries = [v for _, v in columns]
         metrics = {'value': entries}
         if all(isinstance(v, AnnotatedTree) for v in entries):
-            stats = [v.get_stats_dict() for v in entries]
+            stats = [v.get_stats_dict(reconstructed=reconstructed) for v in entries]
             metrics = {}
             for name in stats[0]:
                 try:
@@ -48,10 +48,10 @@ def summaries(values):
 
 # Draw one selected tree or numeric observations across replicates. Vectors must be
 # selected explicitly by the caller; they are never silently pooled into a histogram.
-def plot_values(axes, values, reconstructed=False):
+def plot_values(axes, values, reconstructed=False, evolutionary_distance=False):
     from phylojunction.pgm.pgm import plot_node_histogram, plot_blank
     if len(values) == 1 and isinstance(values[0], AnnotatedTree):
-        values[0].plot_node(axes, draw_reconstructed=reconstructed)
+        values[0].plot_node(axes, draw_reconstructed=reconstructed, evolutionary_distance=evolutionary_distance)
     elif values and all(isinstance(v, numbers.Real) for v in values):
         plot_node_histogram(axes, values)
     else:
