@@ -385,7 +385,7 @@ def prep_trees_rb_smap_dfs(value_records,
                 for ann_tr_repl in node_val:
                     # method call updates ann_tr_repl's members
                     rec_tr = \
-                        ann_tr_repl.extract_reconstructed_tree(plotting_overhead=True)
+                        ann_tr_repl.ensure_reconstructed_tree(plotting_overhead=True)
                     root_node = ann_tr_repl.rec_tr_root_node
                     root_age = ann_tr_repl.rec_tr_root_age
                     node_ages_dict = ann_tr_repl.rec_tr_node_ages_dict
@@ -718,7 +718,7 @@ def prep_data_df(
                 rec_tree_ann_list = []
                 for ith_val in node_val:
                     ith_rec_tree = \
-                        ith_val.extract_reconstructed_tree(plotting_overhead=False)
+                        ith_val.ensure_reconstructed_tree(plotting_overhead=False)
 
                     rec_tree_list.append(
                         ith_rec_tree.as_string(

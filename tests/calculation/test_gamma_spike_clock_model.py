@@ -52,6 +52,22 @@ class TestGammaSpike(unittest.TestCase):
                 self.assertAlmostEqual(node.rate, 0.1 * rate)
             self.assertIn('rate=', first.rec_str())
 
+    # QuaSSE reconstruction used to rebuild on each read, unlike discrete trees. Exercise
+    # the shared consumer entry point so repeated display/export preparation retains rates.
+    def test_continuous_rate_annotations_survive_reads(self):
+        from phylojunction.distribution.dn_quasse import DnQuaSSE
+        from phylojunction.distribution.dn_gamma_spike import DnGammaSpikeClock
+        from phylojunction.calculation.continuous_sse import ConstantRate
+        np.random.seed(9)
+        tree = DnQuaSSE(ConstantRate(2), ConstantRate(0), stop="age", stop_value=1,
+                       start_trait=0, diffusion=0.1, fossil_rate=ConstantRate(1)).draw()
+        result = DnGammaSpikeClock(tree, 'rate', .1, .01, 2, [1.] * tree.n_rec_branches()).draw()
+        rec = result.tree_reconstructed
+        text = result.rec_str()
+        for _ in range(2):
+            self.assertIs(result.ensure_reconstructed_tree(), rec)
+            self.assertEqual(result.rec_str(), text)
+
     def test_gamma_spike(self):
         # We will construct the complete tree here
 

@@ -2048,6 +2048,13 @@ class AnnotatedTree(dp.Tree):
             suppress_annotations=False,
             suppress_internal_taxon_labels=True)
 
+    # Read-only consumers must reuse annotated reconstructed edges. Discrete trees may
+    # still need plotting bookkeeping, which extraction fills without replacing their topology.
+    def ensure_reconstructed_tree(self, plotting_overhead=False):
+        if isinstance(self.trait, ContinuousTrait) and self.tree_reconstructed is not None:
+            return self.tree_reconstructed
+        return self.extract_reconstructed_tree(plotting_overhead=plotting_overhead)
+
     def rec_str(self) -> str:
         if not self.tree_reconstructed:
             self.extract_reconstructed_tree(plotting_overhead=False)
@@ -2623,7 +2630,7 @@ def clear_trait_colorbar(axes: plt.Axes) -> None:
 # Match observations across the reconstruction's deep copy, then mark incoming edges in
 # the complete tree. Stopping at an already marked node visits each ancestral edge once.
 def _retained_observation_ancestry(ann_tr: AnnotatedTree) -> ty.Set[dp.Node]:
-    reconstructed = ann_tr.extract_reconstructed_tree()
+    reconstructed = ann_tr.ensure_reconstructed_tree()
     complete_nodes = {nd.label: nd for nd in ann_tr.tree.preorder_node_iter()}
     retained = set()
     for leaf in reconstructed.leaf_node_iter():
@@ -2692,7 +2699,7 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
         continuous_attr = attr_of_interest
         attr_of_interest = None  # Branches stay black; only terminal markers encode traits.
         if draw_reconstructed:
-            ann_tr.extract_reconstructed_tree()
+            ann_tr.ensure_reconstructed_tree()
             if ann_tr.rec_tr_root_node is None:
                 axes.cla()
                 axes.text(.5, .5, "No sampled tips", ha="center", va="center", transform=axes.transAxes)

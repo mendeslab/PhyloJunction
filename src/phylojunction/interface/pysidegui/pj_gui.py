@@ -387,7 +387,7 @@ class GUIMainWindow(QMainWindow):
         rendered = []
         for value in values:
             if isinstance(value, pjdt.AnnotatedTree) and display_reconstructed:
-                value = value.extract_reconstructed_tree().as_string(schema='newick').strip()
+                value = value.ensure_reconstructed_tree().as_string(schema='newick').strip()
             rendered.append(str(value))
         self.ui.ui_pages.values_content.setText('\n'.join(rendered))
         if len(values) == 1 and isinstance(values[0], pjdt.AnnotatedTree):
