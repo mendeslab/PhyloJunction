@@ -2069,6 +2069,8 @@ class AnnotatedTree(dp.Tree):
                   axes: plt.Axes,
                   node_attr: ty.Optional[str] = None,
                   draw_reconstructed: ty.Optional[bool] = False,
+                  evolutionary_distance: bool = False,
+                  branch_rate_attr: ty.Optional[str] = None,
                   **kwargs) -> None:
         """Draw tree on provided Axes instance.
 
@@ -2088,6 +2090,13 @@ class AnnotatedTree(dp.Tree):
                 Defaults to 'False'.
         """
 
+        if evolutionary_distance:
+            if self.clock_model_attr_name is None:
+                raise ValueError("Evolutionary distance requires reconstructed-edge rates.")
+            draw_reconstructed = True
+        if draw_reconstructed:
+            self.ensure_reconstructed_tree(plotting_overhead=True)
+
         if node_attr is None:
             node_attr = self.trait.name
 
@@ -2097,7 +2106,9 @@ class AnnotatedTree(dp.Tree):
         if not node_attr:
             _, _ = plot_ann_tree(self,
                           axes,
-                          draw_reconstructed=draw_reconstructed)
+                          draw_reconstructed=draw_reconstructed,
+                          distance_attr=self.clock_model_attr_name if evolutionary_distance else None,
+                          branch_rate_attr=branch_rate_attr)
 
         else:
             self.populate_nd_attr_dict([node_attr])
@@ -2105,7 +2116,9 @@ class AnnotatedTree(dp.Tree):
             _, _ = plot_ann_tree(self,
                           axes,
                           attr_of_interest=node_attr,
-                          draw_reconstructed=draw_reconstructed)
+                          draw_reconstructed=draw_reconstructed,
+                          distance_attr=self.clock_model_attr_name if evolutionary_distance else None,
+                          branch_rate_attr=branch_rate_attr)
 
     def get_stats_dict(self) -> ty.Dict[str, ty.Union[int, float]]:
         """Get dictionary with AnnotatedTree's summary stats.
@@ -2381,6 +2394,64 @@ def get_x_coord_from_nd_heights(ann_tr: AnnotatedTree,
             return ann_tr.node_heights_dict
 
 
+def get_x_coord_from_attr_product(
+        ann_tr: AnnotatedTree,
+        attr_of_interest: str = "mutation_rate",
+        draw_reconstructed: bool = False) -> ty.Dict[str, float]:
+    """Return x-coordinates for a phylogram (genetic-distance) layout.
+
+    Unlike 'get_x_coord_from_nd_heights' (branch length = time), here
+    each node's x-coordinate is the cumulative sum, from the root (or
+    origin), of 'branch_length * getattr(node, attr_of_interest)'
+    along its ancestral path -- i.e., distance in units of expected
+    character change, not time. A branch whose 'attr_of_interest'
+    value is None on a marker or seed contributes zero. Every eligible edge must have
+    a finite nonnegative rate; missing rates are errors rather than collapsed edges.
+
+    Args:
+        ann_tr (AnnotatedTree): Instance of AnnotatedTree that we
+            are drawing.
+        attr_of_interest (str): Name of the (per-branch, constant)
+            node attribute whose product with branch length gives
+            each branch's contribution to the x-axis. Defaults to
+            'mutation_rate'.
+        draw_reconstructed (bool, optional): Whether we are drawing
+            the reconstructed tree instead of the complete tree.
+            Defaults to 'False'.
+
+    Returns:
+        (dict): Dictionary with node labels (str) as keys and
+            cumulative genetic-distance x-coordinates (float) as
+            values.
+    """
+
+    if draw_reconstructed:
+        ann_tr.ensure_reconstructed_tree()
+    x_coords: ty.Dict[str, float] = dict()
+
+    def _recur(nd: dp.Node, parent_x: float) -> None:
+        rate = getattr(nd, attr_of_interest, None)
+        branch_contribution = 0.0
+        if is_real_branch(nd, ann_tr.epsilon):
+            if rate is None or not np.isfinite(rate) or rate < 0:
+                raise ValueError(f"Missing or invalid rate {attr_of_interest!r} on edge {nd.label!r}.")
+            branch_contribution = nd.edge_length * rate
+
+        this_x = parent_x + branch_contribution
+        x_coords[get_node_name(nd)] = this_x
+
+        for ch_nd in nd.child_nodes():
+            _recur(ch_nd, this_x)
+
+    seed_nd = ann_tr.tree.seed_node
+    if draw_reconstructed:
+        seed_nd = ann_tr.rec_tr_root_node
+
+    _recur(seed_nd, 0.0)
+
+    return x_coords
+
+
 def get_y_coord_from_n_obs_nodes(ann_tr: AnnotatedTree,
                                  start_at_origin: bool = False,
                                  sa_along_branches: bool = True,
@@ -2651,7 +2722,9 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
                   start_at_origin: bool = False,
                   attr_of_interest: ty.Optional[str] = None,
                   sa_along_branches: bool = True,
-                  draw_reconstructed: bool = False) -> ty.Tuple[ty.Dict[str, float]]:
+                  draw_reconstructed: bool = False,
+                  distance_attr: ty.Optional[str] = None,
+                  branch_rate_attr: ty.Optional[str] = None) -> ty.Tuple[ty.Dict[str, float]]:
     """Plot instance of AnnotatedTree on provided Axes instance.
 
     Plotting is a side-effect. Complete plots fade edges outside the ancestry of
@@ -2685,6 +2758,12 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
         testing purposes only. Keys are node names, values are either x-
         or y-coordinates.
     """
+
+    if distance_attr is not None:
+        if not draw_reconstructed or use_age:
+            raise ValueError("Distance coordinates require a reconstructed tree and forward coordinates.")
+        ann_tr.ensure_reconstructed_tree(plotting_overhead=True)
+    rate_layout = distance_attr is not None or branch_rate_attr is not None
 
     retained = None if draw_reconstructed else _retained_observation_ancestry(ann_tr)
     excluded_alpha = 0.25
@@ -2753,6 +2832,21 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
         get_x_coord_from_nd_heights(ann_tr,
                                     use_age=use_age,
                                     draw_reconstructed=draw_reconstructed)
+
+    if distance_attr is not None:
+        x_coords = get_x_coord_from_attr_product(ann_tr, distance_attr, draw_reconstructed=True)
+
+    rate_mapper = None
+    if branch_rate_attr is not None:
+        selected_tree = ann_tr.tree_reconstructed if draw_reconstructed else ann_tr.tree
+        rates = [getattr(nd, branch_rate_attr, None) for nd in selected_tree
+                 if is_real_branch(nd, ann_tr.epsilon)]
+        if not rates or any(rate is None or not np.isfinite(rate) or rate < 0 for rate in rates):
+            raise ValueError("Branch coloring requires finite nonnegative rates on all eligible edges.")
+        low, high = min(rates), max(rates)
+        if low == high:
+            high = low + max(abs(low) * .01, .01)
+        rate_mapper = plt.cm.ScalarMappable(norm=colors.Normalize(low, high), cmap="viridis")
 
     y_coords = \
         get_y_coord_from_n_obs_nodes(ann_tr,
@@ -2932,6 +3026,10 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
             x_heres = [x_coords[nd_name]]
             segment_colors = ["black"]
 
+        if rate_mapper is not None:
+            rate = getattr(nd, branch_rate_attr, None)
+            segment_colors = [rate_mapper.to_rgba(rate) if rate is not None else 'black']
+
         y_here = y_coords[nd_name]
 
         from_x_here_to_this_x: float = 0.0  # default (present moment)
@@ -2994,7 +3092,7 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
         # SA nodes are plotted along the branches subtending nodes
         # where '.is_sa_lineage' == True, which cannot also be
         # dummy nodes
-        if continuous_attr is None and sa_along_branches and \
+        if not rate_layout and continuous_attr is None and sa_along_branches and \
                 (not nd.is_sa_dummy_parent and nd.is_sa_lineage):
 
             sas: ty.List[pjsa.SampledAncestor] = []
@@ -3034,6 +3132,14 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
                                       sa_y,
                                       axes,
                                       color=sa_color)
+
+        if rate_layout and sa_along_branches and nd.is_sa_dummy_parent:
+            for child in nd.child_node_iter():
+                if child.is_sa and child.is_leaf() and child.edge_length <= ann_tr.epsilon:
+                    if isinstance(ann_tr.trait, ContinuousTrait):
+                        axes.plot(x_coords[nd_name], y_here, marker='o', color='black', markersize=4, zorder=10)
+                    else:
+                        _draw_sa_along_branch(get_node_name(child), x_coords[nd_name], y_here, axes)
 
         # recur if not leaf
         if len(nd.child_nodes()) > 0:
@@ -3077,18 +3183,23 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
                     # mixed forks; the two arms cover the original connector exactly.
                     child_kept = [retained is None or child in retained for child in children]
                     arms = [(y_top, y_bot, child_kept[0])]
-                    if child_kept[0] != child_kept[1]:
+                    if rate_mapper is not None or child_kept[0] != child_kept[1]:
                         arms = [(y_top, y_here, child_kept[0]),
                                 (y_here, y_bot, child_kept[1])]
-                    for arm_top, arm_bottom, kept in arms:
+                    for arm_index, (arm_top, arm_bottom, kept) in enumerate(arms):
+                        # Each colored arm represents its daughter's incoming edge, not
+                        # the edge above the fork. This is independent of axis units.
+                        arm_color = segment_colors[-1]
+                        if rate_mapper is not None:
+                            rate = getattr(children[arm_index], branch_rate_attr, None)
+                            arm_color = rate_mapper.to_rgba(rate) if rate is not None else 'black'
                         _draw_clade_lines(
                             use_linecollection=True,
                             orientation="vertical",
                             x_here=x_here_int_nodes,
                             y_bot=arm_bottom,
                             y_top=arm_top,
-                            # The last segment color is the state at the parent node.
-                            color=segment_colors[-1],
+                            color=arm_color,
                             lw=lw if kept else lw * excluded_width_scale,
                             alpha=1.0 if kept else excluded_alpha,
                         )
@@ -3199,13 +3310,13 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
 
     # if the attribute of interest is the tree's discrete trait and
     # there is only one state, we keep it all black
-    keep_it_black = False
+    keep_it_black = rate_layout
     if (isinstance(ann_tr.trait, DiscreteTrait) and
             attr_of_interest == ann_tr.trait.name and ann_tr.trait.states == 1):
         keep_it_black = True
 
     # grabbing the color at the start of the process
-    if attr_found:
+    if attr_found and not rate_layout:
         attr_idx = ann_tr.node_attr_dict[ann_tr.tree.seed_node.label] \
             [attr_of_interest]
         color = color_map[attr_idx]
@@ -3238,18 +3349,21 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
                 keep_it_black=keep_it_black,
                 draw_reconstructed=draw_reconstructed)
 
-    _draw_time_slices(ann_tr, axes, use_age)
+    present_x = 0.0
+    if distance_attr is None:
+        _draw_time_slices(ann_tr, axes, use_age)
 
-    # Heights equal the displayed root age minus stored node age. The horizon's stored
-    # age is seed_age - horizon, including legacy trees whose ages end at extinction.
-    horizon = ann_tr.max_age if ann_tr.max_age is not None else ann_tr.seed_age
-    present_age = ann_tr.seed_age - horizon
-    root_age = ann_tr.rec_tr_root_age if draw_reconstructed else ann_tr.seed_age
-    present_x = present_age if use_age else root_age - present_age
-    # A tiny nonzero stroke keeps round dots visible in Agg/PNG as well as PDF.
-    axes.axvline(present_x, color="0.5", alpha=0.45, linewidth=0.8,
-                 linestyle=(0, (0.1, 3)), dash_capstyle="round", zorder=0,
-                 gid="present-reference", label="_nolegend_")
+        # Heights equal the displayed root age minus stored node age. The horizon's stored
+        # age is seed_age - horizon, including legacy trees whose ages end at extinction.
+        horizon = ann_tr.max_age if ann_tr.max_age is not None else ann_tr.seed_age
+        present_age = ann_tr.seed_age - horizon
+        root_age = ann_tr.rec_tr_root_age if draw_reconstructed else ann_tr.seed_age
+        present_x = present_age if use_age else root_age - present_age
+        # A tiny nonzero stroke keeps round dots visible in Agg/PNG as well as PDF.
+        axes.axvline(present_x, color="0.5", alpha=0.45, linewidth=0.8,
+                     linestyle=(0, (0.1, 3)), dash_capstyle="round", zorder=0,
+                     gid="present-reference", label="_nolegend_")
+
 
     # draw lines
     for i in horizontal_linecollections:
@@ -3292,7 +3406,7 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
     axes.spines['right'].set_visible(False)
     axes.spines['top'].set_visible(False)
 
-    if continuous_attr is not None:
+    if continuous_attr is not None and not rate_layout:
         complete_tips = list(ann_tr.tree.leaf_node_iter())
         values = [float(getattr(nd, continuous_attr)) for nd in complete_tips]
         low, high = min(values), max(values)
@@ -3308,6 +3422,11 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
         axes._pj_trait_position = axes.get_position(original=True).frozen()
         axes._pj_trait_colorbar = axes.figure.colorbar(markers, ax=axes, label=continuous_attr)
 
+    if rate_mapper is not None:
+        axes._pj_trait_position = axes.get_position(original=True).frozen()
+        axes._pj_trait_colorbar = axes.figure.colorbar(rate_mapper, ax=axes, label=branch_rate_attr)
+    if distance_attr is not None:
+        axes.set_xlabel("Evolutionary distance (time × rate)")
     return x_coords, y_coords
 
 

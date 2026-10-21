@@ -64,9 +64,19 @@ class TestGammaSpike(unittest.TestCase):
         result = DnGammaSpikeClock(tree, 'rate', .1, .01, 2, [1.] * tree.n_rec_branches()).draw()
         rec = result.tree_reconstructed
         text = result.rec_str()
-        for _ in range(2):
+        from matplotlib.figure import Figure
+        from matplotlib.backends.backend_agg import FigureCanvasAgg
+        figure = Figure()
+        FigureCanvasAgg(figure)
+        axes = figure.subplots()
+        for reconstructed, distance in ((False, False), (True, False), (True, True), (False, False)):
+            result.plot_node(axes, draw_reconstructed=reconstructed, evolutionary_distance=distance)
+            figure.canvas.draw()
+            self.assertEqual(any(line.get_gid() == 'present-reference' for line in axes.lines), not distance)
             self.assertIs(result.ensure_reconstructed_tree(), rec)
             self.assertEqual(result.rec_str(), text)
+        result.plot_node(axes, draw_reconstructed=True, branch_rate_attr='rate')
+        figure.canvas.draw()
 
     def test_gamma_spike(self):
         # We will construct the complete tree here
@@ -760,6 +770,154 @@ class TestGammaSpike(unittest.TestCase):
         self.assertGreater(rec_leaf_a_sampled.branch_raw_rate, 0.0)
         self.assertGreater(rec_leaf_a_sampled.spike_effect, 0.0)
         self.assertNotEqual(rec_leaf_a_sampled.mol_rate, clock_rate)
+
+    def test_strict_clock_phylogram_is_ultrametric_when_no_stubs(self):
+        """A stub-free tree's strict-clock phylogram is ultrametric.
+
+        'strict_clock_when_no_stubs=True' pins every stub-free
+        branch's 'mol_rate' to exactly 'clock_rate' (a single
+        constant, no randomness at all -- see
+        'test_strict_clock_when_no_stubs' above). If NO branch in the
+        reconstructed tree has a stub, every single branch gets that
+        same constant rate, so a phylogram (branch length = time *
+        mol_rate) is nothing more than the chronogram uniformly
+        rescaled by 'clock_rate' -- and uniformly rescaling an
+        ultrametric tree (all tips the same distance from the root)
+        cannot break that property. This builds a deliberately
+        asymmetric (but still ultrametric) three-tip tree -- 'leaf_a'
+        two branches from the root, 'leaf_b'/'leaf_c' three -- so that
+        the check is on summed branch length, not on topology/branch
+        count, which a trivial (e.g., a symmetric cherry) fixture
+        would not exercise.
+        """
+
+        origin_node = Node(
+            taxon=Taxon(label="origin"), label="origin", edge_length=0.0)
+        origin_node.state = 0
+        origin_node.alive = False
+        origin_node.sampled = False
+        origin_node.is_sa = False
+        origin_node.is_sa_dummy_parent = False
+        origin_node.is_sa_lineage = False
+
+        root_node = Node(
+            taxon=Taxon(label="root"), label="root", edge_length=1.0)
+        root_node.state = 0
+        root_node.alive = False
+        root_node.sampled = False
+        root_node.is_sa = False
+        root_node.is_sa_dummy_parent = False
+        root_node.is_sa_lineage = False
+
+        origin_node.add_child(root_node)
+
+        # reaches the root in a single (length-2.0) branch
+        leaf_a = Node(
+            taxon=Taxon(label="leaf_a"), label="leaf_a", edge_length=2.0)
+        leaf_a.state = 0
+        leaf_a.alive = True
+        leaf_a.sampled = True
+        leaf_a.is_sa = False
+        leaf_a.is_sa_dummy_parent = False
+        leaf_a.is_sa_lineage = False
+
+        # reaches the root via an extra internal node, so it is the
+        # same total distance (1.0 + 0.5 + 1.5 == 1.0 + 2.0) away from
+        # the origin as 'leaf_a', despite differing in branch count
+        internal = Node(
+            taxon=Taxon(label="internal"), label="internal",
+            edge_length=0.5)
+        internal.state = 0
+        internal.alive = False
+        internal.sampled = False
+        internal.is_sa = False
+        internal.is_sa_dummy_parent = False
+        internal.is_sa_lineage = False
+
+        root_node.add_child(leaf_a)
+        root_node.add_child(internal)
+
+        leaf_b = Node(
+            taxon=Taxon(label="leaf_b"), label="leaf_b", edge_length=1.5)
+        leaf_b.state = 0
+        leaf_b.alive = True
+        leaf_b.sampled = True
+        leaf_b.is_sa = False
+        leaf_b.is_sa_dummy_parent = False
+        leaf_b.is_sa_lineage = False
+
+        leaf_c = Node(
+            taxon=Taxon(label="leaf_c"), label="leaf_c", edge_length=1.5)
+        leaf_c.state = 0
+        leaf_c.alive = True
+        leaf_c.sampled = True
+        leaf_c.is_sa = False
+        leaf_c.is_sa_dummy_parent = False
+        leaf_c.is_sa_lineage = False
+
+        internal.add_child(leaf_b)
+        internal.add_child(leaf_c)
+
+        tr_complete = Tree(seed_node=origin_node)
+        for nd in (origin_node, root_node, leaf_a, internal, leaf_b,
+                   leaf_c):
+            tr_complete.taxon_namespace.add_taxon(nd.taxon)
+
+        ann_tr = pjtr.AnnotatedTree(
+            tr_complete, trait=DiscreteTrait(1), start_at_origin=True,
+            max_age=3.0, epsilon=1e-12)
+
+        tr_rec = ann_tr.extract_reconstructed_tree(
+            plotting_overhead=False, require_obs_both_sides=False)
+
+        ann_tr.populate_n_stubs_on_branches_of_rec_tr()
+
+        # sanity check on the fixture itself: every tip is extant and
+        # sampled, with no unsampled lineage anywhere to be pruned
+        # away, so there must be no stubs at all -- if this ever
+        # stops being true, the test below is not actually checking
+        # what its name says it is
+        for nd in tr_rec.preorder_node_iter():
+            self.assertEqual(nd.n_stub, 0)
+
+        clock_rate = 0.01
+
+        br_specific_rel_rates = [1.0] * ann_tr.n_rec_branches()
+
+        pjgsc.populate_gamma_spike_mol_rates_on_rec_tr_branches(
+            ann_tr,
+            clock_rate=clock_rate,
+            spike_mean=0.3,
+            spike_shape=2.0,
+            br_specific_rel_rates=br_specific_rel_rates,
+            strict_clock_when_no_stubs=True
+        )
+
+        # the free function populates 'mol_rate' directly (not
+        # 'mutation_rate' -- that renaming only happens inside
+        # 'GammaSpikeClockModel.populate_branch_rates', via its own
+        # 'attr_name', which is not involved when calling the free
+        # function directly, as done above)
+        x_coords = pjtr.get_x_coord_from_attr_product(
+            ann_tr, "mol_rate", draw_reconstructed=True)
+
+        leaf_x_coords = [
+            x_coords[label] for label in ("leaf_a", "leaf_b", "leaf_c")]
+
+        # every tip is the exact same (rescaled) distance from the
+        # root -- the phylogram is ultrametric, just like the
+        # (ultrametric, by construction) chronogram it was rescaled
+        # from
+        for x in leaf_x_coords:
+            self.assertAlmostEqual(x, leaf_x_coords[0], places=12)
+
+        # and that common distance is exactly the reconstructed
+        # chronogram's root-to-tip time, rescaled by the constant
+        # 'clock_rate'. The reconstructed tree is re-rooted at 'root'
+        # (the origin -> root branch is dropped), so that time is 2.0
+        # (leaf_a: 2.0; leaf_b/leaf_c: 0.5 + 1.5), not the 3.0 one
+        # would get measuring from 'origin' in the complete tree
+        self.assertAlmostEqual(leaf_x_coords[0], 2.0 * clock_rate, places=12)
 
     def test_origin_with_chained_direct_ancestors_before_root(self):
         """A maximally gnarly tree: origin, chained DAs, stubs, all of it.
