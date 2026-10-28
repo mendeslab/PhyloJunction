@@ -161,6 +161,7 @@ CONSTRUCTORS = {
         'cond_spn': Scalar, 'cond_obs_both_sides': Scalar, 'min_rec_taxa': Scalar, 'max_rec_taxa': Scalar,
         'max_n_attempts': Scalar, 'dt_max': Scalar, 'max_nodes': Scalar, 'block_duration': Scalar,
         'bridge_error': Scalar, 'fossil_rate': Scalar, 'start_distribution': Scalar,
+        'observation_sd': Scalar,
     }]),
     'sse_rate': (sse_rate, [{
         'name': Scalar, 'value': Scalar, 'event': Scalar, 'states': Vector, 'epoch': Scalar,

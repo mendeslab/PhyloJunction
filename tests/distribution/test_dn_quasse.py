@@ -518,6 +518,52 @@ class TestQuaSSE(unittest.TestCase):
                 finally:
                     plt.close(fig)
 
+    # Controlled noise checks observation selection and separation from latent traits in both
+    # engines. Existing trajectory tests cannot detect noise added to evolution or redrawn by pruning.
+    def test_observation_error(self):
+        zero, one = ConstantRate(0), ConstantRate(1)
+        for invalid in (-1, np.nan, np.inf, [1, 2]):
+            with self.assertRaises(ValueError):
+                DnQuaSSE(zero, zero, 'age', 1, observation_sd=invalid)
+        for method in ('diversitree', 'local_thinning'):
+            opts = dict(method=method, block_duration=1) if method == 'local_thinning' else dict(k=1)
+            for rho in (0, 1):
+                dn = DnQuaSSE(zero, zero, 'age', 1, drift=2, fossil_rate=one,
+                             sampling_prob=rho, observation_sd=.2, **opts)
+                with patch('numpy.random.exponential', side_effect=[.25, 2.]), \
+                        patch('numpy.random.uniform', return_value=.5), \
+                        patch('numpy.random.random', return_value=0), \
+                        patch('numpy.random.choice', return_value=0), \
+                        patch('numpy.random.normal', side_effect=[1., -2.]) as noise:
+                    tree = dn.simulate()
+                observed = [nd for nd in tree.tree.leaf_node_iter()
+                            if nd.is_sa or (nd.alive and nd.sampled)]
+                self.assertEqual(noise.call_count, len(observed))
+                np.testing.assert_allclose([nd.observed_trait - nd.trait for nd in observed],
+                                           [.2, -.4][:len(observed)])
+                self.assertEqual(tree.brosc_node.trait, 2.)
+                for nd in tree.tree:
+                    self.assertEqual(hasattr(nd, 'observed_trait'), nd in observed)
+                reconstructed = tree.extract_reconstructed_tree()
+                for nd in reconstructed.leaf_node_iter():
+                    original = tree.tree.find_node_with_label(nd.label)
+                    self.assertEqual(nd.observed_trait, original.observed_trait)
+                    self.assertEqual(nd.annotations.get_value('observed_trait'), original.observed_trait)
+            # Zero error must leave stochastic trajectories and RNG state unchanged.
+            for error in (None, 0):
+                np.random.seed(42)
+                args = {} if error is None else dict(observation_sd=error)
+                dn = DnQuaSSE(zero, zero, 'age', 1, diffusion=.1, **opts, **args)
+                with patch('numpy.random.normal', wraps=np.random.normal) as normal:
+                    tree = dn.draw()
+                self.assertEqual(normal.call_count, 1)  # Only the Brownian increment.
+                result = (tree.brosc_node.trait, np.random.random())
+                self.assertEqual(tree.brosc_node.observed_trait, tree.brosc_node.trait)
+                if error is None:
+                    baseline = result
+                else:
+                    self.assertEqual(result, baseline)
+
     # Continuous export must retain all node traits without generating discrete state matrices.
     # Existing discrete export tests cover the other format; retire if a shared trait writer replaces both.
     def test_export(self):
@@ -554,19 +600,24 @@ class TestQuaSSE(unittest.TestCase):
         self.assertIn('brosc;', output['t_reconstructed.tsv'].to_string(index=False))
         self.assertFalse(any(name.endswith('.nex') or '_anc_states' in name for name in filenames))
         traits = pd.read_csv(io.StringIO(output['t_traits.tsv']), sep='\t')
-        self.assertEqual(list(traits.columns), ['sample', 'replicate', 'node', 'trait', 'alive', 'sampled'])
+        self.assertEqual(list(traits.columns), ['sample', 'replicate', 'node', 'trait',
+                                                'alive', 'sampled', 'observed_trait'])
         self.assertEqual(len(traits), 8)
         np.testing.assert_array_equal(traits['trait'], [1, 1, 1, 1, 3, 3, 3, 3])
+        np.testing.assert_array_equal(traits['observed_trait'].dropna(), [1, 1])
+        self.assertEqual(traits['observed_trait'].isna().sum(), 6)
         fossils = pd.read_csv(io.StringIO(output['t_fossils.tsv']), sep='\t')
-        self.assertEqual(list(fossils.columns), ['sample', 'replicate', 'node', 'time', 'age', 'trait'])
+        self.assertEqual(list(fossils.columns), ['sample', 'replicate', 'node', 'time', 'age',
+                                                 'trait', 'observed_trait'])
         self.assertTrue(fossils.empty)
         self.assertEqual(output['t_stats.csv'].iloc[0]['origin_age'], 0)
         # Fossils use the same renamed trait and sample/replicate indices as existing outputs.
         dag = dag.append('psi := quasse_constant(rate=i)')
         with patch('numpy.random.exponential', side_effect=[.25, 2.] * 4), \
-                patch('numpy.random.uniform', return_value=.5):
+                patch('numpy.random.uniform', return_value=.5), \
+                patch('numpy.random.normal', return_value=2.):
             dag = dag.append('f ~ iid(2,quasse(birth_rate=b,death_rate=b,fossil_rate=psi,'
-                        'stop="age",stop_value=1,sampling_prob=0,drift=2,'
+                        'stop="age",stop_value=1,sampling_prob=0,drift=2,observation_sd=.1,'
                         'method="local_thinning",block_duration=1))')
         self.assertIn(dag.model.name_node_dict['psi'], dag.model.name_node_dict['f'].parent_nd_list)
         for tree in [tree for row in dag.values('f') for tree in row]:
@@ -581,6 +632,10 @@ class TestQuaSSE(unittest.TestCase):
         np.testing.assert_array_equal(fossils['sample'], [1, 1, 2, 2])
         np.testing.assert_array_equal(fossils['replicate'], [1, 2, 1, 2])
         np.testing.assert_allclose(fossils[['time', 'age', 'trait']], [[.25, .75, .5]] * 4)
+        np.testing.assert_allclose(fossils['observed_trait'], [.7] * 4)
+        again_names, again_contents = prep_data_filepaths_dfs(*prep_data_df(records('f')))
+        self.assertEqual(dict(zip(names, contents))['f_fossils.tsv'],
+                         dict(zip(again_names, again_contents))['f_fossils.tsv'])
         for tree in [tree for row in dag.values('t') for tree in row]:
             self.assertFalse(tree.state_count_dict)
         with tempfile.TemporaryDirectory() as directory:
