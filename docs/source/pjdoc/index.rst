@@ -168,6 +168,28 @@ And this is the DAG such script instantiates:
 Note how this DAG has a factor node characterized by a different type of function: deterministic function ``sse_rate``.
 Such functions are denoted by filled diamonds instead of filled squares (those represent distributions), and will have their output enclosed in a hollow diamond.
 
+Scalar arithmetic
+-----------------
+
+Expressions support binary ``+``, ``-``, ``*``, and ``/``, and unary signs such as
+``-x``, ``+2``, and ``-(x + y)``. Parsing uses Python's expression parser, with Python's
+precedence: unary signs bind most tightly, followed by multiplication and division,
+then addition and subtraction. Binary operators associate left to right; parentheses
+change grouping. Division is real-valued, so ``3 / 2`` is ``1.5``.
+
+.. code-block:: text
+
+    diversification ~ lognormal(meanlog=-0.65, sdlog=0.1)
+    turnover ~ beta(alpha=10, beta=40)
+    birth_rate := diversification / (1 - turnover)
+    death_rate := turnover * birth_rate
+
+Arithmetic requires integer or real scalar operands, excluding booleans. It does not
+operate directly on lists or distribution objects. Use a comprehension such as
+``doubled := [2 * x for x in values]`` for elementwise arithmetic. Powers and other
+operators are not supported. Expressions are interpreted by PhyloJunction, not executed
+as Python code.
+
 .. _executions:
 
 Model replicates and IID vectors
