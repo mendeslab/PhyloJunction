@@ -288,7 +288,16 @@ Trees, plots, and output
 
 Complete trees retain extinct and unsampled tips. Reconstructed trees retain paths to sampled
 living tips and fossils, including fossils with extinct or unobserved descendants and trees
-with fossils alone. A lone fossil retains its original age and origin-to-observation stem. All complete-tree nodes carry the trait at that node's time; no full trait trajectory is
+with fossils alone. A single observation becomes a single node without an origin parent or
+branch length. Its reconstructed root age is zero for a living tip and its sampling age for a
+fossil. The complete tree and exported ``origin_age`` retain the simulation's origin age.
+
+Plain Newick does not preserve absolute node ages. For fossil-only trees, including a lone
+fossil, BEAST's branch-length conversion places the youngest tip at the present. Writing node
+ages and using them on import could preserve the intended ages. PhyloJunction retains fossil
+ages in its tree metadata and exported fossil table.
+
+All complete-tree nodes carry the trait at that node's time; no full trait trajectory is
 stored. Black branches and colored terminal markers show traits using a continuous colorbar.
 Ancestral fossils appear as trait-colored markers along their continuing branches; terminal
 fossils have their own rows. ``sa_along_branches=False`` gives every fossil its own row.
