@@ -8,7 +8,7 @@ from phylojunction.pgm.pgm import DistrForSampling
 from phylojunction.distribution.dn_iid import DnIID
 from phylojunction.distribution import dn_parametric as dn
 from phylojunction.interface.grammar.constructors import CONSTRUCTORS, bind_call, construct, flag
-from phylojunction.interface.cmdbox.expressions import binding_names, comprehension
+from phylojunction.interface.cmdbox.expressions import arithmetic, binding_names, comprehension
 
 
 # Empty literals have no inferable element type in Rev. Typed empty draws are handled
@@ -148,8 +148,18 @@ def execution_to_rev(results, root, mcmc_chain_length=1000, prefix=''):
             if isinstance(expression, ast.UnaryOp):
                 item = render(expression.operand, owner, local)
                 negative = isinstance(expression.op, ast.USub)
-                return _RevExpression(('-' if negative else '+') + item.code,
-                                      -item.value if negative else item.value, item.fixed)
+                return _RevExpression(('-' if negative else '') + f'({item.code})',
+                                      arithmetic(expression.op, item.value), item.fixed)
+            if isinstance(expression, ast.BinOp):
+                left = render(expression.left, owner, local)
+                right = render(expression.right, owner, local)
+                symbol = {ast.Add: '+', ast.Sub: '-', ast.Mult: '*', ast.Div: '/'}[type(expression.op)]
+                # Force real division even for integer operands; parentheses preserve the
+                # PJ syntax tree without depending on Rev's operator precedence.
+                numerator = f'(1.0 * ({left.code}))' if symbol == '/' else left.code
+                code = f'({numerator} {symbol} {right.code})'
+                return _RevExpression(code, arithmetic(expression.op, left.value, right.value),
+                                      left.fixed and right.fixed)
             if isinstance(expression, ast.Subscript):
                 vector = render(expression.value, owner, local)
                 index = render(expression.slice, owner, local)

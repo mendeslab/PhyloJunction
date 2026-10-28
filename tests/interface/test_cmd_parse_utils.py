@@ -54,6 +54,41 @@ class TestCommandParseUtils(unittest.TestCase):
         self.assertEqual({kw.arg: ast.literal_eval(kw.value) for kw in call.keywords},
                          {'name': 'a b', 'value': [1, 2]})
 
+    # Arithmetic must preserve numeric semantics and dependency bindings across replicates.
+    # Constructor tests cannot check operators; retain while PJ interprets expressions.
+    def test_scalar_arithmetic(self):
+        cases = {'2 + 3 * 4': 14, '(2 + 3) * 4': 20, '8 - 3 - 2': 3,
+                 '8 / 4 / 2': 1.0, '3 / 2': 1.5, '-2 + +3': 1,
+                 '-(2 + 3)': -5, '--2': 2}
+        for expression, expected in cases.items():
+            with self.subTest(expression=expression):
+                value = compile_model('x := ' + expression).execute().value('x')
+                self.assertEqual(value, expected)
+                self.assertIs(type(value), type(expected))
+        source = ('x ~ normal(0,1)\ny := -(x + 2) / +2\n'
+                  'd := normal(-x, 1 + 2)\nz := [v * 2 for v in [x,y]]')
+        result = compile_model(source).execute(3,42)
+        self.assertEqual(result.model.name_node_dict['y'].bindings, {'x': 0})
+        for i in range(3):
+            x, y = result.value('x', i), result.value('y', i)
+            self.assertEqual(y, -(x + 2) / 2)
+            self.assertEqual(result.value('d', i).mean, -x)
+            self.assertEqual(result.value('z', i), [x * 2, y * 2])
+        for expression in ('true + 1', '-false', '[1] * 2', '[1] + [2]',
+                           '"a" + "b"', '-[1]', 'normal(0,1) / 2'):
+            with self.subTest(expression=expression):
+                with self.assertRaises(ScriptEvaluationError) as caught:
+                    compile_model('x := ' + expression).execute()
+                self.assertIsInstance(caught.exception.__cause__, TypeError)
+        for expression in ('2 ** 3', '2 ^ 3', '3 // 2', '3 % 2', '~2'):
+            with self.assertRaises(ValueError):
+                expressions.parse_expression(expression)
+        with self.assertRaises(ScriptEvaluationError) as caught:
+            compile_model('x <- 0\ny := 1 / x', 'arithmetic.pj').execute()
+        self.assertIsInstance(caught.exception.__cause__, ZeroDivisionError)
+        self.assertEqual((caught.exception.line_number, caught.exception.variable,
+                          caught.exception.execution), (2, 'y', 1))
+
     # Shared shape dispatch must distinguish list arguments from parameter mapping.
     # Scalar constructor tests cannot protect this boundary; retain while mapping is implicit.
     def test_vectorized_calls(self):

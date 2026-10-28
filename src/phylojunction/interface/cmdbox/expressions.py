@@ -4,7 +4,22 @@ Only the explicitly supported nodes are interpreted; Python code is never evalua
 Variable names in arguments are dependencies, whereas constructor names are dispatch keys.
 """
 import ast
+import operator
 import re
+
+
+_BINARY_OPERATORS = {ast.Add: operator.add, ast.Sub: operator.sub,
+                     ast.Mult: operator.mul, ast.Div: operator.truediv}
+_UNARY_OPERATORS = {ast.UAdd: operator.pos, ast.USub: operator.neg}
+
+
+# Apply only scalar numeric operations, sharing the same rules with symbolic export.
+# Exact type checks exclude booleans and Python sequence concatenation/repetition.
+def arithmetic(operation, *operands):
+    if any(type(value) not in (int, float) for value in operands):
+        raise TypeError("Arithmetic requires numeric scalar operands (not booleans).")
+    operators = _UNARY_OPERATORS if len(operands) == 1 else _BINARY_OPERATORS
+    return operators[type(operation)](*operands)
 
 
 # Preserve the language's assignments while delegating nested expression syntax to Python's AST.
@@ -65,9 +80,13 @@ def validate(expression):
         validate(generator.iter)
         validate(expression.elt)
         return
-    if isinstance(expression, ast.UnaryOp) and isinstance(expression.op, (ast.UAdd, ast.USub)):
-        if isinstance(expression.operand, ast.Constant) and type(expression.operand.value) in (int, float):
-            return
+    if isinstance(expression, ast.UnaryOp) and type(expression.op) in _UNARY_OPERATORS:
+        validate(expression.operand)
+        return
+    if isinstance(expression, ast.BinOp) and type(expression.op) in _BINARY_OPERATORS:
+        validate(expression.left)
+        validate(expression.right)
+        return
     if isinstance(expression, ast.Subscript):
         validate(expression.value)
         validate(expression.slice)
@@ -82,7 +101,7 @@ def validate(expression):
         for argument in expression.args:
             validate(argument)
         return
-    raise ValueError('Expected a literal, variable, vector, indexing expression, or named constructor.')
+    raise ValueError('Expected a literal, variable, vector, arithmetic or indexing expression, or named constructor.')
 
 
 # Dependency discovery excludes call targets and includes every collection/index expression.
@@ -136,8 +155,11 @@ def evaluate(expression, lookup, construct):
         value_type(result)
         return result
     if isinstance(expression, ast.UnaryOp):
-        value = expression.operand.value
-        return -value if isinstance(expression.op, ast.USub) else value
+        return arithmetic(expression.op, evaluate(expression.operand, lookup, construct))
+    if isinstance(expression, ast.BinOp):
+        left = evaluate(expression.left, lookup, construct)
+        right = evaluate(expression.right, lookup, construct)
+        return arithmetic(expression.op, left, right)
     if isinstance(expression, ast.Subscript):
         vector = evaluate(expression.value, lookup, construct)
         index = evaluate(expression.slice, lookup, construct)
