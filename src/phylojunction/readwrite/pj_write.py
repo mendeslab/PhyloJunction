@@ -901,11 +901,13 @@ def prep_data_df(
                         # Keep one row per complete-tree node, including internal and extinct nodes.
                         for nd in tree.tree.preorder_node_iter():
                             rows.append((sample_idx, repl_idx, nd.label,
-                                         getattr(nd, tree.trait.name), nd.alive, nd.sampled))
+                                         getattr(nd, tree.trait.name), nd.alive, nd.sampled,
+                                         getattr(nd, "observed_trait", None)))
                             if nd.is_sa:
                                 fossil_rows.append((sample_idx, repl_idx, nd.label,
                                                     tree.node_heights_dict[nd.label], tree.node_ages_dict[nd.label],
-                                                    getattr(nd, tree.trait.name)))
+                                                    getattr(nd, tree.trait.name),
+                                                    getattr(nd, "observed_trait", None)))
                     else:
                         # State and NEXUS serializers use this tree's state space, not that
                         # of the first tree. Both living and ancestral state files are retained.
@@ -919,10 +921,11 @@ def prep_data_df(
 
                 if have_continuous:
                     # The existing filename-to-text table also carries continuous trait TSVs.
-                    fossils = pd.DataFrame(fossil_rows, columns=["sample", "replicate", "node", "time", "age", "trait"])
+                    fossils = pd.DataFrame(fossil_rows, columns=["sample", "replicate", "node", "time", "age",
+                                                              "trait", "observed_trait"])
                     tree_living_nd_states_str_dict[rv_name + "_fossils.tsv"] = fossils.to_csv(sep="\t", index=False)
                     traits = pd.DataFrame(rows, columns=["sample", "replicate", "node", "trait",
-                                                        "alive", "sampled"])
+                                                        "alive", "sampled", "observed_trait"])
                     tree_living_nd_states_str_dict[rv_name + "_traits.tsv"] = traits.to_csv(sep="\t", index=False)
 
     # debugging

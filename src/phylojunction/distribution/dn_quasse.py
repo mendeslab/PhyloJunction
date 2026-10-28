@@ -51,7 +51,8 @@ class DnQuaSSE(DistrForSampling):
                  runtime_limit=300, max_steps=1000000, max_alive=100000,
                  sampling_prob=1.0, cond_surv=True, cond_spn=False, cond_obs_both_sides=False,
                  min_rec_taxa=None, max_rec_taxa=None, max_n_attempts=200, dt_max=None, max_nodes=None,
-                 block_duration=None, bridge_error=None, fossil_rate=None, start_distribution=None):
+                 block_duration=None, bridge_error=None, fossil_rate=None, start_distribution=None,
+                 observation_sd=0.0):
         if start_distribution is not None:
             from phylojunction.distribution.dn_parametric import (
                 DnNormal, DnLogNormal, DnUnif, DnExponential, DnGamma, DnBeta, DnCauchy,
@@ -96,6 +97,7 @@ class DnQuaSSE(DistrForSampling):
         self.fossil_rate = ConstantRate(0) if fossil_rate is None else fossil_rate
         self.start_trait, self.drift, self.diffusion = start_trait, drift, diffusion
         self.stop_value = stop_value
+        self.observation_sd = observation_sd
         self.sampling_prob = sampling_prob
         self.cond_surv, self.cond_spn = cond_surv, cond_spn
         self.cond_obs_both_sides = cond_obs_both_sides
@@ -114,7 +116,7 @@ class DnQuaSSE(DistrForSampling):
     # One parameter set is shared by IID tree draws and conditioning retries.
     def _validate_parameters(self):
         for name in ("birth_rate", "death_rate", "fossil_rate", "start_trait", "drift", "diffusion",
-                     "stop_value", "sampling_prob"):
+                     "stop_value", "sampling_prob", "observation_sd"):
             raw = getattr(self, name)
             if isinstance(raw, (list, tuple, np.ndarray)):
                 raise ValueError(f"{name} must be scalar; use indexing to select a vector element.")
@@ -126,7 +128,7 @@ class DnQuaSSE(DistrForSampling):
                 values = [float(v) for v in values]
                 if not np.all(np.isfinite(values)):
                     raise ValueError(f"{name} must be finite.")
-                if name in ("diffusion", "stop_value") and min(values) < 0:
+                if name in ("diffusion", "stop_value", "observation_sd") and min(values) < 0:
                     raise ValueError(f"{name} must be nonnegative.")
                 if name == "sampling_prob":
                     if min(values) < 0 or max(values) > 1:
@@ -476,6 +478,20 @@ class DnQuaSSE(DistrForSampling):
                     start(daughter, elapsed)
         return tree, float(target if self.stop == "age" else elapsed)
 
+    # Draw independent measurements only after the latent history and sampling are complete.
+    # Store them once on observation nodes; zero error preserves the existing random-number stream.
+    def _record_observations(self, tree):
+        for node in tree.leaf_node_iter():
+            if not (node.is_sa or (node.alive and node.sampled)):
+                continue
+            value = node.trait
+            if self.observation_sd > 0:
+                value += self.observation_sd * np.random.normal()
+            if not math.isfinite(value):
+                raise ec.GenerateFailError(self.DN_NAME, "Nonfinite observed trait.")
+            node.observed_trait = float(value)
+            node.annotations.add_bound_attribute("observed_trait")
+
     # Dispatch without changing downstream tree/observation contracts or default RNG order.
     # Numerical retries discard only the current tree; budget, work, RNG and deadline persist.
     def simulate(self, deadline=None, *, _block_indices=None):
@@ -513,6 +529,7 @@ class DnQuaSSE(DistrForSampling):
             for node in tree:
                 node.annotations.add_bound_attribute("is_sa")
                 node.annotations.add_bound_attribute("is_sa_dummy_parent")
+        self._record_observations(tree)
         return AnnotatedTree(tree, ContinuousTrait(), start_at_origin=True, max_age=horizon,
                              condition_on_obs_both_sides_root=self.cond_obs_both_sides,
                              tree_died=not any(nd.alive for nd in tree.leaf_node_iter()),

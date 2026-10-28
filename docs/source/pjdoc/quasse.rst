@@ -89,8 +89,8 @@ Each tree starts with one lineage at the origin. Daughters inherit the parent's 
 then evolve independently. Optional ``fossil_rate`` supplies a rate object for non-destructive
 sampling along each lineage, in observations per lineage per unit time. It defaults to zero
 (``None`` in Python) and accepts every rate family.
-Fossils record the exact trait at sampling; they do not remove the lineage or reset its trait.
-Sampling at death, removal probabilities and measurement error are not supported.
+Fossils retain the latent trait at sampling; they do not remove the lineage or reset its trait.
+Sampling at death and removal probabilities are not supported.
 
 Rate-constructor and distribution parameters are scalar within a draw. Use ``iid`` to draw
 several trees with the same parameters and model replicates to redraw the whole model.
@@ -101,6 +101,26 @@ the tree sampler for each biological attempt; a numerical restart retains that s
 For example, ``start_distribution=normal(0, 1)`` passes a distribution object directly.
 For a heavy-tailed starting trait, use ``start_distribution=cauchy(0, 1)``; the second
 argument is a scale, not a standard deviation.
+
+Optional observation error
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``observation_sd`` is the standard deviation of independent Gaussian measurement error,
+shared by all sampled living tips and fossil observations, including sampled ancestors.
+It must be a finite nonnegative scalar and defaults to zero. For latent trait x, the
+observation is y = x + observation_sd × Z, with independent standard Normal Z.
+This standard deviation is separate from the Brownian diffusion variance rate.
+
+Observation values are drawn after the latent history and sampling are complete. They are
+stored as ``observed_trait``, separately from ``trait``, and never affect evolution, rates,
+or acceptance conditions. Biological rejection discards the whole result, including its
+observations. Reconstruction and export reuse the stored values. With zero error, observations
+equal the latent traits and consume no additional random draws. Plots continue to show latent traits.
+
+To match SSE's ``NormalCenteredAtObservedLinkFn``, use the sampled nodes' exported
+``observed_trait`` values as ``quTraits`` and the same positive ``observation_sd`` as
+``sdNormalQuTrValue``. The zero-error simulation option does not provide exact-observation
+support in SSE's Gaussian observation model.
 
 Diversitree method and stopping
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -314,12 +334,14 @@ Plotting uses no randomness. An empty reconstructed tree displays ``No sampled t
 
 Data output includes complete/reconstructed Newick tables, annotated variants, generic tree
 summaries, and ``<node>_traits.tsv``. The trait table has columns ``@replicate``, ``@element``, ``node``,
-``trait``, ``alive``, and ``sampled``; replicate indices and element-path components start at one.
-It includes internal
-nodes and the origin as well as living and extinct tips. Discrete state tables and discrete
+``trait``, ``alive``, ``sampled``, and ``observed_trait``. Replicate indices and element-path
+components start at one. It includes internal nodes and the origin as well as living and extinct tips. ``trait`` remains the latent value;
+``observed_trait`` is blank for nodes without stored observations. Annotated Newick also
+records ``observed_trait`` on observation nodes. Discrete state tables and discrete
 NEXUS character matrices are not generated for these trees.
 
-``<node>_fossils.tsv`` contains ``@replicate``, ``@element``, ``node``, ``time``, ``age``, ``trait``.
+``<node>_fossils.tsv`` contains ``@replicate``, ``@element``, ``node``, ``time``, ``age``, ``trait``,
+and ``observed_trait``.
 Replicate indices and element-path components are one-based.
 ``time`` is forward from the origin, and ``age`` is relative to the
 simulation horizon. There is one row per fossil in the complete tree, or a header-only table
