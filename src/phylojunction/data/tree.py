@@ -1515,19 +1515,10 @@ class AnnotatedTree(dp.Tree):
             return self.tree_reconstructed
         rec = copy.deepcopy(self.tree)
         rec.filter_leaf_nodes(lambda nd: nd.is_sa or (nd.alive and nd.sampled), suppress_unifurcations=True)
-        if observed == 1:
-            # Keep the origin-to-tip edge for a singleton; a lone tip would lose its duration.
-            tip = rec.seed_node
-            tip.edge_length = self.node_heights_dict[tip.label]
-            origin = dp.Node(label="origin", edge_length=0.0)
-            setattr(origin, self.trait.name, getattr(self.tree.seed_node, self.trait.name))
-            origin.alive = origin.sampled = False
-            origin.is_sa = origin.is_sa_dummy_parent = origin.is_sa_lineage = False
-            origin.annotations.add_bound_attribute(self.trait.name)
-            origin.add_child(tip)
-            rec.seed_node = origin
-        else:
-            rec.seed_node.edge_length = 0.0
+        # A single observation is its own reconstructed root; its age stays in the metadata.
+        # For a fossil, plain Newick loses that age: BEAST places its youngest tip at the
+        # present. Exporting node ages and using them on import could preserve the time origin.
+        rec.seed_node.edge_length = None if observed == 1 else 0.0
         # Pruning can replace the continuing child of an SA marker. Refresh both true
         # and false flags from the final topology before any plotting preparation.
         for nd in rec:

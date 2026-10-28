@@ -1681,7 +1681,7 @@ class TestRetainedAncestry(unittest.TestCase):
         legacy = pjtr.AnnotatedTree(raw, DiscreteTrait(states=1), max_age=3., tree_died=True)
         no_horizon = pjtr.AnnotatedTree(other_raw, DiscreteTrait(states=1), tree_died=True)
         cases = [(living, False, 3., 0.), (living, True, 2., 0.),
-                 (fossil, False, 3., 0.), (fossil, True, 3., 0.),
+                 (fossil, False, 3., 0.), (fossil, True, 2., 0.),
                  (extinct, False, 3., 0.), (legacy, False, 3., -1.),
                  (no_horizon, False, 2., 0.)]
         ax = Figure().add_subplot(111)

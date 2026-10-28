@@ -161,7 +161,19 @@ class TestQuaSSE(unittest.TestCase):
         self.assertEqual([t.seed_age for t in trees], [0, 0, 2, 2])
         self.assertEqual([t.brosc_node.trait for t in trees], [0, 0, 4, 4])
         self.assertEqual([t.n_extant_sampled_terminal_nodes for t in trees], [1, 1, 0, 0])
-        self.assertEqual(trees[0].extract_reconstructed_tree().seed_node.child_nodes()[0].trait, 0)
+        self.assertEqual(trees[0].extract_reconstructed_tree().seed_node.trait, 0)
+        # A positive stem must remain in the complete tree, not become a reconstructed edge.
+        # This guards singleton export/summary semantics that multi-tip reconstruction cannot cover.
+        single = DnQuaSSE(ConstantRate(0), ConstantRate(0), 'age', 2, drift=1).draw()
+        rec = single.extract_reconstructed_tree()
+        self.assertTrue(rec.seed_node.is_leaf())
+        self.assertIsNone(rec.seed_node.edge_length)
+        self.assertEqual(rec.as_string(schema='newick', suppress_rooting=True).strip(), 'brosc;')
+        self.assertEqual(rec.seed_node.trait, 2)
+        self.assertEqual(single.origin_age, 2)
+        self.assertEqual(single.brosc_node.edge_length, 2)
+        self.assertEqual(single.rec_tr_node_ages_dict, {'brosc': 0})
+        self.assertEqual(single.get_stats_dict(reconstructed=True)['Root age'], 0)
         self.assertEqual(str(trees[-1].extract_reconstructed_tree()), ';')
         self.assertIn(dag.model.name_node_dict['b'], dag.model.name_node_dict['t'].parent_nd_list)
         dag = dag.append('local ~ iid(2,quasse(birth_rate=b,death_rate=b,stop="age",'
@@ -479,6 +491,12 @@ class TestQuaSSE(unittest.TestCase):
                     self.assertEqual(len(fig.axes), 1)
                     self.assertIsNone(ax._pj_trait_colorbar)
                     np.testing.assert_allclose(ax.get_position().bounds, original)
+                    single = DnQuaSSE(zero, zero, 'age', 2, drift=1).draw()
+                    for use_age in (False, True):
+                        from phylojunction.data.tree import plot_ann_tree
+                        plot_ann_tree(single, ax, draw_reconstructed=True, use_age=use_age)
+                        fig.canvas.draw()
+                        self.assertEqual(single.get_stats_dict(reconstructed=True)['Extant taxon count'], 1)
                     for name in ('numbers', 'rate'):
                         tree.plot_node(ax)
                         plot_values(ax, dag.value(name) if name == 'numbers' else [dag.value(name)])
@@ -533,6 +551,7 @@ class TestQuaSSE(unittest.TestCase):
         output = dict(zip(filenames, contents))
         self.assertIn('t_annotated_complete.tsv', output)
         self.assertIn('t_reconstructed.tsv', output)
+        self.assertIn('brosc;', output['t_reconstructed.tsv'].to_string(index=False))
         self.assertFalse(any(name.endswith('.nex') or '_anc_states' in name for name in filenames))
         traits = pd.read_csv(io.StringIO(output['t_traits.tsv']), sep='\t')
         self.assertEqual(list(traits.columns), ['sample', 'replicate', 'node', 'trait', 'alive', 'sampled'])
@@ -601,7 +620,9 @@ class TestQuaSSE(unittest.TestCase):
                 self.assertEqual(len(rec.leaf_nodes()), observed)
                 self.assertAlmostEqual(tree.rec_tr_node_ages_dict['sa1'], 1.5)
                 if observed == 1:
-                    self.assertEqual(tree.rec_tr_root_age, 2.)
+                    self.assertEqual(tree.rec_tr_root_age, 1.5)
+                    self.assertTrue(rec.seed_node.is_leaf())
+                    self.assertIsNone(rec.seed_node.edge_length)
                 for along in (False, True):
                     for age in (False, True):
                         fig, ax = plt.subplots()
