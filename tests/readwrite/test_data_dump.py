@@ -38,6 +38,36 @@ class TestDataDump(unittest.TestCase):
                                 if path.is_file()))
         self.assertEqual(result.value('out')[0].rec_str(), before)
 
+    # 'tree_files' iterates every named node uniformly (no stochastic-vs-deterministic
+    # distinction), so a drawn tree reached through a ':='-defined distribution dumps
+    # exactly like any other -- unlike the legacy pj_write.py path this replaced, which
+    # once gated tree export on an explicit stochastic-node check.
+    def test_apply_to_complete_rate_survives_export(self):
+        source = (
+            't <- read_tree(string="((A[&alive=true]:1,'
+            'X[&alive=false,sampled=false]:.2):1,B[&alive=true]:2);", '
+            'is_complete=true)[1]\n'
+            'nrec <- n_rec_branches(t)\n'
+            'ncomp <- n_complete_only_branches(t)\n'
+            'rates ~ iid(nrec, lognormal(0, 0.1))\n'
+            'rates_c ~ iid(ncomp, lognormal(0, 0.1))\n'
+            'd := gamma_spike_clock(t, "rate", .1, .05, 2, rates, '
+            'apply_to_complete=true, br_specific_rel_rate_complete=rates_c)\n'
+            'out ~ iid(1, d)\n')
+        result = compile_model(source).execute(runs=1, random_seed=2)
+        with tempfile.TemporaryDirectory() as directory:
+            write_results(directory, result)
+            complete_text = (
+                Path(directory) / 'out_annotated_complete.tsv').read_text()
+            rec_text = (
+                Path(directory) / 'out_annotated_reconstructed.tsv').read_text()
+        # the extinct, complete-only branch ('X') only ever appears in
+        # the complete-tree export, and must carry its own rate there
+        self.assertIn('X', complete_text)
+        self.assertIn('rate=', complete_text)
+        self.assertNotIn('X', rec_text)
+        self.assertIn('rate=', rec_text)
+
     # Legacy dataframe checks do not cover replicate/vector boundaries or MCON nesting.
     # Retain these contracts while both tabular and nested replicate exports are supported.
     def test_execution_formats(self):
@@ -66,6 +96,12 @@ class TestDataDump(unittest.TestCase):
         self.assertEqual(summaries([[1, 100]]), [])
         self.assertEqual([r['mean'] for r in summaries([[1, 100], [3, 200]])], [2, 150])
         self.assertEqual(summaries([[1], [2, 3]]), [])
+        # every replicate's vector is empty (e.g. a tree with zero
+        # complete-only branches) -- must not crash statistics.mean/
+        # stdev; 'elements([])' yields the empty list itself as one
+        # opaque value, which is not a real number, so no stats row
+        # is produced for it
+        self.assertEqual(summaries([[], [], []]), [])
 
     # Ordinary format checks cannot detect loss at output dictionary insertion. Collisions
     # must fail before touching files, regardless of which pair of producers shares a name.
