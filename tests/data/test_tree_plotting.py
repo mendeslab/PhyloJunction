@@ -1784,3 +1784,106 @@ class TestRetainedAncestry(unittest.TestCase):
         self.assertEqual(len(segments), 2)
         self.assertTrue(all(c.get_alpha() == .25 for c in segments))
         self.assertFalse((segments[0].get_colors() == segments[1].get_colors()).all())
+
+
+class TestRateLayoutSoleSurvivingSA(unittest.TestCase):
+
+    # Regression check for a bug fixed on an earlier branch's version of this
+    # drawing code (there called '_draw_continuous_attr_tree', since replaced
+    # by plot_ann_tree's shared, rate-layout-aware '_draw_clade'): every
+    # direct ancestor used to be drawn as a dot at its dummy parent's own
+    # position, regardless of the direct ancestor's own edge length -- correct
+    # when that direct ancestor is an ordinary, zero-length one sitting beside
+    # a still-living lineage sibling, but wrong when that sibling goes fully
+    # extinct/unsampled: reconstruction then collapses their shared dummy
+    # parent away, and the direct ancestor inherits the dummy parent's own
+    # (non-zero) edge length, becoming the sole, real survivor of that side.
+    # Drawn as a dot instead of an ordinary branch, that survivor was excluded
+    # from its true parent's children entirely, leaving its sibling -- and,
+    # in a larger tree, that sibling's whole clade -- with no vertical
+    # connector to the rest of the tree at all. Verified here against the
+    # current drawing code (not assumed fixed just because the bug lived in
+    # a differently-named function before): 'dummy.is_sa_dummy_parent' is
+    # only treated as a dot source when 'child.edge_length <= epsilon', which
+    # this fixture's 'sa_leaf' (edge length 1.0, inherited from 'dummy') does
+    # not satisfy.
+    def test_sole_surviving_sa_draws_as_connected_branch(self):
+        from matplotlib.figure import Figure
+
+        def mk(label, el, alive, sampled, is_sa=False,
+               is_sa_dummy_parent=False, is_sa_lineage=False):
+            nd = Node(taxon=Taxon(label=label), label=label, edge_length=el)
+            nd.state = 0
+            nd.alive = alive
+            nd.sampled = sampled
+            nd.is_sa = is_sa
+            nd.is_sa_dummy_parent = is_sa_dummy_parent
+            nd.is_sa_lineage = is_sa_lineage
+            return nd
+
+        origin_node = mk("origin", 0.0, False, False)
+        root_node = mk("root", 1.0, False, False)
+        origin_node.add_child(root_node)
+        tip_a = mk("tipa", 3.0, True, True)
+        dummy = mk("dummy", 1.0, False, False, is_sa_dummy_parent=True)
+        root_node.add_child(tip_a)
+        root_node.add_child(dummy)
+        sa_leaf = mk("sa_leaf", 0.0, False, True, is_sa=True)
+        dead_lineage = mk("dead_lineage", 0.5, False, False)
+        dummy.add_child(sa_leaf)
+        dummy.add_child(dead_lineage)
+
+        all_nodes = (
+            origin_node, root_node, tip_a, dummy, sa_leaf, dead_lineage)
+        tr_complete = Tree(seed_node=origin_node)
+        for nd in all_nodes:
+            tr_complete.taxon_namespace.add_taxon(nd.taxon)
+
+        ann_tr = pjtr.AnnotatedTree(
+            tr_complete, DiscreteTrait(1), start_at_origin=True,
+            max_age=4.0, epsilon=1e-12)
+        tr_rec = ann_tr.extract_reconstructed_tree(
+            plotting_overhead=False, require_obs_both_sides=False)
+
+        # sanity check on the fixture itself: 'dummy' must have been
+        # collapsed away, with 'sa_leaf' inheriting its edge length
+        # and becoming 'root's direct, non-zero-length child
+        self.assertIsNone(tr_rec.find_node_with_label("dummy"))
+        rec_sa_leaf = tr_rec.find_node_with_label("sa_leaf")
+        self.assertEqual(rec_sa_leaf.parent_node.label, "root")
+        self.assertAlmostEqual(rec_sa_leaf.edge_length, 1.0, places=12)
+
+        # a rate-colored ('evolutionary distance') layout -- exactly
+        # where the old bug lived -- needs 'clock_model_attr_name'
+        # set, the same way 'DnGammaSpikeClock.draw()' sets it
+        for nd in tr_rec.preorder_node_iter():
+            nd.rate = 1.0
+            nd.annotations.add_bound_attribute("rate")
+        ann_tr.clock_model_attr_name = "rate"
+
+        fig = Figure()
+        ax = fig.add_subplot()
+        x_coords, y_coords = pjtr.plot_ann_tree(
+            ann_tr, ax, draw_reconstructed=True, distance_attr="rate")
+
+        # 'sa_leaf' gets its own row, distinct from 'root's
+        self.assertIn("sa_leaf", y_coords)
+        self.assertNotEqual(y_coords["sa_leaf"], y_coords["root"])
+
+        # no dot marker is drawn for it -- it is an ordinary branch
+        self.assertEqual(len(ax.lines), 0)
+
+        # a vertical connector spans exactly 'tipa' and 'sa_leaf's
+        # y-coordinates at 'root's own x -- the line that went
+        # missing before the fix, leaving 'sa_leaf' with no
+        # connection to the rest of the tree at all
+        connector_segments = [
+            seg
+            for coll in ax.collections
+            for seg in coll.get_segments()
+            if seg[0][0] == seg[1][0] == x_coords["root"]
+            and seg[0][1] != seg[1][1]]
+        self.assertEqual(len(connector_segments), 1)
+        connector_ys = sorted(connector_segments[0][:, 1])
+        self.assertEqual(
+            connector_ys, sorted([y_coords["tipa"], y_coords["sa_leaf"]]))
