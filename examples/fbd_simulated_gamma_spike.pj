@@ -1,0 +1,41 @@
+# FBD tree, simulated (speciation + extinction + ancestor sampling,
+# i.e. serial/fossil sampling through time) rather than read in from
+# Newick -- see 'examples/fbd.pj' for the simulation alone, and
+# 'examples/fbd_read_gamma_spike.pj' for the read-in-tree version of
+# this same clock-model pipeline. Run the complete model with
+# 'pjcli --runs 2' (or set Replicates in Settings).
+birth_rate <- 1.0
+death_rate <- 0.2
+fossil_rate <- 0.5
+det_birth_rate := sse_rate(name="lambda", value=birth_rate, states=[0,0,0], event="w_speciation")
+det_death_rate := sse_rate(name="mu", value=death_rate, states=[0], event="extinction")
+det_fossil_rate := sse_rate(name="psi", value=fossil_rate, states=[0], event="anc_sampling")
+stash := sse_stash(flat_rate_mat=[det_birth_rate, det_death_rate, det_fossil_rate], n_states=1)
+ori <- 3.0
+# 'min_rec_taxa'/'max_rec_taxa' reject-and-resimulate until the
+# reconstructed tree has between 5 and 15 extant, sampled tips -- a
+# plain age-stopped birth-death process can otherwise occasionally
+# produce a tree with very few (or very many) tips, depending on how
+# the simulation happens to play out
+trs ~ discrete_sse(stash=stash, start_state=0, stop="age", stop_value=ori, origin="true", cond_spn="true", cond_surv="true", min_rec_taxa=5, max_rec_taxa=15)
+
+# per-branch relaxed-clock rates for the reconstructed tree's own
+# branches, drawn independently of the clock model below; mean 1 in
+# real space (meanlog = -sdlog^2 / 2), sdlog=0.5 as in Douglas et al.
+# (2025)'s own empirical analyses ('clockSD')
+n_rec_br <- n_rec_branches(trs)
+br_specific_rel_rate ~ iid(n_rec_br, lognormal(-0.125, 0.5))
+
+# unlike a tree read in from Newick, a simulated tree has a real,
+# known complete topology behind it -- so it also has branches absent
+# from the reconstructed tree (going extinct, or surviving to the
+# present without being sampled), each needing its own, independently
+# drawn relative rate
+n_absent_br <- n_complete_only_branches(trs)
+br_specific_rel_rate_complete ~ iid(n_absent_br, lognormal(-0.125, 0.5))
+
+# Gamma-spike punctuated relaxed clock (Douglas et al. 2025), with
+# clock_rate/spike_mean/spike_shape as in their empirical analyses --
+# 'apply_to_complete="true"' additionally annotates the complete
+# tree's own branches, not just the reconstructed tree's
+phylo ~ gamma_spike_clock(trs, "mutation_rate", 0.001, 0.01, 2.0, br_specific_rel_rate, apply_to_complete="true", br_specific_rel_rate_complete=br_specific_rel_rate_complete)

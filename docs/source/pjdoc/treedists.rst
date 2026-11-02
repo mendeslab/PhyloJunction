@@ -190,7 +190,8 @@ Gamma-spike branch rates
 ------------------------
 
 ``gamma_spike_clock(tree, attr_name, clock_rate, spike_mean, spike_shape,
-br_specific_rel_rate, strict_clock_when_no_stubs=false)`` describes a distribution on a copy
+br_specific_rel_rate, strict_clock_when_no_stubs=false, apply_to_complete=false,
+br_specific_rel_rate_complete=none)`` describes a distribution on a copy
 of one tree with rates on its reconstructed edges. Draw with ``~``. The input's times,
 traits and stochastic maps are preserved. ``br_specific_rel_rate`` is a vector in the
 preorder used by ``n_rec_branches``; generate it separately with ``iid``.
@@ -203,19 +204,43 @@ All parameters must be finite; relative rates and spike_mean may be zero, wherea
 and spike_shape must be positive. The optional ``strict_clock_when_no_stubs`` forces stub-free
 edges to the constant clock_rate; it is a diagnostic option, not the usual statistical model.
 
+``apply_to_complete=true`` additionally annotates every branch of the *complete* tree, not
+just the reconstructed tree's -- this only has an effect on a simulated tree, since a tree
+read in from Newick has no complete topology behind it to annotate. Each reconstructed
+branch's own, already-drawn spike total is split across the complete-tree branches hidden
+along it (a Dirichlet draw, following the Gamma-to-Dirichlet connection: i.i.d. Gamma draws
+summing to a known total have their normalized shares distributed Dirichlet, independently
+of that total), while branches entirely absent from the reconstructed tree -- extinct
+lineages, or ones still alive today but never sampled -- each receive a fresh, independent
+draw instead. ``br_specific_rel_rate_complete`` supplies that fresh draw's relative rates,
+one per branch counted by ``n_complete_only_branches(tree)``, in the same preorder
+``n_complete_only_branches`` and ``complete_only_branch_nodes`` agree on; it is required
+when ``apply_to_complete=true`` and ignored otherwise.
+
+``n_rec_branches``/``n_complete_only_branches`` can both be zero for a given tree (e.g. an
+unusually small simulated replicate, or no extinct/unsampled lineages at all) -- an empty
+``br_specific_rel_rate``/``br_specific_rel_rate_complete`` vector is valid in that case, not
+an error.
+
 Displaying rates
 ----------------
 
 A tree with rate annotations initially displays the reconstructed tree in evolutionary-distance
 units (time × rate). Uncheck **Evolutionary distance** to use time units and enable the
 **Reconstructed** checkbox. Switching back to time restores its previous reconstruction choice.
-Rates are currently assigned only to reconstructed edges, so complete-tree distance plots are
-unavailable. The present-time reference line appears only in time views.
+The present-time reference line appears only in time views.
 
 GUI summaries describe the selected complete or reconstructed topology. Ages remain in time
 units in both views. Exported statistics and comparison/coverage calculations are independent
 of the display selection. Python plotting also accepts ``branch_rate_attr`` to color edges by
 a continuous rate attribute without replacing biological trait annotations.
+
+The complete tree can also be plotted in evolutionary-distance units from Python, provided
+``apply_to_complete=true`` was used -- call ``tree.plot_node(axes, evolutionary_distance=true,
+draw_reconstructed=false)`` directly. Without ``apply_to_complete``, the complete tree has no
+rates to plot against, and this raises rather than falling back to the reconstructed tree or
+producing an incomplete plot. The GUI itself currently only ever displays the reconstructed
+tree in evolutionary-distance units.
 
 Exporting stub counts
 ---------------------
@@ -249,13 +274,20 @@ once per history. These discrete annotations are retained when rates are added l
 Runnable examples
 -----------------
 
-The first example assigns rates to two FBD trees. The second retains every external history
-as a separate mapped tree before adding rates. Use ``pjcli --runs`` to repeat the whole model.
+The first example assigns rates to two FBD trees read in from Newick -- already
+reconstructed, so there is no complete-only branch to annotate. The second retains every
+external history as a separate mapped tree before adding rates. The third simulates (rather
+than reads in) an FBD tree, so it has a real complete topology behind it, and uses
+``apply_to_complete`` to also rate the branches absent from the reconstructed tree. Use
+``pjcli --runs`` to repeat the whole model.
 
 .. literalinclude:: ../../../examples/fbd_read_gamma_spike.pj
    :language: text
 
 .. literalinclude:: ../../../examples/sse_smap_gamma_spike_clock.pj
+   :language: text
+
+.. literalinclude:: ../../../examples/fbd_simulated_gamma_spike.pj
    :language: text
 
 The Gamma-spike model follows Douglas, Bouckaert, Harris, Carter, and Wills (2025),
