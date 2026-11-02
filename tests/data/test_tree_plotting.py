@@ -1887,3 +1887,92 @@ class TestRateLayoutSoleSurvivingSA(unittest.TestCase):
         connector_ys = sorted(connector_segments[0][:, 1])
         self.assertEqual(
             connector_ys, sorted([y_coords["tipa"], y_coords["sa_leaf"]]))
+
+
+class TestChainedDirectAncestorDots(unittest.TestCase):
+
+    # Regression check: '_draw_clade's SA-dot block used to gate on
+    # 'not nd.is_sa_dummy_parent and nd.is_sa_lineage', on the
+    # assumption that a node continuing one direct ancestor's lineage
+    # ('is_sa_lineage') could never itself also be the dummy parent of
+    # a *later*, chained direct ancestor ('is_sa_dummy_parent'). That
+    # assumption is false -- PhyloJunction's own simulator represents
+    # two 'anc_sampling' events in a row along the same lineage
+    # exactly this way (a single node playing both roles, its edge
+    # extended in place rather than a new node created for "nothing
+    # else happens here") -- so the old condition silently dropped
+    # the *earlier* direct ancestor's dot every time one was chained
+    # directly into another.
+    def test_earlier_chained_sa_dot_is_not_dropped(self):
+        def mk(label, el, alive, sampled, is_sa=False,
+               is_sa_dummy_parent=False, is_sa_lineage=False):
+            nd = Node(taxon=Taxon(label=label), label=label, edge_length=el)
+            nd.state = 0
+            nd.alive = alive
+            nd.sampled = sampled
+            nd.is_sa = is_sa
+            nd.is_sa_dummy_parent = is_sa_dummy_parent
+            nd.is_sa_lineage = is_sa_lineage
+            return nd
+
+        origin = mk("origin", 0.0, False, False)
+        dummy1 = mk("dummy1", 1.0, False, False, is_sa_dummy_parent=True)
+        origin.add_child(dummy1)
+        DA_1 = mk("DA_1", 0.0, False, True, is_sa=True)
+        # 'node_X' continues 'DA_1's lineage (is_sa_lineage) AND is
+        # itself the dummy parent of the next, later direct ancestor
+        # ('DA_2') -- the exact double role the old condition assumed
+        # could never happen
+        node_X = mk(
+            "node_X", 1.0, False, False, is_sa_lineage=True,
+            is_sa_dummy_parent=True)
+        dummy1.add_child(DA_1)
+        dummy1.add_child(node_X)
+        DA_2 = mk("DA_2", 0.0, False, True, is_sa=True)
+        root = mk("root", 1.0, False, False, is_sa_lineage=True)
+        node_X.add_child(DA_2)
+        node_X.add_child(root)
+        tip_a = mk("tipa", 2.0, True, True)
+        tip_b = mk("tipb", 2.0, True, True)
+        root.add_child(tip_a)
+        root.add_child(tip_b)
+
+        all_nodes = (
+            origin, dummy1, DA_1, node_X, DA_2, root, tip_a, tip_b)
+        tr_complete = Tree(seed_node=origin)
+        for nd in all_nodes:
+            tr_complete.taxon_namespace.add_taxon(nd.taxon)
+
+        ann_tr = pjtr.AnnotatedTree(
+            tr_complete, DiscreteTrait(1), start_at_origin=True,
+            max_age=4.0, epsilon=1e-12)
+        ann_tr.extract_reconstructed_tree(
+            plotting_overhead=False, require_obs_both_sides=False)
+
+        # a direct ancestor's dot is attached along the branch of
+        # whichever node continues its lineage -- 'DA_1' attaches at
+        # 'node_X's own position, 'DA_2' at 'root's
+        sa_lineage_dict = {
+            "node_X": [pjsa.SampledAncestor(
+                label="DA_1", lineage_node_label="node_X",
+                global_time=1.0, age=3.0, state=0)],
+            "root": [pjsa.SampledAncestor(
+                label="DA_2", lineage_node_label="root",
+                global_time=2.0, age=2.0, state=0)],
+        }
+        ann_tr.sa_lineage_dict = sa_lineage_dict
+        ann_tr.rec_tr_sa_lineage_dict = sa_lineage_dict
+
+        from matplotlib.figure import Figure
+        from matplotlib.backends.backend_agg import FigureCanvasAgg
+        figure = Figure(figsize=(8, 5))
+        FigureCanvasAgg(figure)
+        axes = figure.subplots()
+        pjtr.plot_ann_tree(
+            ann_tr, axes, draw_reconstructed=False, start_at_origin=True)
+        figure.canvas.draw()
+
+        dot_labels = {text.get_text().strip() for text in axes.texts}
+        self.assertIn("DA_2", dot_labels)
+        # this is the one that used to go missing
+        self.assertIn("DA_1", dot_labels)

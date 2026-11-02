@@ -3228,19 +3228,26 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
         #################################
 
         # SA nodes are plotted along the branches subtending nodes
-        # where '.is_sa_lineage' == True, which cannot also be
-        # dummy nodes
+        # where '.is_sa_lineage' == True. Such a node CAN also,
+        # itself, be the dummy parent of a *different*, later direct
+        # ancestor (a chain of direct ancestors along the same
+        # lineage, e.g. two 'anc_sampling' events in a row before the
+        # next real speciation/extinction event) -- 'is_sa_lineage'
+        # and 'is_sa_dummy_parent' are not mutually exclusive, so
+        # excluding dummy parents here (as a previous version of this
+        # check did) silently dropped every direct ancestor whose own
+        # lineage sibling happened to be such a node
         if not rate_layout and continuous_attr is None and sa_along_branches and \
-                (not nd.is_sa_dummy_parent and nd.is_sa_lineage):
+                nd.is_sa_lineage:
 
             sas: ty.List[pjsa.SampledAncestor] = []
             if isinstance(ann_tr.sa_lineage_dict, dict):
                 if draw_reconstructed:
-                    sas = ann_tr.rec_tr_sa_lineage_dict[nd_name]
+                    sas = ann_tr.rec_tr_sa_lineage_dict.get(nd_name, [])
 
                 # drawing complete tree
                 else:
-                    sas = ann_tr.sa_lineage_dict[nd_name]
+                    sas = ann_tr.sa_lineage_dict.get(nd_name, [])
 
             for sa in sas:
                 sa_color: str = "k"
