@@ -231,3 +231,220 @@ def populate_gamma_spike_mol_rates_on_rec_tr_branches(
         )
 
 
+def populate_gamma_spike_mol_rates_on_complete_tree_branches(
+        ann_tr: pjtr.AnnotatedTree,
+        clock_rate: float,
+        spike_mean: float,
+        spike_shape: float,
+        br_specific_rel_rates_complete: ty.List[float]) -> None:
+    """Populate molecular-rate attrs on complete-tree branches too.
+
+    'populate_gamma_spike_mol_rates_on_rec_tr_branches' (this module)
+    annotates the *reconstructed* tree only, treating every stub
+    (unsampled bifurcation) hidden along a reconstructed branch as a
+    single, lumped contribution. This function spreads that same
+    information out over the *complete* tree's own, finer-grained
+    branches, and also rates every branch that has no reconstructed
+    counterpart at all (one belonging to an extinct lineage, or to a
+    lineage still alive today but never sampled):
+
+    (i)  A reconstructed branch with no hidden stubs maps exactly
+         onto one complete-tree branch; that one keeps the
+         reconstructed branch's own, already-computed values,
+         unchanged.
+    (ii) A reconstructed branch with one or more hidden stubs maps
+         onto several complete-tree branches in a row (its
+         "backbone"). Each one keeps the reconstructed branch's own
+         'branch_raw_rate' (a rate is constant along the whole
+         branch, by this model's own definition, so there is nothing
+         to divide there), but the reconstructed branch's single,
+         already-drawn 'spike_effect' total is divided across them --
+         using a Dirichlet distribution, since a sum of 'n' i.i.d.
+         Gamma(alpha, theta) draws is, conditional on that sum, split
+         into proportions distributed exactly as Dirichlet(alpha,
+         ..., alpha) (with 'n' repeats of 'alpha'), independently of
+         the sum itself. This gives each backbone segment a share
+         that is statistically indistinguishable from one drawn
+         directly, rather than an arbitrary split that merely adds up
+         to the right total.
+    (iii) A branch with no reconstructed counterpart at all gets a
+          fresh, independent draw for both components: the gradual,
+          relaxed-clock component from 'br_specific_rel_rates_complete'
+          (externally supplied, exactly like 'br_specific_rel_rates' is
+          for reconstructed branches), and the spike component from
+          this same Gamma mechanism, with exactly one spike (or zero,
+          if the branch is an 'is_sa_lineage' one) -- a complete-tree
+          branch is, by construction, never itself subdivided by
+          further hidden stubs, so there is no "+1 baseline, plus one
+          per stub" sum to make here; it is just the ordinary single-
+          branch rule with zero stubs.
+
+    This function must be called after
+    'populate_gamma_spike_mol_rates_on_rec_tr_branches' has already
+    populated 'ann_tr.tree_reconstructed' -- it reads that tree's own
+    'branch_raw_rate', 'spike_effect', and 'n_stub' values rather than
+    recomputing them. Every node of 'ann_tr.tree' ends up with
+    'branch_raw_rate', 'spike_effect', and 'mol_rate' populated (set
+    to 'None' on the root and any zero-length branch, same as the
+    reconstructed-tree function does). This also leaves the stem
+    leading to the reconstructed tree's own seed node without a rate
+    -- that node's own label is present in the reconstructed tree
+    (it is not "absent" by this function's own definition), but the
+    reconstructed tree's seed node has no incoming edge of its own to
+    inherit a rate from either, so there is nothing to copy or split
+    there.
+
+    See that function's own docstring for every argument except
+    'br_specific_rel_rates_complete', which plays the same role as its
+    'br_specific_rel_rates', just for the branches absent from the
+    reconstructed tree -- it must have exactly
+    'ann_tr.n_complete_only_branches()' entries, one per branch, in
+    the same (preorder) order 'AnnotatedTree.complete_only_branch_nodes'
+    returns them in.
+
+    Args:
+        ann_tr (AnnotatedTree): Tree instance whose complete tree's
+            branches will be annotated, in place.
+        clock_rate (float): See
+            'populate_gamma_spike_mol_rates_on_rec_tr_branches'.
+        spike_mean (float): See
+            'populate_gamma_spike_mol_rates_on_rec_tr_branches'.
+        spike_shape (float): See
+            'populate_gamma_spike_mol_rates_on_rec_tr_branches'.
+        br_specific_rel_rates_complete (list of float): Pre-generated
+            per-branch relative rates for the branches absent from
+            the reconstructed tree. Must have exactly
+            'ann_tr.n_complete_only_branches()' entries.
+
+    Raises:
+        ValueError: Is raised if 'br_specific_rel_rates_complete' is
+            given with the wrong number of entries.
+    """
+
+    complete_only_nodes = ann_tr.complete_only_branch_nodes()
+
+    if len(br_specific_rel_rates_complete) != len(complete_only_nodes):
+        raise ValueError(
+            "'br_specific_rel_rates_complete' had " +
+            str(len(br_specific_rel_rates_complete)) +
+            " entries, but the complete tree has " +
+            str(len(complete_only_nodes)) +
+            " branches absent from the reconstructed tree -- they "
+            "must match.")
+
+    for nd in ann_tr.tree.preorder_node_iter():
+        nd.branch_raw_rate = None
+        nd.spike_effect = None
+        nd.mol_rate = None
+
+    # (iii) branches with no reconstructed counterpart at all
+    for idx, nd in enumerate(complete_only_nodes):
+        nd.branch_raw_rate = br_specific_rel_rates_complete[idx]
+
+        if nd.is_sa_lineage:
+            nd.spike_effect = 0.0
+
+        else:
+            nd.spike_effect = spike_mean * np.random.gamma(
+                shape=spike_shape, scale=1.0 / spike_shape)
+
+        nd.mol_rate = (
+            clock_rate * nd.branch_raw_rate
+            + nd.spike_effect / nd.edge_length)
+
+    # (i)/(ii) branches that do have a reconstructed counterpart
+    for rec_nd in ann_tr.tree_reconstructed.preorder_node_iter():
+        if not pjtr.is_real_branch(rec_nd, ann_tr.epsilon):
+            continue
+
+        complete_nd = ann_tr.tree.find_node_with_label(rec_nd.label)
+        complete_parent = ann_tr.tree.find_node_with_label(
+            rec_nd.parent_node.label)
+
+        # the hidden, stub-bearing nodes between 'complete_parent' and
+        # 'complete_nd', oldest first, mirroring the walk in
+        # 'AnnotatedTree.populate_n_stubs_on_branches_of_rec_tr' -- a
+        # dummy node (the parent of a sampled ancestor) counts here
+        # exactly like any other collapsed node; it gets no exemption
+        # (see that method's own docstring for why)
+        stub_segment_nodes = []
+        current_nd = complete_nd.parent_node
+
+        while current_nd != complete_parent:
+            stub_segment_nodes.append(current_nd)
+            current_nd = current_nd.parent_node
+
+        stub_segment_nodes.reverse()
+
+        # 'complete_nd' itself is the segment carrying the branch's
+        # own "+1 baseline" -- included last, unconditionally; see
+        # below for why it may end up with no Dirichlet share of its
+        # own despite being part of the backbone
+        backbone_segment_nodes = stub_segment_nodes + [complete_nd]
+
+        n_spikes = (
+            rec_nd.n_stub if rec_nd.is_sa_lineage else rec_nd.n_stub + 1)
+
+        # when 'rec_nd.is_sa_lineage', the "+1 baseline" is dropped,
+        # so only the 'n_stub' hidden segments (never 'complete_nd'
+        # itself, which sits last) are conceptually due a share of
+        # the spike total. A zero-length one among them (e.g. a
+        # sampled ancestor whose own dummy parent was collapsed into
+        # it, leaving it with no surviving sibling lineage) cannot
+        # itself carry a rate -- there is no time for one to apply
+        # over -- so it is dropped here, and the *real*-length
+        # segments alone share the whole total instead. This is not
+        # an approximation: the Dirichlet distribution's own
+        # aggregation property means the real segments' own
+        # proportions, conditional on summing to the whole total (as
+        # they must, since a zero-length segment can only ever
+        # contribute exactly 0), are still Dirichlet-distributed with
+        # one entry removed per zero-length segment dropped.
+        candidate_sharing_segments = backbone_segment_nodes[:n_spikes]
+        real_sharing_segments = [
+            seg_nd for seg_nd in candidate_sharing_segments
+            if pjtr.is_real_branch(seg_nd, ann_tr.epsilon)]
+
+        n_real = len(real_sharing_segments)
+
+        if n_real == 0:
+            shares: ty.List[float] = []
+
+        elif n_real == 1:
+            # a single segment needs no splitting -- it gets the
+            # reconstructed branch's own total, unchanged (this is
+            # also exactly the no-stub case, (i) above)
+            shares = [rec_nd.spike_effect]
+
+        else:
+            shares = (
+                np.random.dirichlet([spike_shape] * n_real)
+                * rec_nd.spike_effect
+            ).tolist()
+
+        for seg_nd, share in zip(real_sharing_segments, shares):
+            seg_nd.branch_raw_rate = rec_nd.branch_raw_rate
+            seg_nd.spike_effect = share
+            seg_nd.mol_rate = (
+                clock_rate * seg_nd.branch_raw_rate
+                + share / seg_nd.edge_length)
+
+        # any segment not among 'real_sharing_segments' -- whether
+        # beyond the first 'n_spikes' (only ever 'complete_nd'
+        # itself, and only when 'rec_nd.is_sa_lineage'), or a zero-
+        # length one dropped above -- still needs its own rate if it
+        # is itself a real branch (it carries no spike of its own);
+        # a zero-length one is left with no rate at all, same as
+        # 'is_real_branch' excludes it everywhere else in this module
+        for seg_nd in backbone_segment_nodes:
+            if seg_nd in real_sharing_segments:
+                continue
+
+            if not pjtr.is_real_branch(seg_nd, ann_tr.epsilon):
+                continue
+
+            seg_nd.branch_raw_rate = rec_nd.branch_raw_rate
+            seg_nd.spike_effect = 0.0
+            seg_nd.mol_rate = clock_rate * seg_nd.branch_raw_rate
+
+

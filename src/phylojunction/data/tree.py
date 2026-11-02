@@ -2024,6 +2024,67 @@ class AnnotatedTree(dp.Tree):
             1 for nd in self.tree_reconstructed.preorder_node_iter()
             if is_real_branch(nd, self.epsilon))
 
+    def n_complete_only_branches(self) -> int:
+        """Return the number of real branches found only in the complete tree.
+
+        A branch of the complete tree counts here if it is real (see
+        'is_real_branch', module-level) and neither it nor any of its
+        descendants are present in the reconstructed tree. This
+        covers both ways a lineage can be missing from the
+        reconstructed tree: it went extinct, or it is still alive
+        today but was never sampled. A branch whose own descendants
+        include at least one sampled tip or direct ancestor is not
+        counted here, even if the branch itself was pruned away
+        during reconstruction (its length ends up merged into a
+        longer reconstructed branch instead) -- see
+        'populate_n_stubs_on_branches_of_rec_tr' for how that case is
+        tracked.
+
+        Returns:
+            (int): Number of real branches present only in the
+                complete tree.
+        """
+
+        return len(self.complete_only_branch_nodes())
+
+    def complete_only_branch_nodes(self) -> ty.List[dp.Node]:
+        """Return the complete-only real branches themselves, as nodes.
+
+        Same set of branches as 'n_complete_only_branches' counts
+        (see there for exactly which ones that is), but returning the
+        'self.tree' node instances themselves, in preorder, rather
+        than just how many there are -- for callers (e.g., a clock
+        model) that need to populate a per-branch attribute on each
+        one, in the same order a 'lognormal(n_nr_from=...)' node fed
+        by 'n_complete_only_branches' produces its own values in.
+
+        Returns:
+            (list of dendropy.Node): The complete-only real-branch
+                nodes themselves, in preorder.
+        """
+
+        if not self.tree_reconstructed:
+            self.extract_reconstructed_tree(plotting_overhead=False)
+
+        rec_tr_labels = set(
+            nd.label for nd in self.tree_reconstructed.preorder_node_iter())
+
+        # bottom-up: a complete-tree node "has a sampled descendant"
+        # if it is itself retained in the reconstructed tree, or if
+        # any of its children do
+        has_sampled_descendant: ty.Set[dp.Node] = set()
+
+        for nd in self.tree.postorder_node_iter():
+            if nd.label in rec_tr_labels or any(
+                    ch in has_sampled_descendant
+                    for ch in nd.child_node_iter()):
+                has_sampled_descendant.add(nd)
+
+        return [
+            nd for nd in self.tree.preorder_node_iter()
+            if is_real_branch(nd, self.epsilon)
+            and nd not in has_sampled_descendant]
+
     def populate_nd_attr_dict(self,
                               attrs_of_interest_list: ty.List[str],
                               attr_dict_added_separately_from_tree: bool = False) \

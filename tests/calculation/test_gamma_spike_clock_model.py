@@ -8,6 +8,7 @@ import phylojunction.readwrite.pj_read as pjr
 import phylojunction.data.tree as pjtr
 from phylojunction.data.trait import DiscreteTrait
 import phylojunction.calculation.gamma_spike_clock_model as pjgsc
+import phylojunction.distribution.dn_gamma_spike as pjgsc_dn
 
 
 class TestGammaSpike(unittest.TestCase):
@@ -51,6 +52,108 @@ class TestGammaSpike(unittest.TestCase):
             for node, rate in zip(first.tree_reconstructed.leaf_node_iter(), result.value('rates', replicate)[0]):
                 self.assertAlmostEqual(node.rate, 0.1 * rate)
             self.assertIn('rate=', first.rec_str())
+
+    def test_apply_to_complete_annotates_complete_only_branches(self):
+        """'apply_to_complete' also rates branches absent from the rec. tree.
+
+        'Y' is an extinct, unsampled tip -- present in the complete
+        tree but not the reconstructed one -- so it is the one
+        'n_complete_only_branches' edge here. With 'apply_to_complete
+        =true' and a matching 'br_specific_rel_rate_complete' vector,
+        it must get its own, independently-drawn rate on the complete
+        tree.
+
+        'J' (the internal node joining 'A' and 'Y') is unifurcation-
+        suppressed away from the reconstructed tree -- 'Y' going
+        extinct leaves 'A' as 'J's only surviving child, so 'A's own
+        reconstructed branch inherits 'J's hidden stub. On the
+        complete tree, 'J' and 'A' therefore split that one
+        reconstructed branch's already-drawn spike total between
+        them (a 2-segment backbone), rather than 'J' simply copying
+        'A's values outright. The seed node ('root') still gets no
+        rate at all, on either tree.
+        """
+
+        from phylojunction.interface.cmdbox.cmd_parse import compile_model
+        source = (
+            'trees <- read_tree(string="((A[&alive=true]:1,'
+            'Y[&alive=false,sampled=false]:0.2)J:1,'
+            'B[&alive=true]:1.2)root:0;", is_complete=true)\n'
+            'nrec <- n_rec_branches(trees[1])\n'
+            'ncomp <- n_complete_only_branches(trees[1])\n'
+            'rates ~ iid(nrec, lognormal(0, 0.1))\n'
+            'rates_c ~ iid(ncomp, lognormal(0, 0.1))\n'
+            'd := gamma_spike_clock(trees[1], "rate", 0.1, 0.05, 2, '
+            'rates, apply_to_complete=true, '
+            'br_specific_rel_rate_complete=rates_c)\n'
+            'out ~ iid(1, d)\n')
+        result = compile_model(source).execute(runs=1, random_seed=1)
+
+        self.assertEqual(result.value('nrec', 0), 2)
+        self.assertEqual(result.value('ncomp', 0), 1)
+
+        tr = result.value('out', 0)[0]
+        complete_root = tr.tree.find_node_with_label("root")
+        complete_Y = tr.tree.find_node_with_label("Y")
+        complete_A = tr.tree.find_node_with_label("A")
+        complete_J = tr.tree.find_node_with_label("J")
+        complete_B = tr.tree.find_node_with_label("B")
+
+        self.assertIsNone(complete_root.rate)
+        self.assertIsNotNone(complete_Y.rate)
+        self.assertIsNotNone(complete_A.rate)
+        self.assertIsNotNone(complete_J.rate)
+        self.assertIsNotNone(complete_B.rate)
+
+        # 'J' is unifurcation-suppressed away, so it never appears in
+        # the reconstructed tree under its own label -- 'A's own
+        # reconstructed branch absorbs it instead
+        rec_labels = {
+            nd.label for nd in tr.tree_reconstructed.preorder_node_iter()}
+        self.assertNotIn("J", rec_labels)
+
+        # 'J' and 'A' together must reconstitute exactly 'A's own
+        # reconstructed-branch spike total (Dirichlet-split across
+        # the 2-segment backbone, not independently drawn)
+        rec_A = tr.tree_reconstructed.find_node_with_label("A")
+        self.assertAlmostEqual(
+            complete_J.spike_effect + complete_A.spike_effect,
+            rec_A.spike_effect,
+            places=12)
+
+    def test_apply_to_complete_requires_matching_rate_vector(self):
+        """'apply_to_complete=True' needs a correctly-sized rate vector.
+
+        Missing 'br_specific_rel_rate_complete' entirely, or giving
+        it the wrong number of entries, must raise -- mirroring how
+        'br_specific_rel_rate' itself is validated against
+        'n_rec_branches()'.
+        """
+
+        tree = pjr.read_nwk_tree_str(
+            "((A[&alive=true]:1,Y[&alive=false,sampled=false]:0.2)"
+            "J:1,B[&alive=true]:1.2)root:0;",
+            in_file=False, is_complete=True)
+
+        valid = dict(
+            tree=tree, attr_name="rate", clock_rate=0.1, spike_mean=0.05,
+            spike_shape=2.0, br_specific_rel_rate=[1.0, 1.0],
+            apply_to_complete=True)
+
+        with self.assertRaises(ValueError):
+            pjgsc_dn.DnGammaSpikeClock(
+                **(valid | {"br_specific_rel_rate_complete": None}))
+
+        for wrong_length in ([], [1.0, 1.0]):
+            with self.assertRaises(ValueError):
+                pjgsc_dn.DnGammaSpikeClock(
+                    **(valid | {
+                        "br_specific_rel_rate_complete": wrong_length}))
+
+        # one entry is exactly right ('Y' is the only complete-only
+        # branch here) and must not raise
+        pjgsc_dn.DnGammaSpikeClock(
+            **(valid | {"br_specific_rel_rate_complete": [1.0]}))
 
     # QuaSSE reconstruction used to rebuild on each read, unlike discrete trees. Exercise
     # the shared consumer entry point so repeated display/export preparation retains rates.

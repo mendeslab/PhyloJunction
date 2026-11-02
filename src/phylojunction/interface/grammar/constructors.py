@@ -107,6 +107,17 @@ def n_rec_branches(tree):
     return tree.n_rec_branches()
 
 
+# Counts the complete tree's own branches absent from the reconstructed tree
+# (extinct or unsampled-but-living lineages) -- sizes 'apply_to_complete's
+# 'br_specific_rel_rate_complete' vector the same way 'n_rec_branches' sizes
+# 'br_specific_rel_rate'.
+def n_complete_only_branches(tree):
+    from phylojunction.data.tree import AnnotatedTree
+    if not isinstance(tree, AnnotatedTree):
+        raise TypeError("n_complete_only_branches requires a tree.")
+    return tree.n_complete_only_branches()
+
+
 # Shapes describe calling conventions; implementations retain concrete value validation.
 Scalar, Vector = "Scalar", "Vector"
 
@@ -114,8 +125,10 @@ CONSTRUCTORS = {
     'gamma_spike_clock': (DnGammaSpikeClock, [{
         'tree': Scalar, 'attr_name': Scalar, 'clock_rate': Scalar, 'spike_mean': Scalar,
         'spike_shape': Scalar, 'br_specific_rel_rate': Vector, 'strict_clock_when_no_stubs': Scalar,
+        'apply_to_complete': Scalar, 'br_specific_rel_rate_complete': Vector,
     }]),
     'n_rec_branches': (n_rec_branches, [{'tree': Scalar}]),
+    'n_complete_only_branches': (n_complete_only_branches, [{'tree': Scalar}]),
     'normal': (dn.DnNormal, [{
         'mean': Scalar, 'sd': Scalar,
     }]),

@@ -3,7 +3,9 @@ import copy
 from phylojunction.pgm.pgm import DistrForSampling
 from phylojunction.data.tree import AnnotatedTree
 from phylojunction.distribution.dn_parametric import finite, boolean
-from phylojunction.calculation.gamma_spike_clock_model import populate_gamma_spike_mol_rates_on_rec_tr_branches
+from phylojunction.calculation.gamma_spike_clock_model import (
+    populate_gamma_spike_mol_rates_on_rec_tr_branches,
+    populate_gamma_spike_mol_rates_on_complete_tree_branches)
 
 
 class DnGammaSpikeClock(DistrForSampling):
@@ -13,7 +15,8 @@ class DnGammaSpikeClock(DistrForSampling):
     # Validate without RNG calls or changes to the caller's tree. A private reconstruction
     # supplies the vector length and is copied for every draw, including draws through IID.
     def __init__(self, tree, attr_name, clock_rate, spike_mean, spike_shape,
-                 br_specific_rel_rate, strict_clock_when_no_stubs=False):
+                 br_specific_rel_rate, strict_clock_when_no_stubs=False,
+                 apply_to_complete=False, br_specific_rel_rate_complete=None):
         if not isinstance(tree, AnnotatedTree):
             raise TypeError('gamma_spike_clock requires one tree.')
         if not isinstance(attr_name, str) or not attr_name.isidentifier():
@@ -29,10 +32,27 @@ class DnGammaSpikeClock(DistrForSampling):
         if any(rate < 0 for rate in self.rates):
             raise ValueError('Relative rates must be nonnegative.')
         self.strict = boolean(strict_clock_when_no_stubs)
+        self.apply_to_complete = boolean(apply_to_complete)
         self.attr_name = attr_name
         self.tree = copy.deepcopy(tree)
         if len(self.rates) != self.tree.n_rec_branches():
             raise ValueError('Provide one relative rate per reconstructed edge (n_rec_branches).')
+
+        self.rates_complete = None
+        if self.apply_to_complete:
+            if br_specific_rel_rate_complete is None:
+                raise ValueError(
+                    'apply_to_complete is True, but br_specific_rel_rate_complete was not given.')
+            if not isinstance(br_specific_rel_rate_complete, list):
+                raise TypeError('br_specific_rel_rate_complete must be a vector.')
+            self.rates_complete = [
+                finite(rate, 'relative rate') for rate in br_specific_rel_rate_complete]
+            if any(rate < 0 for rate in self.rates_complete):
+                raise ValueError('Relative rates must be nonnegative.')
+            if len(self.rates_complete) != self.tree.n_complete_only_branches():
+                raise ValueError(
+                    'Provide one relative rate per complete-only edge '
+                    '(n_complete_only_branches).')
 
     # The stored tree is a template, never the returned value. Preserve times, traits and
     # maps; only the copy's reconstructed edges receive rates and serializable annotations.
@@ -43,5 +63,12 @@ class DnGammaSpikeClock(DistrForSampling):
         for node in result.tree_reconstructed:
             setattr(node, self.attr_name, node.mol_rate)
             node.annotations.add_bound_attribute(self.attr_name)
+        if self.apply_to_complete:
+            populate_gamma_spike_mol_rates_on_complete_tree_branches(
+                result, self.clock_rate, self.spike_mean, self.spike_shape,
+                self.rates_complete)
+            for node in result.tree:
+                setattr(node, self.attr_name, node.mol_rate)
+                node.annotations.add_bound_attribute(self.attr_name)
         result.clock_model_attr_name = self.attr_name
         return result
