@@ -78,6 +78,40 @@ class TestModelActions(unittest.TestCase):
         u.evolutionary_distance_check.setChecked(False)
         self.assertFalse(u.reconstructed_tree_check.isChecked())
 
+    # apply_to_complete puts real rates on the complete tree too, so unlike the
+    # ordinary case above, 'Reconstructed' must stay toggleable while distance
+    # units are on, instead of being forced and disabled.
+    def test_rate_views_toggle_with_apply_to_complete(self):
+        self.enter('t <- read_tree(string="((A[&alive=true]:1,X[&alive=false,sampled=false]:0.2):1,B[&alive=true]:2);", is_complete=true)[1]')
+        self.enter('nrec <- n_rec_branches(t)')
+        self.enter('ncomp <- n_complete_only_branches(t)')
+        self.enter('rates ~ iid(nrec, lognormal(0, 0.1))')
+        self.enter('rates_c ~ iid(ncomp, lognormal(0, 0.1))')
+        self.enter('out ~ gamma_spike_clock(t, "rate", .1, 0, 2, rates, apply_to_complete=true, br_specific_rel_rate_complete=rates_c)')
+        u = self.controls
+        u.node_list.setCurrentItem(u.node_list.findItems('out', Qt.MatchFlag.MatchExactly)[0])
+        self.assertTrue(u.evolutionary_distance_check.isChecked())
+        self.assertTrue(u.reconstructed_tree_check.isChecked())
+        self.assertTrue(u.reconstructed_tree_check.isEnabled())
+
+        u.reconstructed_tree_check.setChecked(False)
+        # still checked -- unchecking 'Reconstructed' must not be bounced
+        # back by '_distance_changed', the way it would for an ordinary
+        # (reconstructed-rates-only) tree
+        self.assertTrue(u.evolutionary_distance_check.isChecked())
+        self.assertFalse(u.reconstructed_tree_check.isChecked())
+        self.assertTrue(u.reconstructed_tree_check.isEnabled())
+        tree = self.window.gui_modeling.results.value('out')
+        self.assertEqual(int(tree.get_stats_dict()['Total taxon count']), 3)
+
+        # toggling evolutionary distance off and back on must not disturb
+        # the (now unchecked) reconstruction choice either
+        u.evolutionary_distance_check.setChecked(False)
+        self.assertFalse(u.reconstructed_tree_check.isChecked())
+        u.evolutionary_distance_check.setChecked(True)
+        self.assertFalse(u.reconstructed_tree_check.isChecked())
+        self.assertTrue(u.reconstructed_tree_check.isEnabled())
+
     def test_display_controls_redraw_without_sampling(self):
         self.enter('x ~ [normal(mu,1) for mu in [0,1]]')
         self.enter('y ~ normal([0,1],1)')

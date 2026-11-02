@@ -52,6 +52,7 @@ class TestGammaSpike(unittest.TestCase):
             for node, rate in zip(first.tree_reconstructed.leaf_node_iter(), result.value('rates', replicate)[0]):
                 self.assertAlmostEqual(node.rate, 0.1 * rate)
             self.assertIn('rate=', first.rec_str())
+            self.assertFalse(first.clock_model_on_complete)
 
     def test_apply_to_complete_annotates_complete_only_branches(self):
         """'apply_to_complete' also rates branches absent from the rec. tree.
@@ -104,6 +105,11 @@ class TestGammaSpike(unittest.TestCase):
         self.assertIsNotNone(complete_A.rate)
         self.assertIsNotNone(complete_J.rate)
         self.assertIsNotNone(complete_B.rate)
+
+        # lets a caller (e.g. the GUI) tell, without re-scanning every
+        # branch, that this tree's complete-tree branches really do
+        # have rates to plot against in evolutionary-distance units
+        self.assertTrue(tr.clock_model_on_complete)
 
         # 'J' is unifurcation-suppressed away, so it never appears in
         # the reconstructed tree under its own label -- 'A's own

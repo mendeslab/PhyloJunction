@@ -282,6 +282,13 @@ class AnnotatedTree(dp.Tree):
         # trees
         self.tree = a_tree
         self.clock_model_attr_name: ty.Optional[str] = None
+        # whether 'clock_model_attr_name' was also populated on this
+        # tree's complete-tree branches (e.g. gamma_spike_clock's own
+        # 'apply_to_complete'), not just the reconstructed tree's --
+        # lets a caller (e.g. the GUI) tell whether a complete-tree
+        # evolutionary-distance plot is actually possible, without
+        # re-scanning every branch for a rate
+        self.clock_model_on_complete: bool = False
         self.tree_reconstructed = None
 
         # check if simulated, or specified by user

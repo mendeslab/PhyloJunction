@@ -71,4 +71,5 @@ class DnGammaSpikeClock(DistrForSampling):
                 setattr(node, self.attr_name, node.mol_rate)
                 node.annotations.add_bound_attribute(self.attr_name)
         result.clock_model_attr_name = self.attr_name
+        result.clock_model_on_complete = self.apply_to_complete
         return result

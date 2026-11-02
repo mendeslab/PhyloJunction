@@ -175,6 +175,7 @@ class GUIMainWindow(QMainWindow):
             lambda current, previous: self._display_selected_node())
         self._distance_node = None
         self._time_reconstructed = False
+        self._complete_distance_available = False
         self.ui.ui_pages.evolutionary_distance_check.toggled.connect(self._distance_changed)
         self.ui.ui_pages.reconstructed_tree_check.toggled.connect(
             self.refresh_selected_node_display_plot_spin)
@@ -415,15 +416,21 @@ class GUIMainWindow(QMainWindow):
         count = len(list(elements(results.value(node_name, index))))
         return results.model.name_node_dict[node_name], results.n_executions, count
 
-    # Distance requires reconstructed rates. Preserve the independent time-view choice
-    # while the disabled reconstruction control accurately reflects what is displayed.
+    # Distance requires reconstructed rates, on an ordinary tree. A tree whose rates
+    # were also applied to the complete tree (gamma_spike_clock's apply_to_complete)
+    # can show either, so the reconstruction choice stays live and unforced for it --
+    # see '_sync_distance_control', which keeps 'self._complete_distance_available'
+    # current for whichever node is selected.
     def _distance_changed(self, checked):
         u = self.ui.ui_pages
         if checked:
             self._time_reconstructed = u.reconstructed_tree_check.isChecked()
         with QSignalBlocker(u.reconstructed_tree_check):
-            u.reconstructed_tree_check.setChecked(True if checked else self._time_reconstructed)
-            u.reconstructed_tree_check.setEnabled(not checked)
+            if self._complete_distance_available:
+                u.reconstructed_tree_check.setEnabled(True)
+            else:
+                u.reconstructed_tree_check.setChecked(True if checked else self._time_reconstructed)
+                u.reconstructed_tree_check.setEnabled(not checked)
         self.refresh_selected_node_display_plot_spin()
 
     # Initialize only on a variable switch, not a redraw or replicate change. Rate metadata
@@ -433,6 +440,8 @@ class GUIMainWindow(QMainWindow):
         values, _ = self.selected_values(name, sample, element)
         available = bool(values and isinstance(values[0], pjdt.AnnotatedTree)
                          and values[0].clock_model_attr_name is not None)
+        self._complete_distance_available = bool(
+            available and values[0].clock_model_on_complete)
         with QSignalBlocker(u.evolutionary_distance_check), QSignalBlocker(u.reconstructed_tree_check):
             if name != self._distance_node:
                 if not u.evolutionary_distance_check.isChecked():
@@ -444,7 +453,9 @@ class GUIMainWindow(QMainWindow):
                 u.evolutionary_distance_check.setChecked(False)
                 u.reconstructed_tree_check.setChecked(self._time_reconstructed)
             u.evolutionary_distance_check.setVisible(available)
-            u.reconstructed_tree_check.setEnabled(not u.evolutionary_distance_check.isChecked())
+            u.reconstructed_tree_check.setEnabled(
+                self._complete_distance_available
+                or not u.evolutionary_distance_check.isChecked())
 
     def do_selected_node_dag_page(self, spin_buttons_clicked: bool = False):
         """
@@ -1191,6 +1202,7 @@ class GUIMainWindow(QMainWindow):
 
     def clean_disable_everything(self, user_reset=False):
         self._distance_node = None
+        self._complete_distance_available = False
         with QSignalBlocker(self.ui.ui_pages.evolutionary_distance_check):
             self.ui.ui_pages.evolutionary_distance_check.setChecked(False)
             self.ui.ui_pages.evolutionary_distance_check.hide()
