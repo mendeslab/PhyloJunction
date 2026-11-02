@@ -155,6 +155,65 @@ class TestGammaSpike(unittest.TestCase):
         pjgsc_dn.DnGammaSpikeClock(
             **(valid | {"br_specific_rel_rate_complete": [1.0]}))
 
+    def test_complete_tree_evolutionary_distance_plot(self):
+        """A complete tree can now be plotted in evolutionary-distance units.
+
+        'plot_ann_tree'/'AnnotatedTree.plot_node' used to hard-reject
+        'draw_reconstructed=False' whenever a 'distance_attr'/
+        'evolutionary_distance' was requested, and 'plot_node' itself
+        silently forced 'draw_reconstructed=True' regardless of what
+        was asked for. That restriction predated 'apply_to_complete'
+        (there was previously no such thing as a complete-tree rate
+        to plot against at all); now that 'apply_to_complete' can
+        populate real rates on every complete-tree branch, the
+        complete tree can be rendered in distance units too.
+        """
+
+        tree = pjr.read_nwk_tree_str(
+            "((A[&alive=true]:1,Y[&alive=false,sampled=false]:0.2)"
+            "J:1,B[&alive=true]:1.2)root:0;",
+            in_file=False, is_complete=True)
+
+        result = pjgsc_dn.DnGammaSpikeClock(
+            tree, "rate", 0.1, 0.05, 2.0, [1.0, 1.0],
+            apply_to_complete=True,
+            br_specific_rel_rate_complete=[1.0]).draw()
+
+        from matplotlib.figure import Figure
+        from matplotlib.backends.backend_agg import FigureCanvasAgg
+        figure = Figure()
+        FigureCanvasAgg(figure)
+        axes = figure.subplots()
+
+        # the complete tree, in distance units -- this used to raise
+        result.plot_node(
+            axes, evolutionary_distance=True, draw_reconstructed=False)
+        figure.canvas.draw()
+
+        # 'Y' (complete-only, extinct) only exists on the complete
+        # tree -- confirms this really drew the complete tree, not a
+        # silent fallback to the reconstructed one
+        self.assertIn("Y", {nd.label for nd in result.tree.preorder_node_iter()})
+
+        # without 'apply_to_complete', the complete tree has no rates
+        # to plot against, and this must raise a clear error instead
+        # of silently falling back or producing a wrong plot
+        plain_tree = pjr.read_nwk_tree_str(
+            "(A[&alive=true]:1,B[&alive=true]:1);",
+            in_file=False, is_complete=True)
+        plain_result = pjgsc_dn.DnGammaSpikeClock(
+            plain_tree, "rate", 0.1, 0.05, 2.0, [1.0, 1.0]).draw()
+        with self.assertRaises(ValueError):
+            plain_result.plot_node(
+                axes, evolutionary_distance=True, draw_reconstructed=False)
+
+        # the reconstructed-tree distance plot still works exactly
+        # as before
+        axes.clear()
+        plain_result.plot_node(
+            axes, evolutionary_distance=True, draw_reconstructed=True)
+        figure.canvas.draw()
+
     # QuaSSE reconstruction used to rebuild on each read, unlike discrete trees. Exercise
     # the shared consumer entry point so repeated display/export preparation retains rates.
     def test_continuous_rate_annotations_survive_reads(self):

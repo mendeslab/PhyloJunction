@@ -2185,7 +2185,6 @@ class AnnotatedTree(dp.Tree):
         if evolutionary_distance:
             if self.clock_model_attr_name is None:
                 raise ValueError("Evolutionary distance requires reconstructed-edge rates.")
-            draw_reconstructed = True
         if draw_reconstructed:
             self.ensure_reconstructed_tree(plotting_overhead=True)
 
@@ -2865,9 +2864,10 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
     """
 
     if distance_attr is not None:
-        if not draw_reconstructed or use_age:
-            raise ValueError("Distance coordinates require a reconstructed tree and forward coordinates.")
-        ann_tr.ensure_reconstructed_tree(plotting_overhead=True)
+        if use_age:
+            raise ValueError("Distance coordinates require forward coordinates.")
+        if draw_reconstructed:
+            ann_tr.ensure_reconstructed_tree(plotting_overhead=True)
     rate_layout = distance_attr is not None or branch_rate_attr is not None
 
     retained = None if draw_reconstructed else _retained_observation_ancestry(ann_tr)
@@ -2939,7 +2939,8 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
                                     draw_reconstructed=draw_reconstructed)
 
     if distance_attr is not None:
-        x_coords = get_x_coord_from_attr_product(ann_tr, distance_attr, draw_reconstructed=True)
+        x_coords = get_x_coord_from_attr_product(
+            ann_tr, distance_attr, draw_reconstructed=draw_reconstructed)
 
     rate_mapper = None
     if branch_rate_attr is not None:
