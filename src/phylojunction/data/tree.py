@@ -2519,6 +2519,19 @@ def get_x_coord_from_attr_product(
     value is None on a marker or seed contributes zero. Every eligible edge must have
     a finite nonnegative rate; missing rates are errors rather than collapsed edges.
 
+    When drawing the complete tree ('draw_reconstructed=False'), this
+    also exempts every branch strictly between the complete tree's
+    own seed and the reconstructed tree's own seed (inclusive of the
+    latter's own incoming edge) from that requirement, contributing
+    zero instead. A clock model never assigns a rate along this
+    stretch -- there is no reconstructed branch there to draw a rate
+    from or split a spike total out of, by the same reasoning that
+    leaves the reconstructed tree's own seed with no rate (see
+    'AnnotatedTree.populate_gamma_spike_mol_rates_on_complete_tree_
+    branches'/'is_real_branch', module-level) -- so requiring one here
+    would reject every complete-tree distance plot of a tree with any
+    such stem at all, not just ones with a genuine missing-rate bug.
+
     Args:
         ann_tr (AnnotatedTree): Instance of AnnotatedTree that we
             are drawing.
@@ -2536,14 +2549,26 @@ def get_x_coord_from_attr_product(
             values.
     """
 
-    if draw_reconstructed:
-        ann_tr.ensure_reconstructed_tree()
+    ann_tr.ensure_reconstructed_tree()
     x_coords: ty.Dict[str, float] = dict()
+
+    # the stem leading to the reconstructed tree's own seed, within
+    # the complete tree -- walking up from the complete-tree node
+    # matching the reconstructed tree's seed collects exactly this
+    # chain, with nothing further to do for any side branch off it
+    unrated_stem_labels: ty.Set[str] = set()
+    if not draw_reconstructed and ann_tr.rec_tr_root_node_label is not None:
+        stem_nd = ann_tr.tree.find_node_with_label(
+            ann_tr.rec_tr_root_node_label)
+        while stem_nd is not None:
+            unrated_stem_labels.add(get_node_name(stem_nd))
+            stem_nd = stem_nd.parent_node
 
     def _recur(nd: dp.Node, parent_x: float) -> None:
         rate = getattr(nd, attr_of_interest, None)
         branch_contribution = 0.0
-        if is_real_branch(nd, ann_tr.epsilon):
+        if is_real_branch(nd, ann_tr.epsilon) and \
+                get_node_name(nd) not in unrated_stem_labels:
             if rate is None or not np.isfinite(rate) or rate < 0:
                 raise ValueError(f"Missing or invalid rate {attr_of_interest!r} on edge {nd.label!r}.")
             branch_contribution = nd.edge_length * rate

@@ -220,6 +220,98 @@ class TestGammaSpike(unittest.TestCase):
             axes, evolutionary_distance=True, draw_reconstructed=True)
         figure.canvas.draw()
 
+    def test_complete_tree_distance_plot_with_chained_sa_stem(self):
+        """A chained-SA stem above the rec. tree's own seed must not block this.
+
+        Regression test for a real crash hit from the GUI: a complete
+        tree with one or more sampled ancestors chained between the
+        origin and the first true bifurcation leaves the
+        reconstructed tree's own seed node (here 'dummy1', not
+        'root') with no rate of its own -- by design, there is no
+        reconstructed branch there to draw a rate from or split a
+        spike total out of (see 'populate_gamma_spike_mol_rates_on_
+        complete_tree_branches'). 'get_x_coord_from_attr_product'
+        used to require a rate on every real complete-tree branch
+        unconditionally, including this one, raising
+        "Missing or invalid rate 'mutation_rate' on edge 'dummy1'."
+        the moment a user tried to view such a tree's complete-tree
+        phylogram in the GUI.
+        """
+
+        def mk(label, el, alive, sampled, is_sa=False,
+               is_sa_dummy_parent=False):
+            nd = Node(taxon=Taxon(label=label), label=label, edge_length=el)
+            nd.state = 0
+            nd.alive = alive
+            nd.sampled = sampled
+            nd.is_sa = is_sa
+            nd.is_sa_dummy_parent = is_sa_dummy_parent
+            nd.is_sa_lineage = False
+            return nd
+
+        origin = mk("origin", 0.0, False, False)
+        dummy1 = mk("dummy1", 1.0, False, False, is_sa_dummy_parent=True)
+        origin.add_child(dummy1)
+        DA_1 = mk("DA_1", 0.0, False, True, is_sa=True)
+        root = mk("root", 1.0, False, False)
+        dummy1.add_child(DA_1)
+        dummy1.add_child(root)
+        tip_a = mk("tipa", 2.0, True, True)
+        tip_b = mk("tipb", 2.0, True, True)
+        root.add_child(tip_a)
+        root.add_child(tip_b)
+
+        all_nodes = (origin, dummy1, DA_1, root, tip_a, tip_b)
+        tr_complete = Tree(seed_node=origin)
+        for nd in all_nodes:
+            tr_complete.taxon_namespace.add_taxon(nd.taxon)
+
+        ann_tr = pjtr.AnnotatedTree(
+            tr_complete, DiscreteTrait(1), start_at_origin=True,
+            max_age=4.0, epsilon=1e-12)
+        tr_rec = ann_tr.extract_reconstructed_tree(
+            plotting_overhead=False, require_obs_both_sides=False)
+
+        # sanity check on the fixture: the reconstructed tree's own
+        # seed really is 'dummy1', not 'root' -- otherwise this isn't
+        # exercising the scenario at all
+        self.assertEqual(tr_rec.seed_node.label, "dummy1")
+
+        np.random.seed(1)
+        pjgsc.populate_gamma_spike_mol_rates_on_rec_tr_branches(
+            ann_tr, clock_rate=0.1, spike_mean=0.05, spike_shape=2.0,
+            br_specific_rel_rates=[1.0] * ann_tr.n_rec_branches())
+        pjgsc.populate_gamma_spike_mol_rates_on_complete_tree_branches(
+            ann_tr, clock_rate=0.1, spike_mean=0.05, spike_shape=2.0,
+            br_specific_rel_rates_complete=(
+                [1.0] * ann_tr.n_complete_only_branches()))
+
+        for nd in ann_tr.tree.preorder_node_iter():
+            nd.mutation_rate = nd.mol_rate
+            nd.annotations.add_bound_attribute("mutation_rate")
+        ann_tr.clock_model_attr_name = "mutation_rate"
+
+        from matplotlib.figure import Figure
+        from matplotlib.backends.backend_agg import FigureCanvasAgg
+        figure = Figure()
+        FigureCanvasAgg(figure)
+        axes = figure.subplots()
+
+        # this used to raise
+        ann_tr.plot_node(
+            axes, evolutionary_distance=True, draw_reconstructed=False)
+        figure.canvas.draw()
+
+        # a genuinely missing rate elsewhere must still raise -- this
+        # fix is scoped to the stem, not a blanket relaxation
+        for nd in ann_tr.tree.preorder_node_iter():
+            if nd.label == "tipa":
+                nd.mutation_rate = None
+        axes.clear()
+        with self.assertRaises(ValueError):
+            ann_tr.plot_node(
+                axes, evolutionary_distance=True, draw_reconstructed=False)
+
     # QuaSSE reconstruction used to rebuild on each read, unlike discrete trees. Exercise
     # the shared consumer entry point so repeated display/export preparation retains rates.
     def test_continuous_rate_annotations_survive_reads(self):
