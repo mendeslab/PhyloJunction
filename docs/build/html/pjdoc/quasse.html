@@ -1,0 +1,491 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QuaSSE &mdash; PhyloJunction 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/sphinx-new-tab-link.css?v=d87cb1ac" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/pj_custom.css?v=b916aa57" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=d45e8c67"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html">
+            
+              <img src="../_static/pj_logo_doc.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../index.html">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installing.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules.html">Library API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PhyloJunction</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">QuaSSE</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/pjdoc/quasse.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="quasse">
+<h1>QuaSSE<a class="headerlink" href="#quasse" title="Link to this heading"></a></h1>
+<p>QuaSSE couples a real-valued Brownian trait to trait-dependent speciation, extinction and optional fossil sampling.
+Two simulation methods are available: the default <code class="docutils literal notranslate"><span class="pre">diversitree</span></code> approximation and
+<code class="docutils literal notranslate"><span class="pre">local_thinning</span></code>, which evaluates rates at Brownian-bridge candidate traits and has an
+explicit probability-error budget under the assumptions below.</p>
+<p>With PhyloJunction installed, run these commands from the repository root (where
+<code class="docutils literal notranslate"><span class="pre">examples/</span></code> is located):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pjcli<span class="w"> </span>examples/quasse.pj<span class="w"> </span>-d<span class="w"> </span>-f<span class="w"> </span><span class="s1">'trees;1-2'</span><span class="w"> </span>-r<span class="w"> </span><span class="m">42</span><span class="w"> </span>-o<span class="w"> </span>/tmp/quasse-output
+pjcli<span class="w"> </span>examples/quasse_size.pj<span class="w"> </span>-d<span class="w"> </span>-r<span class="w"> </span><span class="m">42</span><span class="w"> </span>-o<span class="w"> </span>/tmp/quasse-size
+pjcli<span class="w"> </span>examples/quasse_conditioned.pj<span class="w"> </span>-d<span class="w"> </span>-r<span class="w"> </span><span class="m">42</span><span class="w"> </span>-o<span class="w"> </span>/tmp/quasse-conditioned
+pjcli<span class="w"> </span>examples/quasse_local_thinning.pj<span class="w"> </span>-d<span class="w"> </span>-r<span class="w"> </span><span class="m">42</span><span class="w"> </span>-o<span class="w"> </span>/tmp/quasse-local
+</pre></div>
+</div>
+<p>Each <code class="docutils literal notranslate"><span class="pre">.pj</span></code> statement must occupy one line. <code class="docutils literal notranslate"><span class="pre">-d</span></code> writes data; <code class="docutils literal notranslate"><span class="pre">-f</span></code> selects figures.
+The GUI’s normal tree display also colors continuous terminal traits.</p>
+<section id="model">
+<h2>Model<a class="headerlink" href="#model" title="Link to this heading"></a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span># Brownian diffusion is variance per unit time. All commands occupy one line.
+birth := quasse_logistic(y0=0.4, y1=0.8, midpoint=0.0, slope=2.0)
+death := quasse_logistic(y0=0.02, y1=0.1, midpoint=1.0, slope=2.0)
+trees ~ quasse(n=2, nr=2, birth_rate=birth, death_rate=death, start_trait=0.0, drift=0.0, diffusion=0.1, stop="age", stop_value=3.0, method="diversitree", k=500)
+</pre></div>
+</div>
+<p>Download <a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/quasse.pj" rel="noreferrer" target="_blank">quasse.pj</a>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">quasse_logistic</span></code> matches Java SSE’s link function:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>f(x) = y0 + (y1 − y0) / (1 + exp(slope × (midpoint − x)))
+</pre></div>
+</div>
+<p>The plateau values are finite and nonnegative. The midpoint and slope are finite. Either
+slope sign and either plateau ordering are supported. Equal plateaus produce a rate independent
+of the trait. Rate functions have no explicit time dependence; rates change as traits evolve.</p>
+<p>Other rate families are available for speciation, extinction or fossil sampling:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 45.0%" />
+<col style="width: 55.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Constructor and required arguments</p></th>
+<th class="head"><p>Rate at trait x</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">quasse_constant(rate)</span></code></p></td>
+<td><p>rate</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">quasse_gaussian(baseline,</span> <span class="pre">center_rate,</span> <span class="pre">center,</span> <span class="pre">width)</span></code></p></td>
+<td><p>baseline + (center_rate − baseline) exp(−z²/2), z = (x − center)/width</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">quasse_step(left,</span> <span class="pre">right,</span> <span class="pre">threshold)</span></code></p></td>
+<td><p>left when x &lt; threshold; right otherwise, including equality</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">quasse_linear(intercept,</span> <span class="pre">slope)</span></code></p></td>
+<td><p>max(0, intercept + slope × x)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">quasse_skew_gaussian(baseline,</span> <span class="pre">amplitude,</span> <span class="pre">location,</span> <span class="pre">width,</span> <span class="pre">skew)</span></code></p></td>
+<td><p>baseline + 2 amplitude exp(−z²/2) Φ(skew × z), z = (x − location)/width</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">quasse_quadratic(baseline,</span> <span class="pre">strength,</span> <span class="pre">center)</span></code></p></td>
+<td><p>baseline + strength × (x − center)²</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">quasse_absolute(baseline,</span> <span class="pre">strength,</span> <span class="pre">center)</span></code></p></td>
+<td><p>baseline + strength × abs(x − center)</p></td>
+</tr>
+</tbody>
+</table>
+<p>Supply arguments by name in scripts. All parameters must be finite; rate levels, amplitudes
+and strengths must be nonnegative, and widths positive. Locations, slopes, skew and the linear
+intercept can have either sign. Gaussian curves include troughs when <code class="docutils literal notranslate"><span class="pre">center_rate</span> <span class="pre">&lt;</span> <span class="pre">baseline</span></code>.
+Φ is the standard normal cumulative distribution function. The asymmetric peak’s <code class="docutils literal notranslate"><span class="pre">location</span></code>
+and <code class="docutils literal notranslate"><span class="pre">amplitude</span></code> are not generally its peak position and height; <code class="docutils literal notranslate"><span class="pre">skew=0</span></code> gives a symmetric
+Gaussian peak. All constructor parameters are constant through time within a simulation.</p>
+<p>Every constructor accepts optional <code class="docutils literal notranslate"><span class="pre">cap</span></code>: the evaluated rate is min(cap, f(x)). The cap must
+be finite and nonnegative, may be below the baseline, and may be zero. It broadcasts with the
+other parameters. Without it, linear, quadratic and absolute-value rates remain unbounded
+when their slope or strength is nonzero. There is no hidden upper truncation.</p>
+<p>An explicit cap changes the biological model; computational resource limits do not cap rates.
+For example, pure branching Brownian motion with quadratic speciation can have an infinite
+expected population after a finite time even though each finite-time population is finite
+almost surely. A large realization or exceeded node budget is not proof of infinitely many
+nodes. General birth–death models should not be assigned an explosion classification from
+these runtime checks.</p>
+<p>The trait increment over duration δ has mean <code class="docutils literal notranslate"><span class="pre">drift</span> <span class="pre">×</span> <span class="pre">δ</span></code> and variance <code class="docutils literal notranslate"><span class="pre">diffusion</span> <span class="pre">×</span> <span class="pre">δ</span></code>.
+<code class="docutils literal notranslate"><span class="pre">diffusion</span></code> is variance per unit time, not a standard deviation. Drift and diffusion are
+independent of the trait and constant through time within each simulation.
+Zero diffusion is supported.
+Each tree starts with one lineage at the origin. Daughters inherit the parent’s trait and
+then evolve independently. Optional <code class="docutils literal notranslate"><span class="pre">fossil_rate</span></code> supplies a rate object for non-destructive
+sampling along each lineage, in observations per lineage per unit time. It defaults to zero
+(<code class="docutils literal notranslate"><span class="pre">None</span></code> in Python), accepts every rate family, and broadcasts at length one or <code class="docutils literal notranslate"><span class="pre">n</span></code>.
+Fossils record the exact trait at sampling; they do not remove the lineage or reset its trait.
+Sampling at death, removal probabilities and measurement error are not supported.</p>
+<p>Rate-constructor parameters broadcast to a common vector length. Distribution model
+parameters, rate objects, <code class="docutils literal notranslate"><span class="pre">stop_value</span></code>, and <code class="docutils literal notranslate"><span class="pre">sampling_prob</span></code> have length one or <code class="docutils literal notranslate"><span class="pre">n</span></code>.
+Each of the <code class="docutils literal notranslate"><span class="pre">n</span></code> samples has <code class="docutils literal notranslate"><span class="pre">nr</span></code> independent replicates using the same parameter values;
+output ordering is sample first, then replicate. Rejected trees do not resample DAG parents.</p>
+</section>
+<section id="diversitree-method-and-stopping">
+<h2>Diversitree method and stopping<a class="headerlink" href="#diversitree-method-and-stopping" title="Link to this heading"></a></h2>
+<p>At the current living traits, compute total birth–death–sampling rate R. A full step has duration
+1/(kR), and one event occurs with probability 1/k. Choose the event type and lineage using
+the current rates. Apply the event first, then extend and evolve the resulting living
+lineages. A newborn daughter therefore evolves during that step, while a dead lineage does not.
+A fossil records the start-of-step trait and its continuing lineage evolves for the whole step.</p>
+<p>For <code class="docutils literal notranslate"><span class="pre">stop=&quot;age&quot;</span></code>, shorten the final interval to the remaining duration δ and use event
+probability Rδ. Surviving branches end exactly at the observation age. Completely extinct
+trees retain the actual extinction times, with node ages measured relative to observation.</p>
+<p>For <code class="docutils literal notranslate"><span class="pre">stop=&quot;size&quot;</span></code>, N counts <strong>sampled living tips</strong>. The initial lineage receives a
+Bernoulli(<code class="docutils literal notranslate"><span class="pre">sampling_prob</span></code>) mark. At birth, one randomly chosen daughter inherits its parent’s
+mark and the other receives an independent fresh mark. Thus a birth adds zero or one to
+the sampled count. A sampled death subtracts one; fossils preserve the continuing mark.</p>
+<p>Stop immediately before a proposed birth would increase that count from N to N+1, omitting
+that birth and its following trait update. Merely reaching N does not stop the simulation:
+zero-increment births can occur at N and sampled deaths can lower the count again. Do not
+resample marks at the end. <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">&lt;</span> <span class="pre">sampling_prob</span> <span class="pre">&lt;=</span> <span class="pre">1</span></code> is required for size stopping; zero
+is permitted for age stopping. All living lineages, including unsampled ones, evolve and
+count toward <code class="docutils literal notranslate"><span class="pre">max_alive</span></code>. Zero sampled tips with living lineages is not extinction.
+If survival conditioning is disabled, extinct outcomes can also be returned.</p>
+<p>On a fixed biological tree independent of the marks, these leaf marks are independent
+Bernoulli draws. The flag-dependent stopping time conditions their distribution; the
+returned size-stopped tree is defined by this marked process, not independent post-sampling
+of a tree stopped by its total living count. At complete sampling the old behavior is preserved.</p>
+<p>The interior algorithm follows <code class="docutils literal notranslate"><span class="pre">diversitree/R/simulate-quasse.R</span></code>. Intentional differences are:</p>
+<ul class="simple">
+<li><p>The final age-limited interval and event probability are shortened, preventing overshoot.</p></li>
+<li><p>Size stopping omits diffusion after the terminating birth, matching PhyloJunction’s convention.</p></li>
+<li><p>No artificial initial branch length of 1e-8 is added; genuine zero-length branches are valid.</p></li>
+<li><p>Tree storage, observation sampling, and conditioning use PhyloJunction’s conventions.</p></li>
+</ul>
+<p>The method is approximate. Increasing <code class="docutils literal notranslate"><span class="pre">k</span></code> generally improves resolution at greater cost;
+<code class="docutils literal notranslate"><span class="pre">k</span></code> does not specify an absolute time-step tolerance. It defaults to 500 and must be an integer
+at least one. The default method is <code class="docutils literal notranslate"><span class="pre">&quot;diversitree&quot;</span></code>.</p>
+<p>Optional <code class="docutils literal notranslate"><span class="pre">dt_max</span></code> is a positive finite duration. When supplied, each interval is at most
+min(1/(kR), dt_max, remaining age), with event probability R times that interval. This can
+resolve trait changes where present rates are small, but is not an error tolerance or an exact
+simulation method. Step discontinuities and rapidly varying or unbounded rates require
+resolution checks using smaller <code class="docutils literal notranslate"><span class="pre">dt_max</span></code> and larger <code class="docutils literal notranslate"><span class="pre">k</span></code>. Omitting it preserves the original
+step selection for positive total rates.</p>
+</section>
+<section id="brownian-bridge-local-thinning">
+<h2>Brownian bridge local thinning<a class="headerlink" href="#brownian-bridge-local-thinning" title="Link to this heading"></a></h2>
+<p>Select <code class="docutils literal notranslate"><span class="pre">method=&quot;local_thinning&quot;</span></code> and supply a positive finite <code class="docutils literal notranslate"><span class="pre">block_duration</span></code> in the
+model’s time units. Each living lineage samples a Brownian endpoint up to that duration away.
+The endpoints and a Brownian-bridge tail bound define a likely containing trait interval.
+The sum of bounds on birth, death and fossil rates over that interval bounds a Poisson proposal process.
+At each candidate time the simulator samples the actual intermediate trait from the stored
+bridge and selects birth, death, fossil sampling or rejection using actual rates.
+Rejected candidates and fossil events retain the same endpoint and proposal bound. Sampling
+only replaces the living node by its continuing child; it does not allocate another bridge
+or error allowance. At birth the parent ends at that time and its daughters evolve independently.
+There is no one-event-per-step restriction and no requirement that rates change slowly.</p>
+<p>Longer blocks save endpoint work but can enlarge proposal bounds and increase rejected
+candidates. Thus <code class="docutils literal notranslate"><span class="pre">block_duration</span></code> primarily controls cost. It need not be extremely small
+for accuracy. Local thinning does not use <code class="docutils literal notranslate"><span class="pre">dt_max</span></code> or <code class="docutils literal notranslate"><span class="pre">k</span></code>: a supplied <code class="docutils literal notranslate"><span class="pre">dt_max</span></code> or
+nondefault <code class="docutils literal notranslate"><span class="pre">k</span></code> is rejected; the inherited default <code class="docutils literal notranslate"><span class="pre">k=500</span></code> is ignored.</p>
+<p><code class="docutils literal notranslate"><span class="pre">bridge_error</span></code> defaults to <code class="docutils literal notranslate"><span class="pre">1e-8</span></code> and must be finite and strictly between zero and one.
+It budgets excursions outside the likely trait regions across a complete <code class="docutils literal notranslate"><span class="pre">generate()</span></code>
+call, including every sample, replicate, biological rejection and numerical restart.
+Block j receives probability allowance δ/[j(j+1)], whose infinite sum is δ.
+A direct <code class="docutils literal notranslate"><span class="pre">simulate()</span></code> call gets its own budget. Separate calls start new budgets.
+All existing rate families are supported, including uncapped linear, quadratic and
+absolute-value functions: a finite local bound suffices, without a global rate cap.</p>
+<p>A finite evaluated total rate exceeding its proposal bound automatically restarts the
+current tree with the same model parameters. RNG progression, error budget, deadline and
+remaining work allowance persist. Completed earlier trees are retained. This does not
+consume a biological rejection attempt. A loose valid bound merely wastes candidate work;
+an invalid bound can miss events, so restarting does not make this an exact sampler.</p>
+<p>With exact arithmetic and sampling, valid interval bounds, and a terminating, nonexplosive
+reference process, the total variation distance from the exact complete output law is at
+most <code class="docutils literal notranslate"><span class="pre">bridge_error</span></code>. The coupling agrees until the first region excursion, which also
+covers detected violations and their restarts. This is an absolute probability bound,
+not a relative bound on population means or other unbounded statistics. It is not a claim
+of second-order convergence in block duration. Floating-point error and computational
+interruptions are outside this guarantee. Biological rejection-limit failure is included
+as an output; discarding failures and conditioning on success needs a separate bound
+(at most 2δ/p, capped at one, where p is exact success probability and both are positive).</p>
+<p>Age stopping ends living branches exactly at the requested age. Size stopping retains the
+same N-to-N+1 convention as diversitree, but uses the continuous candidate birth time and
+advances every unfinished bridge to that time. The stored future endpoints are retained
+when sampling final traits. Both methods use the same inherited marks for size stopping and
+independent end-of-simulation sampling for age stopping. The probability bound includes the
+marked stopping law: before a region excursion, shared mark draws give identical stopping
+decisions. Adding fossil intensity to the same region’s bound needs no extra error allowance.</p>
+<p>The derivation and assumptions are in <code class="docutils literal notranslate"><span class="pre">TODO/simulator.tex</span></code> in the source repository.</p>
+</section>
+<section id="observation-and-conditions">
+<h2>Observation and conditions<a class="headerlink" href="#observation-and-conditions" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25.0%" />
+<col style="width: 15.0%" />
+<col style="width: 60.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Argument</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Meaning</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">sampling_prob</span></code></p></td>
+<td><p>1</p></td>
+<td><p>Independent terminal sampling for age stopping; inherited Bernoulli marks for size stopping</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">cond_surv</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;true&quot;</span></code></p></td>
+<td><p>Require at least one living lineage</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">cond_spn</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;false&quot;</span></code></p></td>
+<td><p>Require a retained speciation event</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">cond_obs_both_sides</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;false&quot;</span></code></p></td>
+<td><p>Require living sampled descendants on both sides of the original root</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">min_rec_taxa</span></code></p></td>
+<td><p>0</p></td>
+<td><p>Minimum living sampled-tip count, for age stopping</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">max_rec_taxa</span></code></p></td>
+<td><p>unbounded</p></td>
+<td><p>Maximum living sampled-tip count, for age stopping</p></td>
+</tr>
+</tbody>
+</table>
+<p>Equal count bounds request an exact observed count. Sampling precedes these checks.
+Survival does not imply observation: with <code class="docutils literal notranslate"><span class="pre">sampling_prob=0</span></code>, a surviving tree has no sampled living
+tips, but may retain fossil observations. Root-side checks use the original root, before pruning can replace it.
+For unconditional age-based simulation set <code class="docutils literal notranslate"><span class="pre">cond_surv=&quot;false&quot;</span></code> and leave other conditions unset.
+Explicit reconstructed-taxon count bounds with size stopping are errors. Fossils do not
+satisfy living-tip count, root-side or survival conditions; sampling alone is not speciation.</p>
+<p>Rejected attempts use fresh simulation randomness with unchanged model parameters. Rare or
+impossible conditions can exhaust the rejection budget. Limits are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25.0%" />
+<col style="width: 15.0%" />
+<col style="width: 60.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Argument</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Scope</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">max_n_attempts</span></code></p></td>
+<td><p>200</p></td>
+<td><p>Total rejected attempts across one <code class="docutils literal notranslate"><span class="pre">generate()</span></code> call</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">runtime_limit</span></code></p></td>
+<td><p>300 seconds</p></td>
+<td><p>Entire <code class="docutils literal notranslate"><span class="pre">generate()</span></code> call, including retries</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">max_steps</span></code></p></td>
+<td><p>1,000,000</p></td>
+<td><p>Diversitree steps or local queue actions per attempt, shared across numerical restarts</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">max_alive</span></code></p></td>
+<td><p>100,000</p></td>
+<td><p>Living lineages per attempt</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">max_nodes</span></code></p></td>
+<td><p>unset</p></td>
+<td><p>All nodes per attempt, including extinct nodes, fossils, sampling dummy nodes, origin and initial lineage</p></td>
+</tr>
+</tbody>
+</table>
+<p>All limits are positive; count limits are integers. Reaching the rejection budget raises an
+error. Except for the finite local bound-exceedance recovery described above, numerical
+failures and exceeded resource limits raise errors without retry. In particular, transiently
+exceeding <code class="docutils literal notranslate"><span class="pre">max_rec_taxa</span></code> does not reject an attempt.</p>
+<p><code class="docutils literal notranslate"><span class="pre">max_nodes</span></code> is checked before creating the initial two nodes or the two new nodes at a birth or fossil event.
+The omitted size-stopping birth does not consume nodes. This is a memory safeguard, not an
+infinite-population detector; hitting it raises an error without returning a truncated tree.</p>
+<p>When all three rate functions are identically zero, age stopping uses a direct Brownian
+transition, even with <code class="docutils literal notranslate"><span class="pre">dt_max</span></code> set. Identically zero birth and death rates make size stopping
+unreachable even if fossil sampling is positive.
+For diversitree, if the total rate is zero only at the current traits (including underflow), supply
+<code class="docutils literal notranslate"><span class="pre">dt_max</span></code> so traits can advance and rates be reevaluated; without it, simulation raises an error.
+Local thinning instead renews Brownian blocks even when a local proposal bound is zero.</p>
+</section>
+<section id="trees-plots-and-output">
+<h2>Trees, plots, and output<a class="headerlink" href="#trees-plots-and-output" title="Link to this heading"></a></h2>
+<p>Complete trees retain extinct and unsampled tips. Reconstructed trees retain paths to sampled
+living tips and fossils, including fossils with extinct or unobserved descendants and trees
+with fossils alone. A lone fossil retains its original age and origin-to-observation stem. All complete-tree nodes carry the trait at that node’s time; no full trait trajectory is
+stored. Black branches and colored terminal markers show traits using a continuous colorbar.
+Ancestral fossils appear as trait-colored markers along their continuing branches; terminal
+fossils have their own rows. <code class="docutils literal notranslate"><span class="pre">sa_along_branches=False</span></code> gives every fossil its own row.
+The complete tree’s terminal range, including fossils, determines colors in both views.
+Plotting uses no randomness. An empty reconstructed tree displays <code class="docutils literal notranslate"><span class="pre">No</span> <span class="pre">sampled</span> <span class="pre">tips</span></code>.</p>
+<p>Data output includes complete/reconstructed Newick tables, annotated variants, generic tree
+summaries, and <code class="docutils literal notranslate"><span class="pre">&lt;node&gt;_traits.tsv</span></code>. The trait table has columns <code class="docutils literal notranslate"><span class="pre">sample</span></code>, <code class="docutils literal notranslate"><span class="pre">replicate</span></code>, <code class="docutils literal notranslate"><span class="pre">node</span></code>,
+<code class="docutils literal notranslate"><span class="pre">trait</span></code>, <code class="docutils literal notranslate"><span class="pre">alive</span></code>, and <code class="docutils literal notranslate"><span class="pre">sampled</span></code>; sample and replicate indices start at one. It includes internal
+nodes and the origin as well as living and extinct tips. Discrete state tables and discrete
+NEXUS character matrices are not generated for these trees.</p>
+<p><code class="docutils literal notranslate"><span class="pre">&lt;node&gt;_fossils.tsv</span></code> contains <code class="docutils literal notranslate"><span class="pre">sample</span></code>, <code class="docutils literal notranslate"><span class="pre">replicate</span></code>, <code class="docutils literal notranslate"><span class="pre">node</span></code>, <code class="docutils literal notranslate"><span class="pre">time</span></code>, <code class="docutils literal notranslate"><span class="pre">age</span></code>, <code class="docutils literal notranslate"><span class="pre">trait</span></code>.
+Indices are one-based, <code class="docutils literal notranslate"><span class="pre">time</span></code> is forward from the origin, and <code class="docutils literal notranslate"><span class="pre">age</span></code> is relative to the
+simulation horizon. There is one row per fossil in the complete tree, or a header-only table
+when none occur. Annotated Newick identifies fossils with <code class="docutils literal notranslate"><span class="pre">is_sa</span></code> and sampling nodes with
+<code class="docutils literal notranslate"><span class="pre">is_sa_dummy_parent</span></code>. The generic <code class="docutils literal notranslate"><span class="pre">Direct</span> <span class="pre">ancestor</span> <span class="pre">count</span></code> counts all fossil observations,
+including those made terminal by reconstruction. <code class="docutils literal notranslate"><span class="pre">Total</span> <span class="pre">taxon</span> <span class="pre">count</span></code> retains its existing
+biological-terminal meaning.</p>
+<p>QuaSSE RevBayes inference export is not supported and fails before script generation.</p>
+</section>
+<section id="python-interface">
+<h2>Python interface<a class="headerlink" href="#python-interface" title="Link to this heading"></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">phylojunction.calculation.continuous_sse</span><span class="w"> </span><span class="kn">import</span> <span class="n">LogisticRate</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">phylojunction.distribution.dn_quasse</span><span class="w"> </span><span class="kn">import</span> <span class="n">DnQuaSSE</span>
+
+<span class="n">simulator</span> <span class="o">=</span> <span class="n">DnQuaSSE</span><span class="p">(</span>
+    <span class="n">birth_rate</span><span class="o">=</span><span class="n">LogisticRate</span><span class="p">(</span><span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">),</span>
+    <span class="n">death_rate</span><span class="o">=</span><span class="n">LogisticRate</span><span class="p">(</span><span class="mf">0.02</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">),</span>
+    <span class="n">stop</span><span class="o">=</span><span class="s2">"size"</span><span class="p">,</span> <span class="n">stop_value</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">diffusion</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">rng_seed</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">trees</span> <span class="o">=</span> <span class="n">simulator</span><span class="o">.</span><span class="n">generate</span><span class="p">()</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">generate()</span></code> applies conditions and returns a list. <code class="docutils literal notranslate"><span class="pre">simulate(sample_idx=0)</span></code> returns one
+attempt after observation sampling, without rejection conditioning. The Python constructor’s
+<code class="docutils literal notranslate"><span class="pre">rng_seed</span></code> and CLI <code class="docutils literal notranslate"><span class="pre">-r</span></code> use NumPy’s existing global random stream; instances do not own
+independent random generators.</p>
+<p>The Python rate classes are <code class="docutils literal notranslate"><span class="pre">ConstantRate</span></code>, <code class="docutils literal notranslate"><span class="pre">LogisticRate</span></code>, <code class="docutils literal notranslate"><span class="pre">GaussianRate</span></code>, <code class="docutils literal notranslate"><span class="pre">StepRate</span></code>,
+<code class="docutils literal notranslate"><span class="pre">LinearRate</span></code>, <code class="docutils literal notranslate"><span class="pre">SkewGaussianRate</span></code>, <code class="docutils literal notranslate"><span class="pre">QuadraticRate</span></code> and <code class="docutils literal notranslate"><span class="pre">AbsoluteRate</span></code>, all in
+<code class="docutils literal notranslate"><span class="pre">phylojunction.calculation.continuous_sse</span></code>. They accept the same named arguments as the
+script constructors and evaluate NumPy arrays or scalars. Their shared <code class="docutils literal notranslate"><span class="pre">RateFunction</span></code>
+interface exposes <code class="docutils literal notranslate"><span class="pre">is_identically_zero</span></code> and <code class="docutils literal notranslate"><span class="pre">upper_bound</span></code> (a conservative finite bound,
+or <code class="docutils literal notranslate"><span class="pre">None</span></code> when unavailable). A zero rate at one trait is not an identically zero function.
+<code class="docutils literal notranslate"><span class="pre">bound_on_interval(left,</span> <span class="pre">right)</span></code> returns a finite conservative bound on a closed finite
+interval, including zero-width intervals, or raises <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> if unavailable.
+Positive bounds have an outward floating-point guard; this is not certified interval arithmetic.</p>
+</section>
+<section id="additional-scripts">
+<h2>Additional scripts<a class="headerlink" href="#additional-scripts" title="Link to this heading"></a></h2>
+<p>Size stopping (<a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/quasse_size.pj" rel="noreferrer" target="_blank">quasse_size.pj</a>):</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span># Return ten living tips, immediately before the birth that would produce eleven.
+birth := quasse_logistic(y0=0.4, y1=0.8, midpoint=0.0, slope=2.0)
+death := quasse_logistic(y0=0.02, y1=0.1, midpoint=1.0, slope=2.0)
+trees ~ quasse(n=2, birth_rate=birth, death_rate=death, diffusion=0.1, stop="size", stop_value=10, cond_surv="true", method="diversitree", k=500)
+</pre></div>
+</div>
+<p>Conditioning on observed tip count
+(<a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/quasse_conditioned.pj" rel="noreferrer" target="_blank">quasse_conditioned.pj</a>):</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span># Fix age, sample each survivor independently, and retain exactly three observed tips.
+birth := quasse_logistic(y0=0.4, y1=0.8, midpoint=0.0, slope=2.0)
+death := quasse_logistic(y0=0.02, y1=0.1, midpoint=1.0, slope=2.0)
+trees ~ quasse(n=2, birth_rate=birth, death_rate=death, diffusion=0.1, stop="age", stop_value=3.0, sampling_prob=0.8, min_rec_taxa=3, max_rec_taxa=3, method="diversitree", k=500)
+</pre></div>
+</div>
+<p>Bounded and explicitly unbounded rates
+(<a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/quasse_rates.pj" rel="noreferrer" target="_blank">quasse_rates.pj</a>):</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span># Caps change rates; max_nodes only aborts excessive allocations. dt_max is a duration.
+bounded := quasse_gaussian(baseline=0.1, center_rate=0.8, center=0, width=1, cap=0.6)
+unbounded := quasse_quadratic(baseline=0.1, strength=0.05, center=0)
+death := quasse_constant(rate=0.02)
+bounded_trees ~ quasse(birth_rate=bounded, death_rate=death, diffusion=0.1, stop="age", stop_value=2, dt_max=0.01, max_nodes=10000)
+unbounded_trees ~ quasse(birth_rate=unbounded, death_rate=death, diffusion=0.1, stop="age", stop_value=2, dt_max=0.01, max_nodes=10000)
+</pre></div>
+</div>
+<p>Local thinning with uncapped quadratic speciation
+(<a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/quasse_local_thinning.pj" rel="noreferrer" target="_blank">quasse_local_thinning.pj</a>):</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span># Uncapped quadratic speciation with Brownian bridge local thinning.
+b := quasse_quadratic(baseline=0.6,strength=0.05,center=0)
+d := quasse_constant(rate=0.2)
+trees ~ quasse(n=2,nr=2,birth_rate=b,death_rate=d,stop="age",stop_value=2,start_trait=0,drift=0,diffusion=1,method="local_thinning",block_duration=0.5,bridge_error=0.00000001,cond_surv="false",max_nodes=10000)
+</pre></div>
+</div>
+<p>Fossil sampling and incomplete size sampling
+(<a class="reference external" href="https://raw.githubusercontent.com/fkmendes/PhyloJunction/main/examples/quasse_fossils.pj" rel="noreferrer" target="_blank">quasse_fossils.pj</a>):</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>birth := quasse_constant(rate=.5)
+death := quasse_constant(rate=.2)
+fossil := quasse_constant(rate=1)
+mixed ~ quasse(n=2,nr=2,birth_rate=birth,death_rate=death,fossil_rate=fossil,stop="age",stop_value=2,diffusion=.5,sampling_prob=.5,cond_surv="false",method="local_thinning",block_duration=.5,max_nodes=10000)
+fossil_only ~ quasse(n=2,nr=2,birth_rate=birth,death_rate=death,fossil_rate=fossil,stop="age",stop_value=2,diffusion=.5,sampling_prob=0,cond_surv="false",method="local_thinning",block_duration=.5,max_nodes=10000)
+sampled_size ~ quasse(n=2,nr=2,birth_rate=birth,death_rate=death,fossil_rate=fossil,stop="size",stop_value=5,diffusion=.5,sampling_prob=.5,method="local_thinning",block_duration=.5,max_nodes=10000)
+</pre></div>
+</div>
+<p>The three calls produce mixed observations, fossil-only observations, and size-stopped trees
+with exactly five sampled living tips. The last call can retain additional unsampled living
+tips and any number of fossils; neither contributes to its target count.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Fabio K. Mendes.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

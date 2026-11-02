@@ -14,5 +14,5 @@ Module contents
 
 .. automodule:: phylojunction.inference
    :members:
-   :show-inheritance:
    :undoc-members:
+   :show-inheritance:

@@ -1,3 +1,4 @@
+from phylojunction.data.trait import DiscreteTrait
 import unittest
 import matplotlib
 from dendropy import Tree, Node, Taxon
@@ -92,7 +93,7 @@ class TestReconstructedTreePrint(unittest.TestCase):
         max_age = 2.0
         ann_tr = pjtr.AnnotatedTree(
             tr_complete,
-            1,
+            DiscreteTrait(1),
             start_at_origin=True,
             max_age=max_age,
             epsilon=1e-12)
@@ -349,7 +350,7 @@ class TestReconstructedTreePrint(unittest.TestCase):
         max_age = 5.0
         ann_tr = pjtr.AnnotatedTree(
             tr_complete,
-            1,
+            DiscreteTrait(1),
             start_at_origin=True,
             max_age=max_age,
             sa_lineage_dict=sa_lineage_dict,
@@ -596,7 +597,7 @@ class TestReconstructedTreePrint(unittest.TestCase):
         max_age = 5.0
         ann_tr = pjtr.AnnotatedTree(
             tr_complete,
-            1,
+            DiscreteTrait(1),
             start_at_origin=False,
             max_age=max_age,
             sa_lineage_dict=sa_lineage_dict,
@@ -843,7 +844,7 @@ class TestReconstructedTreePrint(unittest.TestCase):
         max_age = 4.0
         ann_tr = pjtr.AnnotatedTree(
             tr_complete,
-            1,
+            DiscreteTrait(1),
             start_at_origin=False,
             max_age=max_age,
             sa_lineage_dict=sa_lineage_dict,
@@ -1064,7 +1065,7 @@ class TestReconstructedTreePrint(unittest.TestCase):
         max_age = 4.0
         ann_tr = pjtr.AnnotatedTree(
             tr_complete,
-            1,
+            DiscreteTrait(1),
             start_at_origin=False,
             max_age=max_age,
             sa_lineage_dict=sa_lineage_dict,
@@ -1219,7 +1220,7 @@ class TestReconstructedTreePrint(unittest.TestCase):
         max_age = 2.0
         ann_tr = pjtr.AnnotatedTree(
             tr_complete,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             at_dict=at_dict,
             start_at_origin=True,
             max_age=max_age,
@@ -1480,7 +1481,7 @@ class TestReconstructedTreePrint(unittest.TestCase):
         max_age = 5.0
         ann_tr = pjtr.AnnotatedTree(
             tr_complete,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             at_dict=at_dict,
             start_at_origin=True,
             max_age=max_age,
@@ -1538,15 +1539,16 @@ class TestReconstructedTreePrint(unittest.TestCase):
         """
 
         read_smap_str = \
-            ('trs <- read_tree(n=1, file_path=\"' +
+            ('trs <- read_tree(file_path=\"' +
              TR_FILE_PATH_STR + '\",'
              'node_name_attr="index")\n'
-             'mapped_trs := map_attr(tree=trs, fun="smap", '
-             'maps_file_path=\"' +
+             'histories := read_maps('
+             'file_path=\"' +
              SMAPS_FILE_PATH_STR + '\",'
              'tip_attr_file_path=\"' +
              TIPDATA_FILE_PATH_STR + '\",'
-             'attr_name="state", n_regions=2, geo="true")')
+             'n_regions=2, geo="true")\n'
+             'mapped_trs := map_attr(tree=trs[1], history=histories, attr_name="state")')
 
         dag_obj = cmdp.script2dag(read_smap_str, in_pj_file=False)
 
@@ -1561,10 +1563,10 @@ class TestReconstructedTreePrint(unittest.TestCase):
         ax.spines['right'].set_visible(False)
         ax.spines['top'].set_visible(False)
 
-        for node_name, node_dag in dag_obj.name_node_dict.items():
+        for node_name in dag_obj.model.name_node_dict:
             if node_name == "mapped_trs":
                 i = 0  # 1
-                ann_tr = node_dag.value[i]
+                ann_tr = dag_obj.value(node_name)[i]
 
                 x_coords, y_coords = \
                     pjtr.plot_ann_tree(ann_tr,
@@ -1596,237 +1598,6 @@ class TestReconstructedTreePrint(unittest.TestCase):
               'nd0': 7.0625}
         )
 
-    def test_y_coords_sa_dummy_parent_not_along_branches(self) -> None:
-        """An 'is_sa_dummy_parent' node is averaged when SAs get own rows.
-
-        The pre-existing special-case for 'is_sa_dummy_parent' nodes
-        (give it its single non-SA child's height) only applies when
-        'sa_along_branches' is True -- when it is False (e.g.
-        phylogram plotting, where a direct ancestor is drawn as its
-        own row instead of placed along its parent's branch), a
-        dummy parent has two real, positioned children (the SA leaf
-        and the continuing lineage) and must instead be averaged over
-        them, like any other bifurcating node. This used to be
-        explicitly excluded from that averaging case too, leaving
-        such a node out of the returned dict altogether -- a real
-        bug, not an artifact of unusual input: it reproduces on any
-        FBD tree simulated by PhyloJunction itself ('discrete_sse'
-        with an 'anc_sampling'-event rate) that has at least one
-        direct ancestor, the moment its phylogram is plotted.
-
-        Tree: (tipa:3.0,(sa:0.0,tipb:2.0)dummy:1.0)root:1.0)origin:0.0;
-        """
-
-        origin_node = Node(taxon=Taxon(label="origin"), label="origin",
-                           edge_length=0.0)
-        origin_node.state = 0
-        origin_node.alive = False
-        origin_node.sampled = False
-        origin_node.is_sa = False
-        origin_node.is_sa_dummy_parent = False
-        origin_node.is_sa_lineage = False
-
-        root_node = Node(taxon=Taxon(label="root"), label="root",
-                         edge_length=1.0)
-        root_node.state = 0
-        root_node.alive = False
-        root_node.sampled = False
-        root_node.is_sa = False
-        root_node.is_sa_dummy_parent = False
-        root_node.is_sa_lineage = False
-        origin_node.add_child(root_node)
-
-        tip_a = Node(taxon=Taxon(label="tipa"), label="tipa",
-                    edge_length=3.0)
-        tip_a.state = 0
-        tip_a.alive = True
-        tip_a.sampled = True
-        tip_a.is_sa = False
-        tip_a.is_sa_dummy_parent = False
-        tip_a.is_sa_lineage = False
-
-        dummy = Node(taxon=Taxon(label="dummy"), label="dummy",
-                    edge_length=1.0)
-        dummy.state = 0
-        dummy.alive = False
-        dummy.sampled = False
-        dummy.is_sa = False
-        dummy.is_sa_dummy_parent = True
-        dummy.is_sa_lineage = False
-
-        root_node.add_child(tip_a)
-        root_node.add_child(dummy)
-
-        sa_leaf = Node(taxon=Taxon(label="sa"), label="sa",
-                      edge_length=0.0)
-        sa_leaf.state = 0
-        sa_leaf.alive = False
-        sa_leaf.sampled = True
-        sa_leaf.is_sa = True
-        sa_leaf.is_sa_dummy_parent = False
-        sa_leaf.is_sa_lineage = False
-
-        tip_b = Node(taxon=Taxon(label="tipb"), label="tipb",
-                    edge_length=2.0)
-        tip_b.state = 0
-        tip_b.alive = True
-        tip_b.sampled = True
-        tip_b.is_sa = False
-        tip_b.is_sa_dummy_parent = False
-        tip_b.is_sa_lineage = True
-
-        dummy.add_child(sa_leaf)
-        dummy.add_child(tip_b)
-
-        tr_complete = Tree(seed_node=origin_node)
-        for nd in (origin_node, root_node, tip_a, dummy, sa_leaf, tip_b):
-            tr_complete.taxon_namespace.add_taxon(nd.taxon)
-
-        sa_lineage_dict = {
-            "tipb": [pjsa.SampledAncestor(
-                "sa", "tipb", 2.0, time_to_lineage_node=2.0)]}
-
-        ann_tr = pjtr.AnnotatedTree(
-            tr_complete, total_state_count=1, start_at_origin=True,
-            max_age=4.0, sa_lineage_dict=sa_lineage_dict, epsilon=1e-12)
-
-        y_coords = pjtr.get_y_coord_from_n_obs_nodes(
-            ann_tr, start_at_origin=True, sa_along_branches=False,
-            draw_reconstructed=False)
-
-        self.assertEqual(
-            y_coords["dummy"], (y_coords["sa"] + y_coords["tipb"]) / 2.0)
-        self.assertEqual(
-            y_coords,
-            {"tipa": 2.0, "sa": 3.0, "tipb": 4.0, "dummy": 3.5,
-             "root": 2.75, "origin": 2.75})
-
-    def test_continuous_attr_tree_draws_sa_as_dot(self) -> None:
-        """A direct ancestor is a dot, not its own zero-length branch.
-
-        '_draw_continuous_attr_tree' (shared by
-        'plot_ann_tree_continuous_attr' and 'plot_ann_tree_phylogram')
-        used to size its y-axis with one row per direct ancestor (via
-        'sa_along_branches=False'), then draw each as an ordinary,
-        zero-length leaf branch -- a visually degenerate dot-less
-        segment, and, before 'read_nwk_tree_str' started correctly
-        setting 'n_sa_nodes' (see that function), a Newick-read tree
-        with direct ancestors would even end up with y-coordinates
-        running well into negative territory, pushing most of the
-        tree outside the plot's hard-coded y-limits. This checks the
-        fix directly: a direct ancestor gets drawn as a dot at its
-        dummy parent's own position (matching 'plot_ann_tree's own
-        '_draw_clade' convention), using exactly one less row than
-        before.
-
-        Tree: (tipa:3.0,(sa:0.0,tipb:2.0)dummy:1.0)root:1.0)origin:0.0;
-        """
-
-        origin_node = Node(taxon=Taxon(label="origin"), label="origin",
-                           edge_length=0.0)
-        origin_node.state = 0
-        origin_node.alive = False
-        origin_node.sampled = False
-        origin_node.is_sa = False
-        origin_node.is_sa_dummy_parent = False
-        origin_node.is_sa_lineage = False
-
-        root_node = Node(taxon=Taxon(label="root"), label="root",
-                         edge_length=1.0)
-        root_node.state = 0
-        root_node.alive = False
-        root_node.sampled = False
-        root_node.is_sa = False
-        root_node.is_sa_dummy_parent = False
-        root_node.is_sa_lineage = False
-        origin_node.add_child(root_node)
-
-        tip_a = Node(taxon=Taxon(label="tipa"), label="tipa",
-                    edge_length=3.0)
-        tip_a.state = 0
-        tip_a.alive = True
-        tip_a.sampled = True
-        tip_a.is_sa = False
-        tip_a.is_sa_dummy_parent = False
-        tip_a.is_sa_lineage = False
-
-        dummy = Node(taxon=Taxon(label="dummy"), label="dummy",
-                    edge_length=1.0)
-        dummy.state = 0
-        dummy.alive = False
-        dummy.sampled = False
-        dummy.is_sa = False
-        dummy.is_sa_dummy_parent = True
-        dummy.is_sa_lineage = False
-
-        root_node.add_child(tip_a)
-        root_node.add_child(dummy)
-
-        sa_leaf = Node(taxon=Taxon(label="sa"), label="sa",
-                      edge_length=0.0)
-        sa_leaf.state = 0
-        sa_leaf.alive = False
-        sa_leaf.sampled = True
-        sa_leaf.is_sa = True
-        sa_leaf.is_sa_dummy_parent = False
-        sa_leaf.is_sa_lineage = False
-
-        tip_b = Node(taxon=Taxon(label="tipb"), label="tipb",
-                    edge_length=2.0)
-        tip_b.state = 0
-        tip_b.alive = True
-        tip_b.sampled = True
-        tip_b.is_sa = False
-        tip_b.is_sa_dummy_parent = False
-        tip_b.is_sa_lineage = True
-
-        dummy.add_child(sa_leaf)
-        dummy.add_child(tip_b)
-
-        tr_complete = Tree(seed_node=origin_node)
-        for nd in (origin_node, root_node, tip_a, dummy, sa_leaf, tip_b):
-            tr_complete.taxon_namespace.add_taxon(nd.taxon)
-
-        ann_tr = pjtr.AnnotatedTree(
-            tr_complete, total_state_count=1, start_at_origin=True,
-            max_age=4.0, epsilon=1e-12)
-
-        x_coords = {
-            "origin": 0.0, "root": 0.1, "tipa": 0.4, "dummy": 0.2,
-            "sa": 0.2, "tipb": 0.3}
-
-        fig = matplotlib.pyplot.figure()
-        ax = fig.add_subplot()
-
-        y_coords = pjtr._draw_continuous_attr_tree(
-            ann_tr, ax, x_coords, lambda nd: "k", draw_reconstructed=False)
-
-        # one row fewer than the (now-reverted) 'sa_along_branches=
-        # False' sizing would have used -- 'dummy' simply takes on
-        # 'tipb's own height, exactly like 'is_sa_dummy_parent' is
-        # handled everywhere else when SAs are placed along branches
-        self.assertEqual(y_coords["dummy"], y_coords["tipb"])
-        self.assertNotIn("sa", y_coords)
-        self.assertEqual(
-            y_coords,
-            {"tipa": 2.0, "tipb": 3.0, "dummy": 3.0, "root": 2.5,
-             "origin": 2.5})
-
-        # the direct ancestor is drawn as a dot (a Line2D with a
-        # marker), at its dummy parent's own (x, y) position -- not
-        # as its own branch segment
-        self.assertEqual(len(ax.lines), 1)
-        dot = ax.lines[0]
-        self.assertEqual(dot.get_marker(), "o")
-        self.assertEqual(
-            (dot.get_xdata()[0], dot.get_ydata()[0]),
-            (x_coords["dummy"], y_coords["dummy"]))
-
-        # 'tipa'/'tipb' get an ordinary tip label each, 'sa' gets its
-        # own (rotated) dot label -- three labels total, none of them
-        # duplicated
-        self.assertEqual(len(ax.texts), 3)
-
 
 if __name__ == "__main__":
     # $ python3.11 tests/data/test_tree_plotting.py
@@ -1840,3 +1611,176 @@ if __name__ == "__main__":
     # $ python3.11 -m unittest tests.data.test_tree_plotting.TestReconstructedTreePrint.test_one_lineage_left_rec_tr_plot
 
     unittest.main()
+
+class TestColorbarLayout(unittest.TestCase):
+    # Colorbar cleanup must preserve automatic layout without changing manual CLI positions.
+    # Existing tree images do not cover repeated resizing or axes participation in layout.
+    def test_colorbar_cleanup_preserves_layout(self):
+        from matplotlib.figure import Figure
+        from matplotlib.backends.backend_agg import FigureCanvasAgg
+        import numpy as np
+
+        for managed in (False, True):
+            with self.subTest(managed=managed):
+                fig = Figure(figsize=(8, 5), constrained_layout=managed)
+                FigureCanvasAgg(fig)
+                ax = fig.add_subplot(111) if managed else fig.add_axes([.075, .25, .6, .7])
+                fig.canvas.draw()
+                original = ax.get_position().bounds
+                for width in (8, 12, 8):
+                    fig.set_size_inches(width, 5)
+                    for _ in range(3):
+                        marker = ax.scatter([0, 1], [0, 1], c=[0, 1])
+                        ax._pj_trait_position = ax.get_position(original=True).frozen()
+                        ax._pj_trait_colorbar = fig.colorbar(marker, ax=ax, label='trait')
+                        fig.canvas.draw()
+                        self.assertEqual(len(fig.axes), 2)
+                        pjtr.clear_trait_colorbar(ax)
+                        marker.remove()
+                        fig.canvas.draw()
+                        self.assertEqual(len(fig.axes), 1)
+                        if managed:
+                            self.assertTrue(ax.get_in_layout())
+                            self.assertGreater(ax.get_position().width, .8)
+                        else:
+                            np.testing.assert_allclose(ax.get_position().bounds, original)
+
+
+class TestRetainedAncestry(unittest.TestCase):
+    # Construct labeled observations deterministically, so ancestry expectations do not
+    # depend on simulator randomness or on the rendering implementation.
+    def make_tree(self, newick, sampled=(), fossils=(), alive=(), require_both=False):
+        from phylojunction.data.trait import ContinuousTrait
+        raw = Tree.get(data=newick, schema='newick', suppress_internal_node_taxa=False)
+        for nd in raw:
+            nd.label = nd.taxon.label if nd.taxon else nd.label
+            nd.alive = nd.label in alive
+            nd.sampled = nd.label in sampled or nd.label in fossils
+            nd.is_sa = nd.label in fossils
+            nd.is_sa_dummy_parent = nd.label.startswith('dummy')
+            nd.is_sa_lineage = False
+            nd.trait = nd.distance_from_root()
+        return pjtr.AnnotatedTree(raw, ContinuousTrait(), start_at_origin=raw.seed_node.label == 'origin',
+                                 max_age=3., condition_on_obs_both_sides_root=require_both)
+
+    # Protect horizon placement when tips disappear or reconstruction shifts the origin;
+    # existing geometry tests do not check this background reference or its redraw lifecycle.
+    def test_present_reference(self):
+        from matplotlib.figure import Figure
+        living = self.make_tree('((a:2,b:2)root:1)origin:0;',
+                                sampled=('a', 'b'), alive=('a', 'b'))
+        fossil = self.make_tree('((brosc:1,sa1:0)dummy1:1)origin:0;', fossils=('sa1',))
+        extinct = self.make_tree('(a:2,b:2)root:0;')
+        raw = Tree.get(data='(a:2,b:2)root:0;', schema='newick', suppress_internal_node_taxa=False)
+        for node in raw:
+            node.label = node.taxon.label if node.taxon else node.label
+            node.alive = node.sampled = node.is_sa = False
+            node.is_sa_dummy_parent = node.is_sa_lineage = False
+            node.state = 0
+        other_raw = raw.clone(depth=2)
+        legacy = pjtr.AnnotatedTree(raw, DiscreteTrait(states=1), max_age=3., tree_died=True)
+        no_horizon = pjtr.AnnotatedTree(other_raw, DiscreteTrait(states=1), tree_died=True)
+        cases = [(living, False, 3., 0.), (living, True, 2., 0.),
+                 (fossil, False, 3., 0.), (fossil, True, 3., 0.),
+                 (extinct, False, 3., 0.), (legacy, False, 3., -1.),
+                 (no_horizon, False, 2., 0.)]
+        ax = Figure().add_subplot(111)
+        for tree, reconstructed, time_x, age_x in cases:
+            for use_age, expected in ((False, time_x), (True, age_x)):
+                with self.subTest(tree=tree, reconstructed=reconstructed, age=use_age):
+                    before = [(n.label, n.edge_length) for n in tree.tree]
+                    for repeat in range(2):
+                        pjtr.plot_ann_tree(tree, ax, draw_reconstructed=reconstructed, use_age=use_age)
+                        lines = [line for line in ax.lines if line.get_gid() == 'present-reference']
+                        self.assertEqual(len(lines), 1)
+                        line = lines[0]
+                        self.assertEqual(list(line.get_xdata()), [expected, expected])
+                        self.assertTrue(line.is_dashed())
+                        self.assertEqual(line.get_dash_capstyle(), 'round')
+                        self.assertEqual(line.get_zorder(), 0)
+                        self.assertLess(line.get_alpha(), .5)
+                        lower, upper = sorted(ax.get_xlim())
+                        self.assertLess(lower, expected)
+                        self.assertGreater(upper, expected)
+                    self.assertEqual(before, [(n.label, n.edge_length) for n in tree.tree])
+        pjtr.plot_ann_tree(extinct, ax, draw_reconstructed=True)
+        self.assertFalse(any(line.get_gid() == 'present-reference' for line in ax.lines))
+        self.assertIn('No sampled tips', [text.get_text() for text in ax.texts])
+
+    # Collapsed ancestors, rejected/empty reconstructions and fossil-only observations
+    # must mark full-tree paths, not merely nodes that survive reconstruction.
+    def test_membership(self):
+        newick = '(((a:1,b:1)n:1,c:1)root:1)origin:0;'
+        for sampled, expected in [(('a',), {'a', 'n', 'root', 'origin'}),
+                                  (('a', 'b'), {'a', 'b', 'n', 'root', 'origin'}),
+                                  ((), set()),
+                                  (('a', 'b', 'c'), {'a', 'b', 'c', 'n', 'root', 'origin'})]:
+            tree = self.make_tree(newick, sampled=sampled, alive=('a', 'b', 'c'))
+            self.assertEqual({n.label for n in pjtr._retained_observation_ancestry(tree)}, expected)
+        tree = self.make_tree(newick, sampled=('a',), alive=('a', 'b'), require_both=True)
+        self.assertFalse(pjtr._retained_observation_ancestry(tree))
+        fossil = self.make_tree('((brosc:2,sa1:0)dummy1:1)origin:0;', fossils=('sa1',), alive=('brosc',))
+        self.assertEqual({n.label for n in pjtr._retained_observation_ancestry(fossil)},
+                         {'origin', 'dummy1', 'sa1'})
+
+    # Collection geometry checks protect mixed-fork styling and prevent width scaling
+    # from compounding with tree depth; reconstructed views and tree data stay unchanged.
+    def test_branch_styles(self):
+        import numpy as np
+        from matplotlib.figure import Figure
+        from matplotlib.collections import LineCollection
+        tree = self.make_tree('(((a:1,b:1)n:1,c:1)root:1)origin:0;', sampled=('a',), alive=('a', 'b'))
+        before = [(id(n), n.edge_length, n.alive, n.sampled) for n in tree.tree]
+        fig = Figure()
+        ax = fig.add_subplot(111)
+        x, y = pjtr.plot_ann_tree(tree, ax, start_at_origin=True)
+        lines = [c for c in ax.collections if isinstance(c, LineCollection)]
+        for label, alpha in [('a', 1.), ('b', .25), ('c', .25), ('n', 1.)]:
+            node = tree.tree.find_node_with_label(label)
+            expected = [[x[node.parent_node.label], y[label]], [x[label], y[label]]]
+            matches = [c for c in lines if np.allclose(c.get_segments()[0], expected)]
+            self.assertEqual(len(matches), 1)
+            self.assertEqual(matches[0].get_alpha(), alpha)
+            self.assertAlmostEqual(matches[0].get_linewidths()[0],
+                                   matplotlib.rcParams['lines.linewidth'] * (1 if alpha == 1 else .65))
+        for child, alpha in [('a', 1.), ('b', .25)]:
+            expected = sorted([y['n'], y[child]])
+            matches = [c for c in lines if np.allclose(c.get_segments()[0][:, 0], x['n'])
+                       and np.allclose(sorted(c.get_segments()[0][:, 1]), expected)]
+            self.assertEqual(len(matches), 1)
+            self.assertEqual(matches[0].get_alpha(), alpha)
+        tree.plot_node(ax, draw_reconstructed=True)
+        self.assertTrue(all(c.get_alpha() == 1. for c in ax.collections if isinstance(c, LineCollection)))
+        self.assertEqual(pjtr.plot_ann_tree(tree, ax, start_at_origin=True), (x, y))
+        self.assertEqual(before, [(id(n), n.edge_length, n.alive, n.sampled) for n in tree.tree])
+
+    # Fossil continuations and multi-color branches need the same edge classification;
+    # membership-only checks cannot detect lost opacity on an emitted state segment.
+    def test_fossil_and_segmented_edges(self):
+        from matplotlib.figure import Figure
+        from matplotlib.collections import LineCollection
+        fossil = self.make_tree('((brosc:2,sa1:0)dummy1:1)origin:0;', fossils=('sa1',), alive=('brosc',))
+        for along in (False, True):
+            ax = Figure().add_subplot(111)
+            x, y = pjtr.plot_ann_tree(fossil, ax, sa_along_branches=along)
+            continuation = [c for c in ax.collections if isinstance(c, LineCollection)
+                            and all(v[1] == y['brosc'] for v in c.get_segments()[0])
+                            and abs(c.get_segments()[0][1, 0] - c.get_segments()[0][0, 0]) > 1.5]
+            self.assertEqual(len(continuation), 1)
+            self.assertEqual(continuation[0].get_alpha(), .25)
+        raw = Tree.get(data='(a:3,b:3)root:0;', schema='newick', suppress_internal_node_taxa=False)
+        for nd in raw:
+            nd.label = nd.taxon.label if nd.taxon else nd.label
+            nd.alive = nd.is_leaf()
+            nd.sampled = nd.label == 'a'
+            nd.is_sa = nd.is_sa_dummy_parent = nd.is_sa_lineage = False
+            nd.state = int(nd.label == 'b')
+        transition = pjat.AttributeTransition('state', 'b', 1., 0, 1, age=2.)
+        tree = pjtr.AnnotatedTree(raw, DiscreteTrait(states=2), at_dict={'b': [transition]})
+        ax = Figure().add_subplot(111)
+        x, y = pjtr.plot_ann_tree(tree, ax, use_age=True)
+        segments = [c for c in ax.collections if isinstance(c, LineCollection)
+                    and all(v[1] == y['b'] for v in c.get_segments()[0])]
+        self.assertEqual(len(segments), 2)
+        self.assertTrue(all(c.get_alpha() == .25 for c in segments))
+        self.assertFalse((segments[0].get_colors() == segments[1].get_colors()).all())

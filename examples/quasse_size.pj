@@ -1,0 +1,5 @@
+# Run the complete model with pjcli --runs 2 (or set Replicates in Settings).
+# Return ten living tips, immediately before the birth that would produce eleven.
+birth := quasse_logistic(y0=0.4, y1=0.8, midpoint=0.0, slope=2.0)
+death := quasse_logistic(y0=0.02, y1=0.1, midpoint=1.0, slope=2.0)
+trees ~ quasse(birth_rate=birth, death_rate=death, diffusion=0.1, stop='size', stop_value=10, cond_surv='true', method='diversitree', k=500)

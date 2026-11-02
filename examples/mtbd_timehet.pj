@@ -1,3 +1,4 @@
+# Run the complete model with pjcli --runs 2 (or set Replicates in Settings).
 # constant-node variable ('birth_rate0_t0') assignment
 # first epoch (oldest)
 # state 0
@@ -105,4 +106,4 @@ det_trans_rate2_1_t2 := sse_rate(name="q2_1_t2", value=trans_rate2_1_t2, states=
 stash := sse_stash(flat_rate_mat=[det_w_birth_rate0_t0, det_death_rate0_t0, det_trans_rate0_2_t0, det_w_birth_rate1_t0, det_death_rate1_t0, det_trans_rate1_2_t0, det_b_birth_rate2_0_2_t0, det_b_birth_rate2_1_2_t0, det_trans_rate2_0_t0, det_trans_rate2_1_t0, det_w_birth_rate0_t1, det_death_rate0_t1, det_trans_rate0_2_t1, det_w_birth_rate1_t1, det_death_rate1_t1, det_trans_rate1_2_t1, det_b_birth_rate2_0_2_t1, det_b_birth_rate2_1_2_t1, det_trans_rate2_0_t1, det_trans_rate2_1_t1, det_w_birth_rate0_t2, det_death_rate0_t2, det_trans_rate0_2_t2, det_w_birth_rate1_t2, det_death_rate1_t2, det_trans_rate1_2_t2, det_b_birth_rate2_0_2_t2, det_b_birth_rate2_1_2_t2, det_trans_rate2_0_t2, det_trans_rate2_1_t2], n_states=3, n_epochs=3, seed_age=3.0, epoch_age_ends=[2.0, 1.0])
 
 # stochastic-node variable ('trs') assignment
-tr ~ discrete_sse(n=2, nr=50, stash=stash, start_state=[0], stop="age", stop_value=3.0, origin="true")
+tr ~ iid(50, discrete_sse(stash=stash, start_state=0, stop='age', stop_value=3.0, origin='true'))

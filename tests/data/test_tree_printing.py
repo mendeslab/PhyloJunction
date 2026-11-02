@@ -1,3 +1,4 @@
+from phylojunction.data.trait import DiscreteTrait
 import unittest
 from dendropy import Tree, Node, Taxon
 
@@ -99,7 +100,7 @@ class TestTreePrinting(unittest.TestCase):
 
         ann_tr_sa_with_root_survives_max_age = pjtr.AnnotatedTree(
             tr_sa_with_root_survives,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=True,
             max_age=max_age,
             sa_lineage_dict=sa_lineage_dict,

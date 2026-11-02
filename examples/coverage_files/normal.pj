@@ -1,0 +1,3 @@
+# Use 100 replicates and seed 42 to match prepare_normal.py.
+mu ~ normal(0, 1)
+y ~ normal(mu, 1, clamp=true)

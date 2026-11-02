@@ -1,3 +1,4 @@
+from phylojunction.data.trait import DiscreteTrait
 import unittest
 import copy
 import matplotlib
@@ -99,7 +100,7 @@ class TestExtractReconstructedTree(unittest.TestCase):
 
         ann_tr = pjtr.AnnotatedTree(
             tr_complete,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=True,
             max_age=max_age,
             epsilon=1e-12)
@@ -242,7 +243,7 @@ class TestExtractReconstructedTree(unittest.TestCase):
 
         ann_tr = pjtr.AnnotatedTree(
             tr_complete,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=True,
             max_age=max_age,
             epsilon=1e-12)
@@ -351,7 +352,7 @@ class TestExtractReconstructedTree(unittest.TestCase):
 
         ann_tr = pjtr.AnnotatedTree(
             tr_complete,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=True,
             max_age=max_age,
             epsilon=1e-12)
@@ -469,7 +470,7 @@ class TestExtractReconstructedTree(unittest.TestCase):
 
         ann_tr = pjtr.AnnotatedTree(
             tr_complete,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=False,
             max_age=max_age,
             sa_lineage_dict=sa_lineage_dict,
@@ -614,7 +615,7 @@ class TestExtractReconstructedTree(unittest.TestCase):
 
         ann_tr1 = pjtr.AnnotatedTree(
             tr_complete,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=False,
             max_age=max_age,
             sa_lineage_dict=sa_lineage_dict,
@@ -736,7 +737,7 @@ class TestExtractReconstructedTree(unittest.TestCase):
 
         ann_tr1 = pjtr.AnnotatedTree(
             tr_complete,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=False,
             max_age=max_age,
             sa_lineage_dict=sa_lineage_dict,
@@ -827,7 +828,7 @@ class TestExtractReconstructedTree(unittest.TestCase):
 
         ann_tr1 = pjtr.AnnotatedTree(
             tr_complete,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=False,
             max_age=max_age,
             epsilon=1e-12)
@@ -970,7 +971,7 @@ class TestExtractReconstructedTree(unittest.TestCase):
 
         ann_tr1 = pjtr.AnnotatedTree(
             tr_complete,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=False,
             max_age=max_age,
             epsilon=1e-12)
@@ -1086,7 +1087,7 @@ class TestExtractReconstructedTree(unittest.TestCase):
 
         ann_tr1 = pjtr.AnnotatedTree(
             tr_complete,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=True,
             max_age=max_age,
             sa_lineage_dict=sa_lineage_dict,
@@ -1199,7 +1200,7 @@ class TestExtractReconstructedTree(unittest.TestCase):
 
         ann_tr1 = pjtr.AnnotatedTree(
             tr_complete,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=True,
             max_age=max_age,
             sa_lineage_dict=sa_lineage_dict,
@@ -1350,7 +1351,7 @@ class TestExtractReconstructedTree(unittest.TestCase):
 
         ann_tr1 = pjtr.AnnotatedTree(
             tr_complete,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=True,
             max_age=max_age,
             sa_lineage_dict=sa_lineage_dict,
@@ -1522,7 +1523,7 @@ class TestExtractReconstructedTree(unittest.TestCase):
 
         ann_tr1 = pjtr.AnnotatedTree(
             tr_complete,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=True,
             max_age=max_age,
             epsilon=1e-12)
@@ -1728,7 +1729,7 @@ class TestExtractReconstructedTree(unittest.TestCase):
 
             ann_tr1 = pjtr.AnnotatedTree(
                 tr_complete,
-                total_state_count,
+                DiscreteTrait(total_state_count),
                 start_at_origin=True,
                 max_age=max_age,
                 sa_lineage_dict=sa_lineage_dict,
@@ -2034,7 +2035,7 @@ class TestExtractReconstructedTree(unittest.TestCase):
         max_age = 5.0
         ann_tr = pjtr.AnnotatedTree(
             tr_complete,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             at_dict=at_dict,
             clado_at_dict=clado_at_dict,
             start_at_origin=True,

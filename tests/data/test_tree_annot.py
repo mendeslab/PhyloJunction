@@ -1,4 +1,7 @@
+from phylojunction.data.trait import DiscreteTrait
 import unittest
+import copy
+from matplotlib import pyplot as plt
 from dendropy import Tree, Node, Taxon
 
 __author__ = "Fabio K. Mendes"
@@ -68,8 +71,8 @@ class TestAnnotateTree(unittest.TestCase):
         # cls.tree_no_spn = pjtr.AnnotatedTree(tr_no_spn, total_state_count, start_at_origin=True, max_age=1.0, epsilon=1e-12)
         # cls.tree_no_spn_dead = pjtr.AnnotatedTree(tr_no_spn_dead, total_state_count, start_at_origin=True, max_age=1.0, epsilon=1e-12)
         # trees built by hand
-        cls.tree_no_spn_built = pjtr.AnnotatedTree(tr_no_spn_built, total_state_count, start_at_origin=True, max_age=1.0, epsilon=1e-12)
-        cls.tree_no_spn_dead_built = pjtr.AnnotatedTree(tr_no_spn_dead_built, total_state_count, start_at_origin=True, max_age=1.0, epsilon=1e-12)
+        cls.tree_no_spn_built = pjtr.AnnotatedTree(tr_no_spn_built, DiscreteTrait(total_state_count), start_at_origin=True, max_age=1.0, epsilon=1e-12)
+        cls.tree_no_spn_dead_built = pjtr.AnnotatedTree(tr_no_spn_dead_built, DiscreteTrait(total_state_count), start_at_origin=True, max_age=1.0, epsilon=1e-12)
 
         # for testing the parsing of states into AnnotatedTree member dictionary
         origin_node3 = Node(taxon=Taxon(label="origin"), label="origin", edge_length=0.0)
@@ -99,7 +102,40 @@ class TestAnnotateTree(unittest.TestCase):
 
         total_state_count = 2
 
-        cls.bifurcating_tree_two_states = pjtr.AnnotatedTree(bif_tr_two_states, total_state_count, start_at_origin=True, epsilon=1e-12)
+        cls.bifurcating_tree_two_states = pjtr.AnnotatedTree(bif_tr_two_states, DiscreteTrait(total_state_count), start_at_origin=True, epsilon=1e-12)
+
+    # Renaming storage must not change tree results; ordinary state-only tests cannot detect
+    # hard-coded attribute accesses. Retire only if equivalent rename coverage replaces this.
+    def test_named_discrete_trait(self):
+        original = copy.deepcopy(self.bifurcating_tree_two_states)
+        for node in original.tree:
+            node.is_sa_dummy_parent = node.is_sa_lineage = False
+        raw = copy.deepcopy(original.tree)
+        for node in raw:
+            # AnnotatedTree removes internal taxa during initialization; restore raw input.
+            raw.taxon_namespace.add_taxon(node.taxon)
+            node.habitat = node.state
+            del node.state
+        renamed = pjtr.AnnotatedTree(raw, DiscreteTrait(2, name="habitat"), start_at_origin=True)
+        self.assertEqual(renamed.state_count_dict, original.state_count_dict)
+        self.assertEqual(renamed.get_stats_dict(), original.get_stats_dict())
+        for nexus in (False, True):
+            self.assertEqual(renamed.get_taxon_states_str(nexus=nexus),
+                             original.get_taxon_states_str(nexus=nexus))
+        for reconstructed in (False, True):
+            fig, ax = plt.subplots()
+            try:
+                renamed.plot_node(ax, draw_reconstructed=reconstructed)
+                colors = [line.get_colors().copy() for line in ax.collections]
+                ax.clear()
+                original.plot_node(ax, draw_reconstructed=reconstructed)
+                self.assertEqual([c.tolist() for c in colors],
+                                 [line.get_colors().tolist() for line in ax.collections])
+            finally:
+                plt.close(fig)
+        self.assertEqual(renamed.rec_str(), original.rec_str())
+        self.assertTrue(all(hasattr(nd, "habitat") and not hasattr(nd, "state")
+                            for nd in renamed.tree_reconstructed))
 
     def test_root_origin_age_rootedge_length(self):
         """

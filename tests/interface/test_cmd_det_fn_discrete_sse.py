@@ -24,32 +24,12 @@ class TestDetFnDiscreteSSEErrors(unittest.TestCase):
              "stash := sse_stash(flat_rate_mat=[l0ratet1, l0ratet2, l0ratet3], n_states=1, n_epochs=2, "
              "seed_age=3.0, epoch_age_ends=[1.2, 0.7])")
 
-        # NOTE: previously, this test asserted that a raw
-        # 'ec.ParseDetFnInitFailError' propagated all the way out of
-        # 'cmd.script2dag'. That was actually a pre-existing bug:
-        # 'cmd_parse.py' was catching 'ec.ParseDnInitFailError' (the
-        # '~' operator's exception class) instead of
-        # 'ec.ParseDetFnInitFailError' (the ':=' operator's own), so
-        # det-fn init failures were never wrapped into a
-        # 'ScriptSyntaxError' the way every other script-level error
-        # is. Now that this is fixed, 'ParseDetFnInitFailError' is
-        # caught and wrapped, matching the '~' pathway (see
-        # 'test_cmd_parametric_sampling_dn_assignment.py', which
-        # already asserts 'ec.ParseDnInitFailError' is *not* what
-        # leaks out of 'cmd.script2dag' for '~' misspecifications).
-        with self.assertRaises(ec.ScriptSyntaxError) as exc:
+        with self.assertRaises(ec.ScriptEvaluationError) as exc:
             dag_obj = cmd.script2dag(yule_timehet_invalid_epoch, in_pj_file=False)
 
         self.assertEqual(
-            str(exc.exception),
-            ("ERROR: stash := sse_stash(flat_rate_mat=[l0ratet1, l0ratet2, "
-             "l0ratet3], n_states=1, n_epochs=2, seed_age=3.0, "
-             "epoch_age_ends=[1.2, 0.7])\n\n"
-             "The line above had a syntax problem and could not be "
-             "tokenized. Deterministic output from 'sse_stash' could not "
-             "be instantiated. Incorrect dimension of container "
-             "epoch_age_ends, which was of size 2. The expected dimension "
-             "was 1."))
+            str(exc.exception.__cause__),
+            "epoch_age_ends must contain n_epochs - 1 ages.")
         
     def test_rate_epoch_index_zero(self):
         """
@@ -63,13 +43,12 @@ class TestDetFnDiscreteSSEErrors(unittest.TestCase):
              "stash := sse_stash(flat_rate_mat=[l0ratet1, l0ratet2], n_states=1, n_epochs=2, "
              "seed_age=3.0, epoch_age_ends=[0.7])")
 
-        with self.assertRaises(ec.ParseRequirePositiveIntegerError) as exc:
+        with self.assertRaises(ec.ScriptEvaluationError) as exc:
             dag_obj = cmd.script2dag(yule_zero_index, in_pj_file=False)
 
         self.assertEqual(
-            str(exc.exception),
-            ("When specifying object sse_rate's parameter 'epoch', something other than a positive "
-             "integer was provided. A positive integer is required."))
+            str(exc.exception.__cause__),
+            "Expected an integer at least 1.")
 
 if __name__ == "__main__":
     # Assuming you opened the PhyloJunction/ (repo root) folder

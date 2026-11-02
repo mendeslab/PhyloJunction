@@ -1,5 +1,7 @@
+from phylojunction.data.trait import DiscreteTrait, ContinuousTrait
 import os
 import typing as ty
+from phylojunction.pgm.execution import ExecutionResults
 import dendropy as dp
 import numpy as np
 import pandas
@@ -168,69 +170,7 @@ def initialize_tree_dataframe(
     return return_df
 
 
-def prep_n_stub_df(
-        node_val: ty.List[AnnotatedTree],
-        sample_size: int,
-        n_repl: int = 1) -> pd.DataFrame:
-    """Build a per-(sample, replicate) table of reconstructed-tree stub counts.
-
-    One row per (sample, replicate) tree (same convention as
-    'initialize_tree_dataframe's "sample"/"replicate" columns). One
-    column per reconstructed-tree node label observed across ALL of
-    'node_val's trees -- different replicate trees can have different
-    topologies (and so different node labels), so the column set is
-    the union over every tree, not just those labels common to all of
-    them; a tree missing a given column's node is left with an empty
-    ('pandas.NA') cell there.
-
-    Stub counts ('n_stub') are (re-)computed here via
-    'AnnotatedTree.populate_n_stubs_on_branches_of_rec_tr', which is
-    pure tree-topology bookkeeping (no randomness involved) -- so this
-    table can be requested for any tree-valued DAG node, whether or
-    not a clock model (e.g.,
-    'calculation.gamma_spike_clock_model.GammaSpikeClockModel') was
-    ever applied to it.
-
-    Args:
-        node_val (list of AnnotatedTree): All (sample, replicate)
-            trees for one tree-valued DAG node, in iteration order
-            (sample 1 replicate 1, sample 1 replicate 2, ..., sample
-            2 replicate 1, ...).
-        sample_size (int): Number of samples.
-        n_repl (int): Number of replicates per sample. Defaults to 1.
-
-    Returns:
-        (pd.DataFrame): See above.
-    """
-
-    rec_trees = []
-    all_labels: ty.Set[str] = set()
-
-    for ith_val in node_val:
-        rec_tree = ith_val.extract_reconstructed_tree(plotting_overhead=False)
-        ith_val.populate_n_stubs_on_branches_of_rec_tr()
-        rec_trees.append(rec_tree)
-        all_labels.update(
-            nd.label for nd in rec_tree.preorder_node_iter()
-            if nd.label is not None)
-
-    return_df = initialize_tree_dataframe(
-        sample_size, n_repl=n_repl, summaries=False)
-
-    for label in sorted(all_labels):
-        return_df[label] = pd.array(
-            [pd.NA] * len(node_val), dtype="Int64")
-
-    for idx, rec_tree in enumerate(rec_trees):
-        for nd in rec_tree.preorder_node_iter():
-            n_stub = getattr(nd, "n_stub", None)
-            if nd.label is not None and n_stub is not None:
-                return_df.at[idx, nd.label] = n_stub
-
-    return return_df
-
-
-def prep_trees_rb_smap_dfs(dag_obj: pgm.DirectedAcyclicGraph,
+def prep_trees_rb_smap_dfs(value_records,
                            tree_dag_node_name_list: ty.List[str],
                            mapped_attr_name: str) -> \
         ty.Tuple[ty.Dict[str, ty.List[pd.DataFrame]],
@@ -242,8 +182,9 @@ def prep_trees_rb_smap_dfs(dag_obj: pgm.DirectedAcyclicGraph,
     correspond to a single replicate.
 
     Args:
-        dag_obj (DirectedAcyclicGraph): Instance of DAG class, holding
-            the model.
+        value_records: Tuples of (name, trees, sample count, replicate count).
+            Replicate export supplies one tree per coordinate; these ordinals
+            are internal to the established stochastic-map serializer.
         tree_dag_node_name_list (list): List with names of the DAG nodes
             tree random variables along which attributes have
             transitioned and for which we are producing a stochastic
@@ -421,7 +362,7 @@ def prep_trees_rb_smap_dfs(dag_obj: pgm.DirectedAcyclicGraph,
     all_tr_nds_df_list_dict: ty.Dict[str, ty.List[pandas.DataFrame]] = dict()
     all_tr_nds_df_content_str_list_dict: ty.Dict[str, ty.List[str]] = dict()
 
-    for node_name, node_dag in dag_obj.name_node_dict.items():
+    for node_name, node_val, n_samples, n_repl in value_records:
         # initializing empty lists as values
         # each item will be a sample from this node
         # and inside those items (which will be either dataframes
@@ -431,14 +372,10 @@ def prep_trees_rb_smap_dfs(dag_obj: pgm.DirectedAcyclicGraph,
 
         if node_name in tree_dag_node_name_list:
             repl_df_content_str_list = list()
-            node_val = node_dag.value
 
             if isinstance(node_val, list) and \
                     isinstance(node_val[0], AnnotatedTree):
-                rv_name = node_dag.node_name
-                node_val = node_dag.value  # list
-                n_samples = node_dag.sample_size
-                n_repl = node_dag.repl_size
+                rv_name = node_name
 
                 assert(len(node_val) == (n_samples * n_repl))
 
@@ -448,7 +385,7 @@ def prep_trees_rb_smap_dfs(dag_obj: pgm.DirectedAcyclicGraph,
                 for ann_tr_repl in node_val:
                     # method call updates ann_tr_repl's members
                     rec_tr = \
-                        ann_tr_repl.extract_reconstructed_tree(plotting_overhead=True)
+                        ann_tr_repl.ensure_reconstructed_tree(plotting_overhead=True)
                     root_node = ann_tr_repl.rec_tr_root_node
                     root_age = ann_tr_repl.rec_tr_root_age
                     node_ages_dict = ann_tr_repl.rec_tr_node_ages_dict
@@ -543,35 +480,27 @@ def prep_trees_rb_smap_dfs(dag_obj: pgm.DirectedAcyclicGraph,
 
 
 def prep_data_df(
-        dag_obj: pgm.DirectedAcyclicGraph,
+        value_records,
         write_nex_states: bool = False,
-        bit_format: bool = False,
-        write_stub_counts: bool = False) -> \
+        bit_format: bool = False) -> \
         ty.Tuple[ty.List[ty.Union[pd.DataFrame, ty.Dict[int, pd.DataFrame]]],
         ty.List[ty.Dict[str, pd.DataFrame]]]:
     """Return two pandas DataFrame's, with scalar and tree random variables.
 
     Args:
-        dag_obj (DirectedAcyclicGraph): DAG object holding the
-            simulated data to be tabulated.
+        value_records: Tuples of (name, values, replicate count, is_stochastic,
+            is_sampled, sample count). These are explicit serializer inputs,
+            not DAG nodes. Use write_results() to export ExecutionResults.
         write_nex_states (bool): Flag specifying if .nex file should be
             additionally written. Defaults to 'False'.
         bit_format (bool): Flag specifying if states are to be
             represented as bit patterns (e.g., 'A' -> '10', 'B' ->
             '01', 'AB' -> '11'). Defaults to 'False'.
-        write_stub_counts (bool): Flag specifying if a per-(sample,
-            replicate) table of reconstructed-tree stub counts
-            ('n_stub') should additionally be built, one per
-            tree-valued DAG node -- see 'prep_n_stub_df'. Defaults to
-            'False'.
 
     Returns:
         (tuple): Tuple with two lists as elements, one with file-suffix
                  strings, another with pandas.DataFrame's
     """
-
-    sample_size = dag_obj.sample_size
-    node_dag_list = dag_obj.get_sorted_node_dag_list()
 
     # tree nodes (one dataframe per different tree node)
 
@@ -597,12 +526,6 @@ def prep_data_df(
     # averaged over replicates, for all samples }
     tree_repl_summary_df_dict: ty.Dict[str, pd.DataFrame] = dict()
 
-    # { "[tr_node_name1]_n_stub.tsv": pd.DataFrame with one row per
-    # (sample, replicate) tree and one column per reconstructed-tree
-    # node label, holding that node's stub count -- only populated if
-    # 'write_stub_counts' is 'True' (see 'prep_n_stub_df') }
-    tree_n_stub_df_dict: ty.Dict[str, pd.DataFrame] = dict()
-
     # { "[tr_node_name1]_sampleidx_repl_idx": states_str, ... }
     tree_living_nd_states_str_dict: ty.Dict[str, str] = dict()
 
@@ -627,31 +550,18 @@ def prep_data_df(
     # stats; scalars always have only average and std. dev.
 
     # main loop: nodes!
-    for node_dag in node_dag_list:
-        rv_name = node_dag.node_name
-        node_val = node_dag.value  # list
-        n_repl = node_dag.repl_size
+    for rv_name, node_val, n_repl, is_stochastic, is_sampled, sample_size in value_records:
 
         # if stochastic node is constant and at least one value was indeed
-        # saved in list; tree-valued deterministic (':=') nodes are
-        # included here too (e.g., 'gamma_spike_clock's 'phylo'), so they
-        # get written just like stochastic/constant-function tree nodes
-        # do -- scalar deterministic nodes are left out, since the scalar
-        # branches below assume no replication structure (see "no support
-        # for replication via 2D-lists yet" a few lines down), which does
-        # not hold for most deterministic scalar outputs
-        if node_val and (
-                isinstance(node_dag, pgm.StochasticNodeDAG)
-                or (isinstance(node_dag, pgm.DeterministicNodeDAG)
-                    and isinstance(node_val, list)
-                    and isinstance(node_val[0], AnnotatedTree))):
+        # saved in list
+        if is_stochastic and node_val:
             ################################
             # Fixed-value stochastic nodes #
             ################################
 
             # scalar constants (no support for replication via 2D-lists yet)
             if isinstance(node_val[0], (str, int, float, np.float64)) \
-                    and not node_dag.is_sampled:
+                    and not is_sampled:
 
                 if scalar_constant_df.empty:
                     if sample_size == 0:
@@ -679,7 +589,7 @@ def prep_data_df(
             # Scalars #
             ###########
             if isinstance(node_val[0], (str, int, float, np.float64)) \
-                    and node_dag.is_sampled:
+                    and is_sampled:
 
                 ######################################################
                 # DataFrame holding scalar values (replicates if     #
@@ -808,7 +718,7 @@ def prep_data_df(
                 rec_tree_ann_list = []
                 for ith_val in node_val:
                     ith_rec_tree = \
-                        ith_val.extract_reconstructed_tree(plotting_overhead=False)
+                        ith_val.ensure_reconstructed_tree(plotting_overhead=False)
 
                     rec_tree_list.append(
                         ith_rec_tree.as_string(
@@ -834,14 +744,6 @@ def prep_data_df(
                 tree_rec_ann_value_df_dict[rv_name][rv_name] = \
                     rec_tree_ann_list
 
-                ##############################################
-                # DataFrame holding reconstructed-tree stub   #
-                # counts (one per tree node), if requested    #
-                ##############################################
-                if write_stub_counts:
-                    tree_n_stub_df_dict[rv_name] = prep_n_stub_df(
-                        node_val, sample_size, n_repl=n_repl)
-
                 ####################################
                 # DataFrame holding tree summaries #
                 # (one per tree node)              #
@@ -857,18 +759,21 @@ def prep_data_df(
                             summaries=True,
                             summaries_avg_over_repl=False)
 
-                total_n_states = node_val[0].state_count
+                # Keep the historical single-state-only schema, but include applicable
+                # state counts in mixed collections. Unassigned cells remain missing.
+                report_state_counts = any(isinstance(tree.trait, ContinuousTrait)
+                                          or tree.trait.states > 1 for tree in node_val)
 
                 # populating tree_summary_df_dict,
                 # iterating over samples and replicates
                 idx = 0
                 for replicate_tree in node_val:
                     tree_summary_df_dict[rv_name].at[idx, "root_age"] = \
-                        float("{:,.4f}".format(replicate_tree.root_age))
+                        round(replicate_tree.root_age, 4)
 
-                    if replicate_tree.origin_age:
+                    if replicate_tree.origin_age is not None:
                         tree_summary_df_dict[rv_name].at[idx, "origin_age"] = \
-                            float("{:,.4f}".format(replicate_tree.origin_age))
+                            round(replicate_tree.origin_age, 4)
 
                     # conservative: should match n_extant + n_extinct!
                     tree_summary_df_dict[rv_name].at[idx, "n_total"] = \
@@ -885,8 +790,8 @@ def prep_data_df(
                     # for leaves in the different states
                     # NOTE: at the moment, all leaves are counted (in the
                     # future, maybe just the sampled ones)
-                    if total_n_states > 1:
-                        for ith_state in range(replicate_tree.state_count):
+                    if report_state_counts and isinstance(replicate_tree.trait, DiscreteTrait):
+                        for ith_state in range(replicate_tree.trait.states):
                             tree_summary_df_dict[rv_name].at[idx, "n_" + str(ith_state)] = \
                                 replicate_tree.state_count_dict[ith_state]
 
@@ -984,47 +889,41 @@ def prep_data_df(
                 # Doing dictionaries with tsv and nexus #
                 # strings for states                    #
                 #########################################
-                sample_idx = 0
-                repl_idx = 0
-                idx = 0
-                for replicate_tree in node_val:
-                    while (sample_idx < sample_size):
-                        while (repl_idx < n_repl):
-                            living_nd_states_tsv_fp = \
-                                rv_name + "_sample" + str(sample_idx + 1) \
-                                + "_repl" + str(repl_idx + 1) + ".tsv"
-                            internal_nd_states_tsv_fp = \
-                                rv_name + "_sample" + str(sample_idx + 1) \
-                                + "_repl" + str(repl_idx + 1) + "_anc_states.tsv"
-                            living_nd_states_str, int_node_states_str = \
-                                node_val[idx].get_taxon_states_str()
-                            tree_living_nd_states_str_dict[living_nd_states_tsv_fp] = \
-                                living_nd_states_str
-                            tree_internal_nd_states_str_dict[internal_nd_states_tsv_fp] = \
-                                int_node_states_str
+                # Dispatch on each tree, keeping its original ordinal for every table
+                # and filename. Filtering by trait must never renumber observations.
+                rows = []
+                fossil_rows = []
+                have_continuous = False
+                for idx, tree in enumerate(node_val):
+                    sample_idx, repl_idx = idx // n_repl + 1, idx % n_repl + 1
+                    if isinstance(tree.trait, ContinuousTrait):
+                        have_continuous = True
+                        # Keep one row per complete-tree node, including internal and extinct nodes.
+                        for nd in tree.tree.preorder_node_iter():
+                            rows.append((sample_idx, repl_idx, nd.label,
+                                         getattr(nd, tree.trait.name), nd.alive, nd.sampled))
+                            if nd.is_sa:
+                                fossil_rows.append((sample_idx, repl_idx, nd.label,
+                                                    tree.node_heights_dict[nd.label], tree.node_ages_dict[nd.label],
+                                                    getattr(nd, tree.trait.name)))
+                    else:
+                        # State and NEXUS serializers use this tree's state space, not that
+                        # of the first tree. Both living and ancestral state files are retained.
+                        filename = rv_name + "_sample" + str(sample_idx) + "_repl" + str(repl_idx)
+                        living_states, internal_states = tree.get_taxon_states_str()
+                        tree_living_nd_states_str_dict[filename + ".tsv"] = living_states
+                        tree_internal_nd_states_str_dict[filename + "_anc_states.tsv"] = internal_states
+                        if write_nex_states:
+                            tree_living_nd_states_str_nexus_dict[filename + ".nex"] = \
+                                tree.get_taxon_states_str(nexus=True, bit_format=bit_format)
 
-                            if write_nex_states:
-                                states_nex_fp = rv_name + "_sample" \
-                                    + str(sample_idx + 1) + "_repl" \
-                                    + str(repl_idx + 1) + ".nex"
-                                nexus_str = node_val[idx].get_taxon_states_str(nexus=True, bit_format=bit_format)
-                                tree_living_nd_states_str_nexus_dict[
-                                    states_nex_fp] = nexus_str
-
-                            repl_idx += 1
-                            idx += 1
-
-                        repl_idx = 0
-                        sample_idx += 1
-
-                    # TODO
-                    # while (sample_idx < n_samples):
-                    #     while (repl_idx < n_repl):
-                    #         nex_fp = node_name + "_sample" + str(sample_idx) + "_repl" + str(repl_idx) + ".nex"
-                    #         nexus_str = node_val[idx].get_taxon_states_nexus_str()
-                    #         tree_nexus_str_states_dict[nex_fp] = nexus_str
-                    #         repl_idx += 1
-                    #     sample_idx += 1
+                if have_continuous:
+                    # The existing filename-to-text table also carries continuous trait TSVs.
+                    fossils = pd.DataFrame(fossil_rows, columns=["sample", "replicate", "node", "time", "age", "trait"])
+                    tree_living_nd_states_str_dict[rv_name + "_fossils.tsv"] = fossils.to_csv(sep="\t", index=False)
+                    traits = pd.DataFrame(rows, columns=["sample", "replicate", "node", "trait",
+                                                        "alive", "sampled"])
+                    tree_living_nd_states_str_dict[rv_name + "_traits.tsv"] = traits.to_csv(sep="\t", index=False)
 
     # debugging
     # print("\n\nPrinting dataframe for scalars with fixed value:\n")
@@ -1089,8 +988,7 @@ def prep_data_df(
                               tree_repl_summary_df_dict,
                               tree_living_nd_states_str_dict,
                               tree_living_nd_states_str_nexus_dict,
-                              tree_internal_nd_states_str_dict,
-                              tree_n_stub_df_dict])
+                              tree_internal_nd_states_str_dict])
 
     return scalar_output_stash, tree_output_stash
 
@@ -1185,143 +1083,46 @@ def prep_data_filepaths_dfs(
             output_fp_list.append(state_tsv_fp)
             output_df_str_list.append(state_string)
 
-    # reconstructed-tree stub counts, one .tsv per tree node (only
-    # populated if the caller requested 'write_stub_counts')
-    if tree_output_stash[9]:
-        for rv_name, df in tree_output_stash[9].items():
-            output_fp_list.append(rv_name + "_n_stub.tsv")
-            output_df_str_list.append(df)
-
     return output_fp_list, output_df_str_list
 
 
 def dump_pgm_data(dir_string: str,
-                  dag_obj: pgm.DirectedAcyclicGraph,
+                  dag_obj: "ExecutionResults",
                   prefix: str = "",
                   write_nex_states: bool = False,
-                  bit_format: bool = False,
-                  write_stub_counts: bool = False) -> None:
+                  bit_format: bool = False) -> None:
     """Write stochastic-node sampled values in specified directory.
 
     This function has the side-effect of writing to disk.
 
     Args:
         dir_string (str): Where to save the files to be written
-        dag_obj (DirectedAcyclicGraph): DAG object whose sampled
-            values we are extracting and writing to file.
+        dag_obj (ExecutionResults): Completed model replicates whose values are written.
         prefix (str): String to preceed file names.
         write_nex_states (bool): Flag specifying if .nex file should be
             additionally written. Defaults to 'False'.
         bit_format (bool): Flag specifying if states are to be
             represented as bit patterns (e.g., 'A' -> '10', 'B' ->
             '01', 'AB' -> '11'). Defaults to 'False'.
-        write_stub_counts (bool): Flag specifying if a
-            '[tr_node_name]_n_stub.tsv' file should additionally be
-            written for every tree-valued DAG node -- see
-            'prep_n_stub_df'. Defaults to 'False'.
     """
 
-    sorted_node_dag_list: \
-        ty.List[pgm.NodeDAG] = dag_obj.get_sorted_node_dag_list()
-
-    # populating data stashes that will be dumped and their file names
-    scalar_output_stash: \
-        ty.List[ty.Union[pd.DataFrame, ty.Dict[int, pd.DataFrame]]]
-    tree_output_stash: ty.List[ty.Dict[str, pd.DataFrame]]
-    output_fp_list: ty.List[str]
-    output_df_str_list: ty.List[pd.DataFrame]
-
-    # still prefixless #
-    scalar_output_stash, tree_output_stash = \
-        prep_data_df(dag_obj,
-                     write_nex_states=write_nex_states,
-                     bit_format=bit_format,
-                     write_stub_counts=write_stub_counts)
-
-    output_fp_list, output_df_str_list = \
-        prep_data_filepaths_dfs(scalar_output_stash, tree_output_stash)
-
-    # sort out file path #
-    if not dir_string.endswith("/"):
-        dir_string += "/"
-
-    output_file_path = dir_string
-
-    if prefix:
-        output_file_path += prefix + "_"
-
-    # full file paths #
-    data_df_full_fp_list = \
-        [output_file_path + fn for fn in output_fp_list]
-
-    # debugging
-    # print("\n\n" + "\n".join(data_df_full_fp_list))
-    # for df_or_str in output_df_str_list:
-    #     if isinstance(df_or_str, pd.DataFrame):
-    #         print(tabulate(df, df.head(), tablefmt="plain",
-    #               showindex=False).lstrip())
-
-    # write! #
-    for idx, full_fp in enumerate(data_df_full_fp_list):
-        f: str = ""
-        to_print = output_df_str_list[idx]
-
-        if full_fp.endswith("csv"):
-            f = "csv"
-
-        elif full_fp.endswith("tsv"):
-            f = "tsv"
-
-        elif full_fp.endswith("nex"):
-            f = "nex"
-
-        if isinstance(to_print, pd.DataFrame):
-            with open(full_fp, "w") as data_out:
-                write_data_df(data_out, to_print, format=f)
-
-        elif isinstance(to_print, str):
-            # ignore nexus file #
-            if f == "nex" and not write_nex_states:
-                continue
-
-            with open(full_fp, "w") as data_out:
-                write_str_list(data_out, [to_print])
+    from phylojunction.readwrite.execution_export import write_results
+    write_results(dir_string, dag_obj, prefix, write_nex_states=write_nex_states, bit_format=bit_format)
 
 
 def dump_trees_rb_smap_dfs(dir_string: str,
-                           dag_obj: pgm.DirectedAcyclicGraph,
+                           dag_obj: "ExecutionResults",
                            tr_dag_node_name_list: ty.List[str],
                            mapped_attr_name: str,
                            prefix: str = "") -> None:
 
-    # get dataframes ready #
-    all_tr_nds_df_list_dict, all_tr_nds_df_content_str_list_dict = \
-        prep_trees_rb_smap_dfs(dag_obj, tr_dag_node_name_list, mapped_attr_name)
-
-    # sort out file path #
-    if not dir_string.endswith("/"):
-        dir_string += "/"
-
-    if not os.path.isdir(dir_string):
-        os.mkdir(dir_string)
-
-    if prefix:
-        dir_string += prefix + "_"
-
-    # full file paths #
-    for nd_name, df_list in all_tr_nds_df_list_dict.items():
-        for idx, df in enumerate(df_list):
-            file_path = \
-                dir_string + nd_name + "_sample" + str(idx + 1) + "_smaps.tsv"
-
-            if isinstance(df, pd.DataFrame):
-                with open(file_path, "w") as data_out:
-                    write_data_df(data_out, df, format="tsv")
+    from phylojunction.readwrite.execution_export import write_maps
+    write_maps(dir_string, dag_obj, tr_dag_node_name_list, mapped_attr_name, prefix)
 
 
 def dump_serialized_pgm(
         file_name: str,
-        dag_obj: pgm.DirectedAcyclicGraph,
+        dag_obj: "ExecutionResults",
         cmd_log_list: ty.List[str],
         prefix: str = "",
         to_folder: bool = False) -> None:
@@ -1432,7 +1233,8 @@ if __name__ == "__main__":
     dag_obj = cmdp.script2dag(model_fp, in_pj_file=True)
 
     # either: to see what's inside dataframes (uncomment debugging)
-    prep_data_df(dag_obj)
+    from phylojunction.readwrite.execution_export import tree_files
+    print(tree_files(dag_obj))
 
     # or: to see file names and dataframes after organized (uncomment debugging)
     # dump_pgm_data("./", dag_obj, prefix="test")

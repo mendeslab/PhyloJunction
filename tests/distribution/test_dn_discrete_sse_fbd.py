@@ -167,18 +167,18 @@ class TestFBDTrees(unittest.TestCase):
             # print("Doing batch " + str(n_batches - i))
             sse_sim = distsse.DnSSE(
                 self.sse_stash,
-                n=100,
+                
                 origin=start_at_origin,
-                start_states_list=start_states_list,
+                start_state=(start_states_list)[0],
                 stop=stop_condition,
-                stop_value=stop_condition_value,
+                stop_value=(stop_condition_value)[0],
                 condition_on_speciation=True,
                 condition_on_survival=True,
                 epsilon=1e-12,
                 runtime_limit=3600,
                 debug=False)
 
-            trs = sse_sim.generate()
+            trs = sse_sim.draw_many(100)
 
             sim_batches.append(trs)
 

@@ -1,6 +1,7 @@
 import os
 import copy
 import typing as ty
+from dataclasses import dataclass
 import matplotlib.pyplot as plt  # type: ignore
 
 # pj imports
@@ -13,6 +14,72 @@ import phylojunction.utility.exception_classes as ec
 
 __author__ = "Fabio K. Mendes"
 __email__ = "fmendes@lsu.edu"
+
+
+@dataclass(frozen=True)
+class StochasticHistory:
+    """One iteration's tree-independent records, tip states, and state interpretation."""
+
+    iteration: int
+    records: tuple
+    tip_states: tuple
+    state2bit_lookup: pjbio.State2BitLookup
+
+    # Resolve identifiers only when a history is attached to a tree. This operation
+    # updates the supplied tree; public map_attr copies it first, legacy collections do not.
+    def apply(self, tree, attr_name=None):
+        attribute = tree.trait.name if attr_name is None else attr_name
+        nodes = {getattr(node, 'index', None): node for node in tree.tree.preorder_node_iter()}
+        for record in self.records:
+            if record[0] not in nodes:
+                raise ValueError(f"History {self.iteration}: tree has no node index {record[0]}.")
+        for name, state in self.tip_states:
+            node = tree.tree.find_node_with_label(name)
+            if node is None:
+                raise ValueError(f"History {self.iteration}: tree has no node {name}.")
+            setattr(node, attribute, state)
+        if self.tip_states:
+            tree.populate_nd_attr_dict([attribute], attr_dict_added_separately_from_tree=False)
+        maps = StochMapsOnTree(self.iteration, tree, self.state2bit_lookup, '', attribute)
+        for record in self.records:
+            maps.add_map(record)
+        maps.update_tree_attributes(attribute)
+        # Mapping changes transition data after AnnotatedTree initialization. Rebuild the
+        # reconstruction inputs, otherwise plotting/export prunes stale, empty dictionaries.
+        tree.tree_reconstructed = None
+        tree.rec_tr_at_dict = copy.deepcopy(tree.at_dict)
+        tree.rec_tr_clado_at_dict = copy.deepcopy(tree.clado_at_dict)
+        tree.rec_tr_sa_lineage_dict = copy.deepcopy(tree.sa_lineage_dict)
+        tree.have_updated_rec_tr_at_dict = False
+        tree.have_updated_rec_tr_clado_at_dict = False
+        return maps
+
+
+# Group records in first-appearance order, preserving record order inside each iteration.
+# Parsing is independent of trees; resolving node indices is deliberately deferred to apply.
+def read_histories(file_path, tip_attr_file_path, state2bit_lookup):
+    tip_states = ()
+    if tip_attr_file_path:
+        tip_states = tuple((name, int(state)) for name, state in
+                           (line.split('\t') for line in pjr.read_text_file(tip_attr_file_path)))
+    grouped = {}
+    with open(file_path) as stream:
+        header = stream.readline().rstrip('\n').split('\t')
+        if len(header) != 11 or header[0] != 'iteration':
+            raise ValueError("Expected the 11-column stochastic-map header starting with iteration.")
+        for line_number, line in enumerate(stream, 2):
+            if not line.strip():
+                continue
+            fields = line.rstrip('\n').split('\t')
+            if len(fields) != 11:
+                raise ValueError(f"{file_path}:{line_number}: expected 11 map columns.")
+            try:
+                iteration = int(fields[0])
+            except ValueError as error:
+                raise ValueError(f"{file_path}:{line_number}: invalid iteration identifier.") from error
+            grouped.setdefault(iteration, []).append(tuple(fields[1:]))
+    return [StochasticHistory(iteration, tuple(records), tip_states, state2bit_lookup)
+            for iteration, records in grouped.items()]
 
 
 class StochMap(pjev.EvolRelevantEvent):
@@ -1130,7 +1197,7 @@ class StochMapsOnTree():
                 print("nd_name", nd_name, stoch_map_attr_name, smap.from_state)
 
             clado_state_trans = AttributeTransition(
-                "state",
+                stoch_map_attr_name,
                 nd_name,
                 smap.time,
                 smap.from_state,
@@ -1188,7 +1255,7 @@ class StochMapsOnTree():
                     print("nd_name", nd_name, stoch_map_attr_name, smap.to_state)
 
                 ana_state_trans = AttributeTransition(
-                    "state",
+                    stoch_map_attr_name,
                     nd_name,
                     smap.time,
                     smap.from_state,
@@ -1297,7 +1364,7 @@ class StochMapsOnTreeCollection():
                  stoch_maps_file_path: str,
                  ann_trs: ty.List[pjtr.AnnotatedTree],
                  state2bit_lookup: pjbio.State2BitLookup,
-                 stoch_map_attr_name: str = "",
+                 stoch_map_attr_name: ty.Optional[str] = "",
                  node_states_file_path: str = "") -> None:
 
         self.stoch_maps_tree_dict = dict()
@@ -1329,7 +1396,7 @@ class StochMapsOnTreeCollection():
     def _read_stoch_maps_file(self,
                               stoch_maps_file_path: str,
                               node_states_file_path: str,
-                              stoch_map_attr_name: str,
+                              stoch_map_attr_name: ty.Optional[str],
                               ann_trs: ty.List[pjtr.AnnotatedTree],
                               state2bit_lookup: \
                               pjbio.State2BitLookup) -> None:
@@ -1351,7 +1418,7 @@ class StochMapsOnTreeCollection():
                 as metadata for each node.
             stoch_map_attr_name (str): Name of the attribute (e.g.,
                 'state') whose transitions are being stochastically
-                mapped.
+                mapped. None selects each tree's primary trait attribute.
             ann_trs (AnnotatedTree): List of AnnotatedTree objects. Can
                 have a single tree inside, in which case it is deep-
                 cloned should there be multiple iterations of
@@ -1361,87 +1428,20 @@ class StochMapsOnTreeCollection():
         """
 
         self.n_char = state2bit_lookup.n_char
-
-        if not os.path.isfile(stoch_maps_file_path):
-            exit("ERROR: Could not find " + stoch_maps_file_path + ". Exiting.")
-        
-        with open(stoch_maps_file_path, "r") as infile:
-            infile.readline() # skip header
-            # load all maps in memory
-            stoch_map_on_tree_str_list = infile.read().splitlines()
-
-        # how many MCMC iterations we have maps for
-        self.n_stoch_map_iterations = \
-            len(set(line.split("\t")[0] \
-                    for line in stoch_map_on_tree_str_list))
-            
-        # either we have a single tree (n_samples = 1)
-        # and multiple maps (stochastic maps from
-        # a single analysis at different MCMC generations),
-        # in which that tree is deep copied to match the number
-        # of maps (see below)
-        #
-        # or we have multiple trees (n_samples > 1 and/or
-        # n_repl > 1) and the number of MCMC stochastic maps
-        # must match the number of trees
-        n_trees: int = len(ann_trs)
-        if n_trees > 1 and n_trees != self.n_stoch_map_iterations:
+        histories = read_histories(stoch_maps_file_path, node_states_file_path, state2bit_lookup)
+        self.n_stoch_map_iterations = len(histories)
+        n_trees = len(ann_trs)
+        if n_trees != 1 and n_trees != len(histories):
             raise ec.ObjInitIncorrectDimensionError(
-                "StochMapCollection",
-                "ann_trs",
-                n_trees,
-                self.n_stoch_map_iterations)
+                "StochMapCollection", "ann_trs", n_trees, len(histories))
 
-        # deep-cloning AnnotatedTree objects so that each can get
-        # a different set of stochastic maps (one set per iteration)
+        # The established Python collection interface expands a single input tree for
+        # multiple iterations. PJ now expresses this using scalar argument vectorization.
         if n_trees == 1:
-            n_tree_copies_to_make = self.n_stoch_map_iterations - 1
-
-            for i in range(n_tree_copies_to_make, 0, -1):
-                ann_trs.append(copy.deepcopy(ann_trs[0]))
-
-        # debugging
-        # print("n_iterations", self.n_stoch_map_iterations)
-
-        # iterating over MCMC iterations when stochastic maps were logged
-        n_different_iterations: int = 0
-        for line in stoch_map_on_tree_str_list:
-            stoch_map_on_tree_str_list = line.split("\t")
-            it_idx = int(stoch_map_on_tree_str_list[0])
-
-            if it_idx not in self.sorted_it_idxs:
-                self.sorted_it_idxs.append(it_idx)
-
-            if it_idx not in self.stoch_maps_tree_dict:
-                self.stoch_maps_tree_dict[it_idx] \
-                    = StochMapsOnTree(it_idx,
-                                      ann_trs[n_different_iterations],
-                                      state2bit_lookup,
-                                      node_states_file_path,
-                                      stoch_map_attr_name)
-
-                n_different_iterations += 1
-
-            # we append this map to the members of the
-            # already initialized smot
-            self.stoch_maps_tree_dict[it_idx] \
-                .add_map(stoch_map_on_tree_str_list[1:])
-                
-                # print("just added map", iteration_idx, "n_forbidden =", self.stoch_maps_tree_dict[iteration_idx].n_forbidden_higher_order_anagenetic_maps)
-        
-        sorted(self.sorted_it_idxs)
-
-        #############################################
-        # Make every SMOT update its tree's members #
-        # according to the stochastic maps of their #
-        # assigned iteration                        #
-        #############################################
-        for it_idx, smot in self.stoch_maps_tree_dict.items():
-            # sets critical properties in stoch maps
-            # if iteration_idx == 11:
-            #     smot.update_tree_attributes(stoch_map_attr_name, debug=True)
-            # else:
-            smot.update_tree_attributes(stoch_map_attr_name)
+            ann_trs.extend(copy.deepcopy(ann_trs[0]) for _ in range(len(histories) - 1))
+        self.sorted_it_idxs = [history.iteration for history in histories]
+        for history, tree in zip(histories, ann_trs):
+            self.stoch_maps_tree_dict[history.iteration] = history.apply(tree, stoch_map_attr_name)
 
 
     def _report_clado_map_issue_str(self) -> None:

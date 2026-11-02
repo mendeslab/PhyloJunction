@@ -18,7 +18,7 @@ release = '0.0.1'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ["sphinx.ext.napoleon", "sphinx_new_tab_link"]
+extensions = ["sphinx.ext.autodoc", "sphinx.ext.napoleon", "sphinx_new_tab_link"]
 # "sphinx_new_tab_link" makes new links be opened in separate tabs; it needs module sphinx-new-tab-link
 
 # necessary to load this custom css, which 
@@ -28,21 +28,8 @@ def setup(app):
     app.add_css_file('css/pj_custom.css')
 
 templates_path = ['_templates']
-# these pjdoc/ files are never built as standalone pages -- they are
-# only ever pulled into 'pjdoc/index.rst' via '.. include::', chained
-# one into the next (constfns -> parametric -> treedists -> detfns).
-# Without excluding them here, sphinx also builds each as its own
-# orphan page (since every .rst under 'source/' is a document by
-# default, regardless of whether anything 'toctree's to it), doubling
-# up any content -- including, concretely, any '.. _label:' used for
-# cross-referencing (e.g. 'detfns.rst's ':ref:`read-tree`'), which
-# then triggers a "duplicate label" warning
-exclude_patterns = [
-    'pjdoc/constfns.rst',
-    'pjdoc/parametric.rst',
-    'pjdoc/treedists.rst',
-    'pjdoc/detfns.rst',
-]
+# Included reference sections are not standalone pages (avoid duplicate labels).
+exclude_patterns = ['pjdoc/parametric.rst', 'pjdoc/treedists.rst']
 
 #####################
 # Napoleon settings #
@@ -118,5 +105,4 @@ rst_prolog += """
 .. _RevBayes: https://revbayes.github.io
 .. |cpp| replace:: C++
 .. _C++: https://isocpp.org/"""
-
 

@@ -1,11 +1,35 @@
+from phylojunction.calculation.gamma_spike_clock_model import populate_gamma_spike_mol_rates_on_rec_tr_branches
 import unittest
+from unittest.mock import patch
+from phylojunction.readwrite.pj_read import read_nwk_tree_str
 from dendropy import Tree, Node, Taxon
 
 # pj imports
 import phylojunction.data.tree as pjtr
+from phylojunction.data.trait import DiscreteTrait
 
 
 class TestTreeCountStub(unittest.TestCase):
+
+    # Stub placement is an edge invariant, not a traversal-order convention. Existing
+    # hand-built trees do not check reordered input; retain while fossils split edges.
+    def test_stubs_on_both_sides_of_observation(self):
+        after = "(A[&alive=true]:1,Y[&alive=false,sampled=false]:0.2)J:1"
+        for children in ("S:0," + after, after + ",S:0"):
+            tree = read_nwk_tree_str(
+                "(((" + children + ")D:0.5,X[&alive=false,sampled=false]:0.2)H:0.5,"
+                "B[&alive=true]:3);", in_file=False, is_complete=True)
+            rec = tree.extract_reconstructed_tree()
+            tree.populate_n_stubs_on_branches_of_rec_tr()
+            expected = {"root": 0, "D": 1, "S": 0, "A": 1, "B": 0}
+            self.assertEqual({n.label: n.n_stub for n in rec}, expected)
+            with patch("numpy.random.gamma", return_value=1.0) as gamma:
+                populate_gamma_spike_mol_rates_on_rec_tr_branches(
+                    tree, 0.1, 0.01, 2.0, [1.0] * tree.n_rec_branches())
+            self.assertEqual([call.kwargs for call in gamma.call_args_list],
+                             [dict(shape=4.0, scale=0.5), dict(shape=2.0, scale=0.5),
+                              dict(shape=2.0, scale=0.5)])
+            self.assertIsNone(rec.find_node_with_taxon_label("S").spike_effect)
 
     def test_count_stubs(self):
         # We will construct the complete tree here
@@ -266,7 +290,7 @@ class TestTreeCountStub(unittest.TestCase):
 
         ann_tr = pjtr.AnnotatedTree(
             tr_complete,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=True,
             max_age=max_age,
             epsilon=1e-12
@@ -288,9 +312,9 @@ class TestTreeCountStub(unittest.TestCase):
         expected_stub_counts = {
             "root": 0,
             "nd10": 1,
-            "nd6": 0,
+            "nd6": 1,
             "sa": 0,
-            "nd7": 1,
+            "nd7": 0,
             "nd12": 0,
             "nd13": 1
         }

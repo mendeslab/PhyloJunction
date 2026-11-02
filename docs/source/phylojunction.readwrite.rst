@@ -9,21 +9,29 @@ phylojunction.readwrite.pj\_read module
 
 .. automodule:: phylojunction.readwrite.pj_read
    :members:
-   :show-inheritance:
    :undoc-members:
+   :show-inheritance:
 
 phylojunction.readwrite.pj\_write module
 ----------------------------------------
 
 .. automodule:: phylojunction.readwrite.pj_write
    :members:
-   :show-inheritance:
    :undoc-members:
+   :show-inheritance:
+
+phylojunction.readwrite.execution_export module
+-----------------------------------------------
+
+.. automodule:: phylojunction.readwrite.execution_export
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 Module contents
 ---------------
 
 .. automodule:: phylojunction.readwrite
    :members:
-   :show-inheritance:
    :undoc-members:
+   :show-inheritance:

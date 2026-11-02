@@ -1,4 +1,6 @@
 import unittest
+import copy
+from unittest.mock import patch
 
 # pj imports
 import phylojunction.utility.helper_functions as pjh
@@ -11,8 +13,23 @@ __email__ = "fmendes@lsu.edu"
 
 class TestDnSSEObject(unittest.TestCase):
 
+    # Explicit IID draws share a starting state but do not mutate caller-owned rates.
+    # Statistical tree tests do not isolate argument reuse or state selection.
+    def test_start_state_expansion(self):
+        rate = sseobj.DiscreteStateDependentRate(
+            name='lambda', val=1.0, event=sseobj.MacroevolEvent.W_SPECIATION, states=[0,0,0])
+        stash = sseobj.SSEStash(sseobj.MacroevolEventHandler(
+            sseobj.DiscreteStateDependentParameterManager([[rate]], 2)))
+        for state in (0, 1):
+            sim = distsse.DnSSE(stash, start_state=state, stop='age', stop_value=1.0)
+            with patch.object(sim, 'simulate', return_value=object()) as simulate, \
+                    patch.object(sim, '_is_tr_ok', return_value=True):
+                self.assertEqual(len(sim.draw_many(2)), 2)
+                self.assertEqual([call.args[0] for call in simulate.call_args_list], [state, state])
+            self.assertEqual(rate.value, [1.0])
+
     def test_dnsse_vectorization(self):
-        """Test if DnSSE takes vectorized input correctly."""
+        """Test explicit scalar parameter settings across separate tree draws."""
 
         # NOTE
         # first 5 trees must be alive (l = 1.0, mu = 0.0)
@@ -57,21 +74,20 @@ class TestDnSSEObject(unittest.TestCase):
         start_at_origin = True
         start_states_list = [0 for i in range(n_sim)]
 
-        sse_sim = distsse.DnSSE(
-            sse_stash,
-            n=n_sim,
-            origin=start_at_origin,
-            start_states_list=start_states_list,
-            stop=stop_condition,
-            stop_value=stop_condition_value,
-            condition_on_speciation=False,
-            condition_on_survival=False,
-            epsilon=1e-12,
-            runtime_limit=3600,
-            debug=False)
-
-        print("\n\nRunning TestDnSSEObject.test_dnsse_vectorization")
-        trs = sse_sim.generate()
+        trs = []
+        for i in range(n_sim):
+            stash = copy.deepcopy(sse_stash)
+            for epoch in stash.meh.sse_rate_manager.matrix_state_dep_params:
+                for parameter in epoch:
+                    parameter.value = [parameter.value[i]]
+            sim = distsse.DnSSE(stash, origin=start_at_origin, start_state=start_states_list[i],
+                               stop=stop_condition, stop_value=stop_condition_value[0],
+                               condition_on_speciation=False, condition_on_survival=False,
+                               epsilon=1e-12, runtime_limit=3600, debug=False)
+            # Force an event before the horizon so pure-death cases exercise extinction
+            # deterministically, instead of relying on five exponential draws all being short.
+            with patch('phylojunction.distribution.dn_parametric.DnExponential.draw_exp', return_value=[1.0]):
+                trs.append(sim.draw())
 
         trs1to5 = [ tr for tr in trs[:5] ]
         trs6to10 = [ tr for tr in trs[5:] ]

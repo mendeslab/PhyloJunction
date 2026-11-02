@@ -158,18 +158,17 @@ if __name__ == "__main__":
     #################
 
     # initializing model
-    model_fp = "examples/validate_files/r_b.pj"
+    model_fp = "examples/coverage_files/r_b_exp.pj"
     dag_obj = cmdp.script2dag(model_fp, in_pj_file=True)
 
     # reading true values
-    scalar_output_stash, tree_output_stash = pjwrite.prep_data_df(dag_obj)
-    scalar_constant_df = scalar_output_stash[0]
+    scalar_constant_df = pd.DataFrame({"r_b": dag_obj.value("r_b")})
     # print(tabulate(scalar_constant_df, headers=scalar_constant_df.head(),
     #                tablefmt="pretty", showindex=False))
 
     # reading hpd table
     hpd_df = pjread.read_csv_into_dataframe(
-        "./examples/validate_files/r_b.csv")
+        "./examples/coverage_files/r_b_exp.csv")
     # print(tabulate(hpd_df, headers=hpd_df.head(), tablefmt="pretty"))
 
     full_cov_df = pd.concat([scalar_constant_df, hpd_df], axis=1)

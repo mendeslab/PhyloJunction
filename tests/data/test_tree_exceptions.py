@@ -1,3 +1,4 @@
+from phylojunction.data.trait import DiscreteTrait
 import unittest
 from dendropy import Tree, Node, Taxon
 
@@ -124,7 +125,7 @@ class TestTreeExceptions(unittest.TestCase):
         with self.assertRaises(ec.AnnotatedTreeIncorrectAnnotationError) as exc:
             ann_tr = pjtr.AnnotatedTree(
             tr_complete,
-            total_state_count,
+            DiscreteTrait(total_state_count),
             start_at_origin=False,
             max_age=max_age,
             sa_lineage_dict=sa_lineage_dict,

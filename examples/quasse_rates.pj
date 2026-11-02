@@ -1,0 +1,6 @@
+# Caps change rates; max_nodes only aborts excessive allocations. dt_max is a duration.
+bounded := quasse_gaussian(baseline=0.1, center_rate=0.8, center=0, width=1, cap=0.6)
+unbounded := quasse_quadratic(baseline=0.1, strength=0.05, center=0)
+death := quasse_constant(rate=0.02)
+bounded_trees ~ quasse(birth_rate=bounded, death_rate=death, diffusion=0.1, stop="age", stop_value=2, dt_max=0.01, max_nodes=10000)
+unbounded_trees ~ quasse(birth_rate=unbounded, death_rate=death, diffusion=0.1, stop="age", stop_value=2, dt_max=0.01, max_nodes=10000)

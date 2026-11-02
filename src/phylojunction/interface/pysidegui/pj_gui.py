@@ -1,6 +1,10 @@
 import sys
+from contextlib import ExitStack
 import os
 import re
+from phylojunction.pgm.values import elements, path_text, shape, summaries, plot_values, component_values, component_frame
+from phylojunction.pgm.execution import ExecutionResults
+from phylojunction.readwrite.execution_export import write_results, write_maps
 import typing as ty
 import numpy as np
 import pandas as pd
@@ -8,9 +12,9 @@ import arviz as az  # type: ignore
 from natsort import natsorted  # type: ignore
 from tabulate import tabulate  # type: ignore
 from PySide6.QtWidgets import \
-    QApplication, QMainWindow, QPushButton, QFileDialog
+    QApplication, QMainWindow, QPushButton, QFileDialog, QMessageBox, QStyle
 from PySide6.QtGui import QAction
-from PySide6.QtCore import QPropertyAnimation, QEasingCurve, QTimer
+from PySide6.QtCore import QPropertyAnimation, QEasingCurve, QTimer, QSignalBlocker, Qt
 
 # pj imports #
 from phylojunction.interface.pysidegui.content_main_window \
@@ -36,79 +40,49 @@ class GUIModeling():
     cmd_log_list: ty.List[str]
 
     def __init__(self):
-        self.dag_obj = DirectedAcyclicGraph()
+        self.results = DirectedAcyclicGraph().execute()
         self.cmd_log_list = []
+        self.active_script_lines: ty.Optional[ty.List[str]] = []
+        self._seed = None
 
-    def update_dag_random_seed(self, a_random_seed: int):
-        self.dag_obj.random_seed = a_random_seed
+    @property
+    def dag_obj(self):
+        return self.results.model
 
-    def parse_cmd_update_pgm(
-            self,
-            cmd_line_list,
-            gui_main_window_obj,
-            clear_cmd_log_list: bool = False):
-        
-        # in case we read two scripts
-        # consecutively, we want to clear
-        # the comand line history list
+    def update_dag_random_seed(self, a_random_seed):
+        self._seed = a_random_seed
+
+    # Execute new commands transactionally for all current runs. A changed run count
+    # takes effect on the next full rerun, so additions never invent missing prior values.
+    def parse_cmd_update_pgm(self, cmd_line_list, gui_main_window_obj, clear_cmd_log_list=False):
+        lines = [line.strip() for line in cmd_line_list if line.strip() and not line.strip().startswith('#')]
+        try:
+            if not self.dag_obj.definitions:
+                seed = gui_main_window_obj._read_seed()
+                candidate = cmdp.compile_model('\n'.join(cmd_line_list), '<interactive>').execute(
+                    gui_main_window_obj.ui.ui_pages.execution_count.value(), seed)
+            else:
+                candidate = self.results.append('\n'.join(cmd_line_list))
+        except Exception as error:
+            gui_main_window_obj.ui.bottom_label_left.setText('Execution failed; previous results retained')
+            gui_main_window_obj.ui.ui_pages.warnings_textbox.setText(str(error))
+            return False
+        self.results = candidate
         if clear_cmd_log_list:
             self.cmd_log_list = []
-
-        valid_cmd_line = None
-        print("\nReading following command lines:")
-
-        for line in cmd_line_list:
-            # removing whitespaces from left and right
-            line = line.strip()
-            print("  " + line)
-
-            # will set random seed once if DAG does not already have one
-            if not isinstance(self.dag_obj.random_seed, int):
-                a_random_seed: str = \
-                    gui_main_window_obj.ui.ui_pages. \
-                        random_seed_prefix_textbox.toPlainText()
-                
-                # random seed is not None and not empty string
-                if a_random_seed:
-                    random_seed: int = int(a_random_seed)
-                    self.dag_obj.random_seed = random_seed
-
-            # side-effect in cmdline2dag
-            try:
-                valid_cmd_line = cmdp.cmdline2dag(self.dag_obj, line)
-
-            except Exception as e:
-                gui_main_window_obj.ui.bottom_label_left.setText("Warning produced")
-
-                # if not event == "Simulate":
-                if e.__context__:
-                    # __context__ catches innermost exception
-                    # update warnings page later, with e.__context__
-                    # print(e.__context__)
-                    # gui_main_window_obj.ui.ui_pages.warnings_textbox.setText(str(e.__context__))
-                    print(e)
-                    gui_main_window_obj.ui.ui_pages.warnings_textbox.setText(str(e))
-
-                else:
-                    print(e)  # update warnings page with e
-                    gui_main_window_obj.ui.ui_pages.warnings_textbox.setText(str(e))
-
-            if valid_cmd_line:
-                # try:
-                if len(self.cmd_log_list) >= 1 and self.cmd_log_list[-1] in ("\n#"):
-                    self.cmd_log_list.append("")  # adding new line
-
-                # except Exception as e:
-                #     print("PhyloJunction's GUI: An error occurred: ", type(e).__name__, " - ", e)
-                #     pass
-
-                self.cmd_log_list.append(valid_cmd_line)
+        self.cmd_log_list.extend(lines)
+        if self.active_script_lines is not None:
+            self.active_script_lines.extend(lines)
+        gui_main_window_obj.refresh_resample_button()
+        return True
 
     def cmd_log(self):
         return "\n".join(self.cmd_log_list) + "\n\n"
 
     def clear(self):
-        self.dag_obj = DirectedAcyclicGraph()
+        self.results = DirectedAcyclicGraph().execute()
+        self.active_script_lines = []
+
 
 
 class GUIMainWindow(QMainWindow):
@@ -188,18 +162,22 @@ class GUIMainWindow(QMainWindow):
         # PGM page #
         ############
 
+        self.ui.ui_pages.random_seed_prefix_textbox.returnPressed.connect(self._seed_entered)
+        self.ui.ui_pages.tr_dag_node_textbox.setToolTip(
+            "Comma-separated tree variable names, for example: trees, mapped_trees")
+
         # cmd line enter #
         self.ui.ui_pages.cmd_prompt.returnPressed.connect(
             self.parse_cmd_update_gui)
 
-        # node list #
-        # need to use lambda b/c otherwise 'self'
-        # is passed as argument for 'spin_buttons_clicked'
-        # which makes it so spin buttons are not properly
-        # initialized
-        self.ui.ui_pages.node_list.itemClicked.connect(
-            lambda do_node: self.do_selected_node_dag_page(
-                spin_buttons_clicked=False))
+        # Selection changes include keyboard navigation as well as mouse clicks.
+        self.ui.ui_pages.node_list.currentItemChanged.connect(
+            lambda current, previous: self._display_selected_node())
+        self._distance_node = None
+        self._time_reconstructed = False
+        self.ui.ui_pages.evolutionary_distance_check.toggled.connect(self._distance_changed)
+        self.ui.ui_pages.reconstructed_tree_check.toggled.connect(
+            self.refresh_selected_node_display_plot_spin)
 
         # radio button update #
         self.ui.ui_pages.one_sample_radio.clicked.connect(
@@ -221,10 +199,11 @@ class GUIMainWindow(QMainWindow):
             )
         )
 
-        # redraw selected node button #
-        self.ui.ui_pages.redraw_node.clicked.connect(
-            lambda clear_model:
-            self.redraw_selected_node())
+        # Replay the specification to generate a new model, then display it.
+        self.ui.ui_pages.resample_model.clicked.connect(self.resample_current_script)
+        self.ui.ui_pages.resample_model.setIcon(
+            self.style().standardIcon(QStyle.StandardPixmap.SP_BrowserReload))
+        self.refresh_resample_button()
 
         # clear model button #
         self.ui.ui_pages.clear_model.clicked.connect(
@@ -379,7 +358,8 @@ class GUIMainWindow(QMainWindow):
 
         # read commands
         # (side-effect: gui_modeling stores cmd hist)
-        self.gui_modeling.parse_cmd_update_pgm(cmd_line_list, self)
+        if not self.gui_modeling.parse_cmd_update_pgm(cmd_line_list, self):
+            return
 
         # update GUI cmd history
         self.refresh_cmd_history()
@@ -389,124 +369,82 @@ class GUIMainWindow(QMainWindow):
         # updating node lists
         self.refresh_node_lists()
 
-    def selected_node_display(
-            self,
-            node_dag,
-            do_all_samples,
-            sample_idx=None,
-            repl_idx=0,
-            repl_size=1,
-            display_reconstructed=False):
+    # Select one explicit nested path, keeping the same path when comparing replicates.
+    def selected_values(self, node_name, sample_idx, repl_idx, all_executions=False):
+        values = self.gui_modeling.results.values(node_name)
+        execution = max(0, sample_idx or 0)
+        choices = list(elements(values[execution]))
+        path, selected = choices[min(max(0, repl_idx), len(choices) - 1)]
+        self.ui.ui_pages.repl_idx_spin.setToolTip(node_name + path_text(path))
+        if not all_executions:
+            return [selected], path
+        if any(shape(value) != shape(values[0]) for value in values[1:]):
+            return values, None
+        return [dict(elements(value))[path] for value in values], path
 
-        display_node_dag_value_str = str()
-        display_node_dag_stat_str = str()
-
-        is_tree = False
-        # try:
-        if isinstance(node_dag.value, list) and \
-                isinstance(node_dag.value[0], pjdt.AnnotatedTree):
-            is_tree = True
-
-        # if deterministic, not subscriptable
-        # except Exception as e:
-            # print("(pj_gui.py) An error occurred: ", type(e).__name__, " - ", e)
-            # pass
-
-        # first we do values
-        # we care about a specific sample and maybe a specific replicate
-        if sample_idx is not None and not do_all_samples:
-            start = sample_idx * repl_size
-            end = start + repl_size
-
-            # values
-            display_node_dag_value_str = \
-                node_dag.get_start2end_str(
-                    start,
-                    end,
-                    repl_idx=repl_idx,
-                    is_tree=is_tree,
-                    display_reconstructed=display_reconstructed)
-
-            # summary stats
-            display_node_dag_stat_str = \
-                node_dag.get_node_stats_str(
-                    start,
-                    end,
-                    repl_idx)
-
-        # we get all samples
+    # Display observations separately from summaries across replicates. Tree summaries
+    # remain available for individual trees; vector elements are never averaged together.
+    def selected_node_display(self, node_dag, do_all_samples, sample_idx=None,
+                              repl_idx=0, repl_size=1, display_reconstructed=False):
+        values, path = self.selected_values(node_dag.node_name, sample_idx, repl_idx, do_all_samples)
+        rendered = []
+        for value in values:
+            if isinstance(value, pjdt.AnnotatedTree) and display_reconstructed:
+                value = value.ensure_reconstructed_tree().as_string(schema='newick').strip()
+            rendered.append(str(value))
+        self.ui.ui_pages.values_content.setText('\n'.join(rendered))
+        if len(values) == 1 and isinstance(values[0], pjdt.AnnotatedTree):
+            text = tabulate(values[0].get_stats_dict(reconstructed=display_reconstructed).items(), tablefmt='plain')
         else:
-            # just calling __str__
-            display_node_dag_value_str = \
-                self.gui_modeling.dag_obj \
-                .get_display_str_by_name(node_dag.node_name)
+            rows = summaries(values, reconstructed=display_reconstructed) if path is not None else []
+            text = tabulate(rows, headers='keys', tablefmt='plain') if rows else ''
+        self.ui.ui_pages.summary_content.setText(text)
 
-            # getting all values
-            display_node_dag_stat_str = \
-                node_dag.get_node_stats_str(
-                    0, len(node_dag.value), repl_idx)  # summary stats
-
-        # print("Set values_content QLineEdit widget with text: " + display_node_dag_value_str)
-        # print("Set summary_content QLineEdit widget with text: " + display_node_dag_stat_str)
-        self.ui.ui_pages.values_content.setText(display_node_dag_value_str)
-        self.ui.ui_pages.summary_content.setText(display_node_dag_stat_str)
-
-    def selected_node_plot(
-            self,
-            fig_obj,
-            fig_axes,
-            node_dag,
-            do_all_samples,
-            sample_idx=None,
-            repl_idx=0,
-            repl_size=1,
-            draw_reconstructed=False):
-        """
-        Plot DAG node on 'node_display_fig_axes' (Axes object) scoped to 'call_gui()',
-        then update canvas with new plot
-        """
-
-        if isinstance(node_dag.value, list):
-            # if a tree
-            if isinstance(node_dag.value[0], pjdt.AnnotatedTree):
-                self.draw_node_dag(fig_axes,
-                                   node_dag,
-                                   sample_idx=sample_idx,
-                                   repl_idx=repl_idx,
-                                   repl_size=repl_size,
-                                   draw_reconstructed=draw_reconstructed)
-
-            # when not a tree
-            else:
-                if do_all_samples:
-                    self.draw_node_dag(fig_axes,
-                                       node_dag,
-                                       repl_size=repl_size)
-
-                else:
-                    self.draw_node_dag(fig_axes,
-                                        node_dag,
-                                        sample_idx=sample_idx,
-                                        repl_idx=repl_idx,
-                                        repl_size=repl_size)
-
-        # if deterministic, not subscriptable
-        # except Exception as e:
-        #     print("An error occurred: ", type(e).__name__, " - ", e)
-
-        # deterministic node
-        else:
-            self.draw_node_dag(fig_axes, node_dag)
-
+    # Plot observations from one selected path, or a single selected tree.
+    def selected_node_plot(self, fig_obj, fig_axes, node_dag, do_all_samples,
+                           sample_idx=None, repl_idx=0, repl_size=1, draw_reconstructed=False):
+        values, _ = self.selected_values(node_dag.node_name, sample_idx, repl_idx, do_all_samples)
+        plot_values(fig_axes, values, draw_reconstructed,
+                    self.ui.ui_pages.evolutionary_distance_check.isChecked())
         fig_obj.canvas.draw()
 
-    def selected_node_read(self, node_name: str):
-        node_dag = self.gui_modeling.dag_obj.get_node_dag_by_name(node_name)
-        # this is n_sim inside sampling distribution classes
-        sample_size = len(node_dag)
-        repl_size = node_dag.repl_size
+    # The first selector chooses a replicate; the second enumerates explicit leaf paths.
+    def selected_node_read(self, node_name):
+        results = self.gui_modeling.results
+        index = max(0, min(self.ui.ui_pages.sample_idx_spin.value() - 1, results.n_executions - 1))
+        count = len(list(elements(results.value(node_name, index))))
+        return results.model.name_node_dict[node_name], results.n_executions, count
 
-        return node_dag, sample_size, repl_size
+    # Distance requires reconstructed rates. Preserve the independent time-view choice
+    # while the disabled reconstruction control accurately reflects what is displayed.
+    def _distance_changed(self, checked):
+        u = self.ui.ui_pages
+        if checked:
+            self._time_reconstructed = u.reconstructed_tree_check.isChecked()
+        with QSignalBlocker(u.reconstructed_tree_check):
+            u.reconstructed_tree_check.setChecked(True if checked else self._time_reconstructed)
+            u.reconstructed_tree_check.setEnabled(not checked)
+        self.refresh_selected_node_display_plot_spin()
+
+    # Initialize only on a variable switch, not a redraw or replicate change. Rate metadata
+    # controls availability; it does not change the tree, statistics, or export settings.
+    def _sync_distance_control(self, name, sample, element):
+        u = self.ui.ui_pages
+        values, _ = self.selected_values(name, sample, element)
+        available = bool(values and isinstance(values[0], pjdt.AnnotatedTree)
+                         and values[0].clock_model_attr_name is not None)
+        with QSignalBlocker(u.evolutionary_distance_check), QSignalBlocker(u.reconstructed_tree_check):
+            if name != self._distance_node:
+                if not u.evolutionary_distance_check.isChecked():
+                    self._time_reconstructed = u.reconstructed_tree_check.isChecked()
+                u.evolutionary_distance_check.setChecked(available)
+                u.reconstructed_tree_check.setChecked(True if available else self._time_reconstructed)
+                self._distance_node = name
+            elif not available and u.evolutionary_distance_check.isChecked():
+                u.evolutionary_distance_check.setChecked(False)
+                u.reconstructed_tree_check.setChecked(self._time_reconstructed)
+            u.evolutionary_distance_check.setVisible(available)
+            u.reconstructed_tree_check.setEnabled(not u.evolutionary_distance_check.isChecked())
 
     def do_selected_node_dag_page(self, spin_buttons_clicked: bool = False):
         """
@@ -526,23 +464,16 @@ class GUIMainWindow(QMainWindow):
             node_dag, sample_size, repl_size = \
                 self.selected_node_read(selected_node_name)
 
-            # spin boxes must be up-to-date #
-            self.ui.ui_pages.repl_idx_spin.setMaximum(repl_size)
-            if sample_size == 0:
-                self.ui.ui_pages.sample_idx_spin.setMaximum(0)
-
-            else:
+            # Range and mode initialization must not trigger intermediate plots.
+            with QSignalBlocker(self.ui.ui_pages.sample_idx_spin), \
+                    QSignalBlocker(self.ui.ui_pages.repl_idx_spin):
+                self.ui.ui_pages.repl_idx_spin.setMaximum(repl_size)
                 self.ui.ui_pages.sample_idx_spin.setMaximum(sample_size)
+                if not spin_buttons_clicked:
+                    self.init_and_refresh_radio_spin(node_dag, sample_size, repl_size)
 
-            # grab pgm_page's figure and axes #
             fig_obj = self.ui.ui_pages.pgm_page_matplotlib_widget.fig
             fig_axes = self.ui.ui_pages.pgm_page_matplotlib_widget.axes
-
-            # activate radio buttons and spin elements #
-            # if spin buttons were clicked, no need
-            # to updated radio and spin buttons
-            if not spin_buttons_clicked:
-                self.init_and_refresh_radio_spin(node_dag, sample_size, repl_size)
 
             do_all_samples = \
                 self.ui.ui_pages.all_samples_radio.isChecked()
@@ -556,6 +487,8 @@ class GUIMainWindow(QMainWindow):
 
             sample_idx = self.ui.ui_pages.sample_idx_spin.value() - 1
             repl_idx = self.ui.ui_pages.repl_idx_spin.value() - 1
+            self._sync_distance_control(selected_node_name, sample_idx, repl_idx)
+            do_reconstructed = self.ui.ui_pages.reconstructed_tree_check.isChecked()
 
             ###############
             # Now do node #
@@ -579,144 +512,35 @@ class GUIMainWindow(QMainWindow):
 
         # no nodes to do
         else:
-            print("If there are no nodes in PJ model, nothing to do")
             pass
 
+    def component_values(self, name):
+        return component_values(self.gui_modeling.results, name)
+
+    def component_frame(self, name):
+        return component_frame(self.gui_modeling.results, name)
+
+    # Compare the chosen component across replicates, without within-vector averages.
     def do_selected_node_compare_page(self):
-        """
-        Chose node to get summary statistics
-        and compare against user implementation
-        (implementation comparison menu)
-        """
+        u = self.ui.ui_pages
+        item = u.compare_node_list.currentItem()
+        u.summary_stats_list.clear()
+        if item is None:
+            return
+        name = item.text()
+        self.pj_comparison_df = self.component_frame(name)
+        self.pj_comparison_df['program'] = 'PJ'
+        if isinstance(self.component_values(name)[0], pjdt.AnnotatedTree):
+            u.summary_stats_list.addItems([column for column in self.pj_comparison_df
+                                          if column not in ('sample', 'replicate', 'program')])
 
-        # first get selected node's name #
-        selected_node_name: str = ""
-        active_item = self.ui.ui_pages.compare_node_list.currentItem()
-        if active_item:
-            selected_node_name = active_item.text()
-
-        # if there is at least one
-        # sampled node with a name
-        if selected_node_name not in ("", None):
-
-            # reading node information #
-            selected_node_dag, selected_node_sample_size, selected_node_repl_size = \
-                self.selected_node_read(selected_node_name)
-
-            # could be more efficient, but this
-            # makes sure that stashes are always up-to-date
-            scalar_output_stash, tree_output_stash = \
-                pjwrite.prep_data_df(self.gui_modeling.dag_obj)
-
-            # collecting scalars #
-            _, scalar_value_df_dict, scalar_repl_summary_df = \
-                scalar_output_stash
-
-            # collecting trees #
-            tree_value_df_dict, tree_ann_value_df_dict, tree_rec_value_df_dict, \
-                tree_rec_ann_value_df_dict, tree_summary_df_dict, tree_repl_summary_df_dict, \
-                tree_living_nd_states_str_dict, tree_living_nd_states_str_nexus_dict, \
-                tree_internal_nd_states_str_dict, tree_n_stub_df_dict = tree_output_stash
-
-            # adding "program" column to
-            # PJ's pandas DataFrame's stored inside dicts
-            for repl_size in scalar_value_df_dict:
-                scalar_value_df_dict[selected_node_repl_size] \
-                    .loc[:, "program"] = "PJ"
-
-            for tr_nd_name in tree_summary_df_dict:
-                tree_summary_df_dict[tr_nd_name] \
-                    .loc[:, "program"] = "PJ"
-
-            for tr_w_repl_nd_name in tree_repl_summary_df_dict:
-                tree_repl_summary_df_dict[tr_w_repl_nd_name] \
-                    .loc[:, "program"] = "PJ"
-
-            # scalar was selected #
-            if isinstance(selected_node_dag.value[0], (int, float, np.float64)):
-                self.ui.ui_pages.summary_stats_list.clear()
-
-                if not self.is_avg_repl_check:
-                    self.pj_comparison_df = scalar_value_df_dict[selected_node_repl_size]
-
-                elif selected_node_repl_size > 1:
-                    self.ui.ui_pages.summary_stats_list.addItems(
-                        ["average", "std. dev."]
-                    )
-                    self.pj_comparison_df = scalar_repl_summary_df
-
-            # tree was selected #
-            elif isinstance(selected_node_dag.value[0], pjdt.AnnotatedTree):
-                self.pj_comparison_df = tree_summary_df_dict[selected_node_name]
-                self.ui.ui_pages.summary_stats_list.clear()
-                self.ui.ui_pages.summary_stats_list.addItems(
-                    [tree_stat for tree_stat in self.pj_comparison_df.keys()
-                     if tree_stat not in ("program", "sample", "replicate")]
-                )
-
-        # no sampled nodes
-        else:
-            print("If there are no sampled nodes in PJ model, we cannot compare against PJ. Later write an Exception for this")
-            pass
-
+    # Coverage always compares one numeric component's value per model replicate.
     def do_selected_node_coverage_page(self):
-        """
-        Chose node to get values or summary
-        statistics for coverage plot
-        (coverage menu)
-        """
-
-        # first get selected node's name #
-        selected_node_name: str = ""
-        active_item = self.ui.ui_pages.coverage_node_list.currentItem()
-        if active_item:
-            selected_node_name = active_item.text()
-
-        # if there is at least one
-        # sampled node with a name
-        if selected_node_name not in ("", None):
-
-            # reading node information #
-            selected_node_dag, selected_node_sample_size, selected_node_repl_size = \
-                self.selected_node_read(selected_node_name)
-
-            # could be more efficient, but this
-            # makes sure that stashes are always up-to-date
-            scalar_output_stash, tree_output_stash = \
-                pjwrite.prep_data_df(self.gui_modeling.dag_obj)
-
-            # collecting scalars #
-            scalar_constant_value_df, scalar_value_df_dict, scalar_repl_summary_df = \
-                scalar_output_stash
-
-            # collecting trees #
-            tree_value_df_dict, tree_ann_value_df_dict, tree_rec_value_df_dict, \
-                tree_rec_ann_value_df_dict, tree_summary_df_dict, tree_repl_summary_df_dict, \
-                tree_living_nd_states_str_dict, tree_living_nd_states_str_nexus_dict, \
-                tree_internal_nd_states_str_dict, tree_n_stub_df_dict = tree_output_stash
-
-            # str because could be constant set by hand
-            if isinstance(selected_node_dag.value[0], (str, int, float, np.float64)):
-                if selected_node_repl_size <= 1:
-                    self.ui.ui_pages.cov_summary_stats_list.clear()
-
-                    # sampled, non-deterministic
-                    if selected_node_dag.is_sampled:
-                        self.coverage_df = scalar_value_df_dict[selected_node_repl_size]
-
-                    # constant, non-deterministic
-                    else:
-                        self.coverage_df = scalar_constant_value_df
-
-                else:
-                    self.ui.ui_pages.cov_summary_stats_list.addItems(
-                        ["average", "std. dev."]
-                    )
-                    self.coverage_df = scalar_repl_summary_df
-
-        else:
-            print("If there are no non-deterministic nodes in PJ model, no sensical coverage can be calculated. Later write an Exception for this")
-            pass
+        u = self.ui.ui_pages
+        item = u.coverage_node_list.currentItem()
+        u.cov_summary_stats_list.clear()
+        if item is not None:
+            self.coverage_df = self.component_frame(item.text())
 
     ##################
     # Functions for  #
@@ -724,56 +548,187 @@ class GUIMainWindow(QMainWindow):
     # loading events #
     ##################
 
+    # Read configuration without changing RNG state. NumPy's existing seed API accepts uint32.
+    def _read_seed(self):
+        text = self.ui.ui_pages.random_seed_prefix_textbox.text().strip()
+        if not text:
+            return None
+        if text.isascii() and text.isdecimal():
+            value = int(text)
+            if value <= 4294967295:
+                return value
+        raise ValueError("Enter a whole number from 0 to 4294967295, or leave the seed blank.")
+
+    # Return checks the field but does not execute or apply a seed; Rerun reads it directly.
+    def _seed_entered(self):
+        try:
+            seed = self._read_seed()
+        except ValueError as error:
+            QMessageBox.warning(self, "Invalid seed", str(error))
+            return
+        if seed is None:
+            message = "No fixed seed; the next run will continue the random sequence."
+        elif self.gui_modeling.active_script_lines:
+            message = f"Seed {seed} is ready; click Rerun to apply it."
+        else:
+            message = f"Seed {seed} is ready; read a script or enter commands."
+        self.ui.bottom_label_left.setText(message)
+
+    # Describe every completed run without guessing whether external inputs or results changed.
+    def _run_completed(self, seed):
+        message = ("Completed without resetting the random seed." if seed is None else
+                   f"Completed with seed {seed}. Same seed + inputs reproduce the same samples.")
+        self.ui.bottom_label_left.setText(message)
+
+    # Qt selection callbacks cannot propagate exceptions to their caller. Report display failures
+    # here, after any execution-status message, without rerunning the model.
+    def _display_selected_node(self):
+        try:
+            self.do_selected_node_dag_page()
+        except Exception as error:
+            self.ui.bottom_label_left.setText("Displaying the selected node failed; see Warnings")
+            self.ui.ui_pages.warnings_textbox.setText(str(error))
+
+    # Read and validate before cleanup; a cancelled chooser or bad input preserves current results.
     def read_execute_script(self):
+        script_fp, _ = QFileDialog.getOpenFileName(
+            parent=self, caption="Read script", dir=".", filter="*.pj")
+        if not script_fp:
+            return
+        u = self.ui.ui_pages
+        item = u.node_list.currentItem()
+        selected_name = item.text() if item else None
+        try:
+            seed = self._read_seed()
+            commands = pjread.read_text_file(script_fp, keep_empty=True)
+            candidate = cmdp.compile_model('\n'.join(commands), script_fp).execute(u.execution_count.value(), seed)
+        except Exception as error:
+            self.ui.bottom_label_left.setText("Script failed; previous results retained")
+            QMessageBox.warning(self, "Cannot read script", str(error))
+            return
 
-        # read file path #
-        script_fp, filter = \
-            QFileDialog.getOpenFileName(
-                parent=self,
-                caption="Read script",
-                dir=".",
-                filter="*.pj")
+        self.clean_disable_everything()
+        self.gui_modeling.results = candidate
+        self.gui_modeling.active_script_lines = [line.strip() for line in commands
+                                                if line.strip() and not line.strip().startswith('#')]
+        self.gui_modeling.cmd_log_list = list(self.gui_modeling.active_script_lines)
+        self.refresh_resample_button()
+        self.refresh_cmd_history(user_reset=True)
+        with QSignalBlocker(u.node_list):
+            self.refresh_node_lists()
+        self.show_pgm_page()
 
-        if script_fp:
-            # reset everything #
-            self.clean_disable_everything()
+        nodes = list(self.gui_modeling.dag_obj.name_node_dict.values())
+        chosen = next((n for n in nodes if n.node_name == selected_name), None)
+        if chosen is None:
+            chosen = next((n for n in nodes if n.is_sampled and any(isinstance(v, pjdt.AnnotatedTree)
+                           for _, v in elements(self.gui_modeling.results.value(n.node_name)))), None)
+        if chosen is None:
+            chosen = next((n for n in nodes if n.is_sampled), nodes[0] if nodes else None)
+        if self.gui_modeling.active_script_lines is None:
+            self.ui.bottom_label_left.setText("Script reported errors; see Warnings")
+        elif not nodes:
+            self.ui.bottom_label_left.setText("Script completed; no model nodes.")
+        else:
+            self._run_completed(seed)
+        if chosen is not None:
+            matches = u.node_list.findItems(chosen.node_name, Qt.MatchFlag.MatchExactly)
+            u.node_list.setCurrentItem(matches[0])
 
-            # set seed
-            a_random_seed = self.ui.ui_pages.random_seed_prefix_textbox.toPlainText()
-            # is not None and is not an empty string
-            if a_random_seed:
-                random_seed: int = int(a_random_seed)
-                self.gui_modeling.update_dag_random_seed(random_seed)
+    # Availability depends on executable source, independently of seed configuration.
+    # Preserve a more specific unavailable reason when supplied.
+    def refresh_resample_button(self, unavailable_reason=None):
+        button = self.ui.ui_pages.resample_model
+        lines = self.gui_modeling.active_script_lines
+        button.setEnabled(bool(lines))
+        if lines:
+            button.setToolTip("Rerun the current script and interactive additions using the seed in Settings.")
+        elif lines is not None:
+            button.setToolTip("Load a script or enter commands to enable rerunning.")
+        elif unavailable_reason:
+            button.setToolTip(unavailable_reason)
 
-            # read all command line strings
-            cmd_line_list = pjread.read_text_file(script_fp)
+    # Evaluate into a separate DAG before replacing the displayed model. Retain source and
+    # view preferences across the existing cleanup routine, which resets GUIModeling.
+    def resample_current_script(self):
+        u = self.ui.ui_pages
+        if not self.gui_modeling.active_script_lines or not u.resample_model.isEnabled():
+            return
+        try:
+            seed = self._read_seed()
+        except ValueError as error:
+            QMessageBox.warning(self, "Invalid seed", str(error))
+            return
 
-            # (side-effect: gui_modeling stores cmd hist) #
-            self.gui_modeling.parse_cmd_update_pgm(cmd_line_list, self, clear_cmd_log_list=True)
+        lines = list(self.gui_modeling.active_script_lines)
+        history = list(self.gui_modeling.cmd_log_list)
+        item = u.node_list.currentItem()
+        selected_name = item.text() if item else None
+        sample, replicate = u.sample_idx_spin.value(), u.repl_idx_spin.value()
+        all_samples = u.all_samples_radio.isChecked()
+        reconstructed = u.reconstructed_tree_check.isChecked()
+        distance = u.evolutionary_distance_check.isChecked()
+        time_reconstructed = self._time_reconstructed
+        u.resample_model.setEnabled(False)
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            try:
+                candidate = cmdp.compile_model("\n".join(lines), "<rerun>").execute(u.execution_count.value(), seed)
+            except Exception as error:
+                self.ui.bottom_label_left.setText("Rerun failed; previous results retained")
+                u.warnings_textbox.setText(str(error))
+                return
 
-            # update GUI cmd history #
-            self.refresh_cmd_history(user_reset=True)
-
-            # add node names to...
-            # pgm page node list
-            self.ui.ui_pages.node_list.addItems(
-                [node_name for node_name in
-                 self.gui_modeling.dag_obj.name_node_dict]
-            )
-
-            # compare page node list
-            self.ui.ui_pages.compare_node_list.addItems(
-                [nd.node_name for nd in
-                 self.gui_modeling.dag_obj.get_sorted_node_dag_list() if
-                 nd.is_sampled]
-            )
-
-            # coverage page node list
-            self.ui.ui_pages.coverage_node_list.addItems(
-                [nd.node_name for nd in
-                 self.gui_modeling.dag_obj.get_sorted_node_dag_list() if
-                 not nd.is_deterministic]
-            )
+            # No callbacks may draw an intermediate selection or out-of-range sample.
+            with ExitStack() as blocked:
+                for widget in (u.node_list, u.sample_idx_spin, u.repl_idx_spin,
+                               u.one_sample_radio, u.all_samples_radio, u.reconstructed_tree_check,
+                               u.evolutionary_distance_check):
+                    blocked.enter_context(QSignalBlocker(widget))
+                self.clean_disable_everything()
+                u.resample_model.setEnabled(False)
+                self.gui_modeling.results = candidate
+                self.gui_modeling.active_script_lines = lines
+                self.gui_modeling.cmd_log_list = history
+                self.refresh_cmd_history()
+                self.refresh_node_lists()
+                matches = u.node_list.findItems(selected_name, Qt.MatchFlag.MatchExactly) if selected_name else []
+                if matches:
+                    u.node_list.setCurrentItem(matches[0])
+                elif u.node_list.count():
+                    u.node_list.setCurrentRow(0)
+                if u.node_list.currentItem():
+                    node, sample_size, repl_size = self.selected_node_read(u.node_list.currentItem().text())
+                    u.sample_idx_spin.setMaximum(sample_size)
+                    u.repl_idx_spin.setMaximum(repl_size)
+                    self.init_and_refresh_radio_spin(node, sample_size, repl_size)
+                    if u.all_samples_radio.isEnabled():
+                        if all_samples or not u.one_sample_radio.isEnabled():
+                            u.all_samples_radio.setChecked(True)
+                            u.sample_idx_spin.setMinimum(0)
+                            u.sample_idx_spin.setValue(0)
+                            u.sample_idx_spin.setEnabled(False)
+                        else:
+                            u.one_sample_radio.setChecked(True)
+                            u.sample_idx_spin.setMinimum(1)
+                            u.sample_idx_spin.setEnabled(True)
+                    if u.sample_idx_spin.isEnabled():
+                        u.sample_idx_spin.setValue(sample)
+                    if u.repl_idx_spin.isEnabled():
+                        u.repl_idx_spin.setValue(replicate)
+                    u.reconstructed_tree_check.setChecked(reconstructed)
+                    u.evolutionary_distance_check.setChecked(distance)
+                    self._time_reconstructed = time_reconstructed
+                    self._distance_node = u.node_list.currentItem().text()
+            try:
+                self.do_selected_node_dag_page(spin_buttons_clicked=True)
+                self._run_completed(seed)
+            except Exception as error:
+                self.ui.bottom_label_left.setText("Rerun completed, but displaying the new model failed")
+                u.warnings_textbox.setText(str(error))
+        finally:
+            QApplication.restoreOverrideCursor()
+            self.refresh_resample_button()
 
     def read_compare_csv(self):
 
@@ -787,7 +742,7 @@ class GUIMainWindow(QMainWindow):
 
             try:
                 self.other_comparison_df = \
-                    pjread.read_csv_into_dataframe(compare_csv_fp)
+                    pjread.read_csv_tsv_into_dataframe(compare_csv_fp)
 
                 other_comparison_df_str = \
                     tabulate(
@@ -909,8 +864,12 @@ class GUIMainWindow(QMainWindow):
         if model_fp:
             self.clean_disable_everything()
             self.ui.ui_pages.cmd_log_textbox.clear()
-            self.gui_modeling.dag_obj, self.gui_modeling.cmd_log_list = \
+            self.gui_modeling.results, self.gui_modeling.cmd_log_list = \
                 pjread.read_serialized_pgm(model_fp)
+            if not isinstance(self.gui_modeling.results, ExecutionResults):
+                raise ValueError("This saved model uses the old format; reload its script.")
+            self.gui_modeling.active_script_lines = None
+            self.refresh_resample_button("This saved model has no verified script. Load its script to rerun.")
             self.refresh_node_lists()
             self.ui.ui_pages.cmd_log_textbox.setText(self.gui_modeling.cmd_log())
 
@@ -932,7 +891,7 @@ class GUIMainWindow(QMainWindow):
                 QFileDialog.getSaveFileName(self, "Save file", "", ".png")
 
             head, tail = os.path.split(fig_fp)
-            prefix = self.ui.ui_pages.filename_prefix_textbox.toPlainText()
+            prefix = self.ui.ui_pages.filename_prefix_textbox.text()
 
             # should user cancel, then no error!
             if head and tail:
@@ -953,12 +912,12 @@ class GUIMainWindow(QMainWindow):
         pickle_fp, filter = QFileDialog.getSaveFileName(self, "Save file", "", "")
 
         if not prefix:
-            prefix = self.ui.ui_pages.filename_prefix_textbox.toPlainText()
+            prefix = self.ui.ui_pages.filename_prefix_textbox.text()
 
         # pickling and saving PGM
         pjwrite.dump_serialized_pgm(
             pickle_fp,
-            self.gui_modeling.dag_obj,
+            self.gui_modeling.results,
             self.gui_modeling.cmd_log_list,
             prefix=prefix)
 
@@ -968,31 +927,26 @@ class GUIMainWindow(QMainWindow):
             self, "Save in folder", "./", QFileDialog.ShowDirsOnly
         )
 
-        prefix = self.ui.ui_pages.filename_prefix_textbox.toPlainText()
+        prefix = self.ui.ui_pages.filename_prefix_textbox.text()
 
-        pjwrite.dump_pgm_data(
-            data_out_dir,
-            self.gui_modeling.dag_obj,
-            prefix=prefix)
+        if data_out_dir:
+            write_results(data_out_dir, self.gui_modeling.results, prefix,
+                          self.ui.ui_pages.output_format.currentData())
 
+    # Cancel without side effects; the exporter validates all selections before writing.
     def write_smaps_to_dir(self):
-        # get dir path
         data_out_dir = QFileDialog.getExistingDirectory(
             self, "Save in folder", "./", QFileDialog.ShowDirsOnly
         )
-
-        prefix = self.ui.ui_pages.filename_prefix_textbox.toPlainText()
-        mapped_attr_name = \
-            self.ui.ui_pages.attr_name_textbox.toPlainText()
-        tr_dag_node_name_list = \
-            self.ui.ui_pages.tr_dag_node_textbox.toPlainText()
-
-        pjwrite.dump_trees_rb_smap_dfs(
-            data_out_dir,
-            self.gui_modeling.dag_obj,
-            tr_dag_node_name_list,
-            mapped_attr_name,
-            prefix=prefix)
+        if not data_out_dir:
+            return
+        prefix = self.ui.ui_pages.filename_prefix_textbox.text()
+        mapped_attr_name = self.ui.ui_pages.attr_name_textbox.text().strip()
+        names = [name.strip() for name in self.ui.ui_pages.tr_dag_node_textbox.text().split(',')]
+        try:
+            write_maps(data_out_dir, self.gui_modeling.results, names, mapped_attr_name, prefix=prefix)
+        except Exception as error:
+            QMessageBox.warning(self, "Cannot export stochastic maps", str(error))
 
     #################
     # Functions for #
@@ -1008,12 +962,8 @@ class GUIMainWindow(QMainWindow):
             repl_size=1,
             draw_reconstructed=False) -> None:
 
-        return node_dag.plot_node(
-            axes,
-            sample_idx=sample_idx,
-            repl_idx=repl_idx,
-            repl_size=repl_size,
-            draw_reconstructed=draw_reconstructed)
+        values, _ = self.selected_values(node_dag.node_name, sample_idx, repl_idx, sample_idx is None)
+        return plot_values(axes, values, draw_reconstructed)
 
     def draw_violin(self):
         thing_to_compare: str = ""
@@ -1033,14 +983,13 @@ class GUIMainWindow(QMainWindow):
 
         if selected_node_name not in ("", None):
             # reading node information #
-            node_dag, sample_size, repl_size = \
-                self.selected_node_read(selected_node_name)
+            node_dag = self.gui_modeling.dag_obj.name_node_dict[selected_node_name.split('[')[0]]
 
             if not self.pj_comparison_df.empty and \
                     not self.other_comparison_df.empty:
 
                 # scalar
-                if isinstance(node_dag.value[0], (int, float, np.float64)):
+                if isinstance(self.component_values(selected_node_name)[0], (int, float, np.float64)):
                     if not self.is_avg_repl_check:
                         thing_to_compare = selected_node_name
 
@@ -1085,8 +1034,10 @@ class GUIMainWindow(QMainWindow):
                     pass
 
                 else:
-                    # initializing plot
-                    self.ui.ui_pages.compare_page_matplotlib_widget.initialize_axes(disabled_yticks=False)
+                    # Seaborn uses category tick positions to set horizontal limits;
+                    # installing an empty tick list can put both violins outside the viewport.
+                    self.ui.ui_pages.compare_page_matplotlib_widget.initialize_axes(
+                        disabled_yticks=False, disabled_xticks=False)
                     self.ui.ui_pages.compare_page_matplotlib_widget.fig.canvas.draw()
                     fig_obj = self.ui.ui_pages.compare_page_matplotlib_widget.fig
                     fig_axes = self.ui.ui_pages.compare_page_matplotlib_widget.axes
@@ -1118,14 +1069,13 @@ class GUIMainWindow(QMainWindow):
 
         if selected_node_name not in ("", None):
             # reading node information #
-            node_dag, sample_size, repl_size = \
-                self.selected_node_read(selected_node_name)
+            node_dag = self.gui_modeling.dag_obj.name_node_dict[selected_node_name.split('[')[0]]
 
             if not self.coverage_df.empty and \
                     not self.hpd_df.empty:
 
                 # scalar
-                if isinstance(node_dag.value[0], (str, int, float, np.float64)):
+                if isinstance(self.component_values(selected_node_name)[0], (str, int, float, np.float64)):
                     thing_to_validate = selected_node_name
 
                 # debugging
@@ -1177,192 +1127,24 @@ class GUIMainWindow(QMainWindow):
     # checking          #
     #####################
 
+    # Block selection signals while setting ranges, so layout changes cannot resample
+    # or produce intermediate plots. Trees remain a one-replicate display.
     def init_and_refresh_radio_spin(self, node_dag, sample_size, repl_size):
-
-        # preserve the user's current sample/replicate selection
-        # across node switches (e.g., going from a chronogram DAG
-        # node to a phylogram one derived from it), as long as it is
-        # still a valid index for the newly selected node; otherwise
-        # (e.g., the first node ever selected, or the previous
-        # index is out of range for this node) fall back to 1.
-        # these are captured here, before anything below modifies
-        # the spin boxes' current values.
-        current_sample_idx = self.ui.ui_pages.sample_idx_spin.value()
-        current_repl_idx = self.ui.ui_pages.repl_idx_spin.value()
-
-        def _clamp_to_range(idx: int, upper: int) -> int:
-            if upper <= 0:
-                return 1
-
-            return min(max(idx, 1), upper)
-
-        def _prepare_for_tree(potential_repl: bool = False):
-            # radio #
-            # we always look one tree at a time
-            self.ui.ui_pages.all_samples_radio.setChecked(False)
-            self.ui.ui_pages.all_samples_radio.setCheckable(False)
-            self.ui.ui_pages.all_samples_radio.setDisabled(True)
-
-            self.ui.ui_pages.one_sample_radio.setEnabled(True)
-            self.ui.ui_pages.one_sample_radio.setCheckable(True)
-            self.ui.ui_pages.one_sample_radio.setChecked(True)
-
-            # spin #
-            self.ui.ui_pages.sample_idx_spin.setEnabled(True)
-            self.ui.ui_pages.sample_idx_spin.setMinimum(1)
-            self.ui.ui_pages.sample_idx_spin.setValue(
-                _clamp_to_range(current_sample_idx, sample_size))
-
-            self.ui.ui_pages.repl_idx_spin.setMinimum(1)
-            self.ui.ui_pages.repl_idx_spin.setValue(
-                _clamp_to_range(current_repl_idx, repl_size)
-                if potential_repl else 1)
-            if potential_repl:
-                self.ui.ui_pages.repl_idx_spin.setEnabled(True)
-
-        def _prepare_for_scalar(potential_repl: bool = False):
-            # radio #
-            self.ui.ui_pages.all_samples_radio.setEnabled(True)
-            self.ui.ui_pages.all_samples_radio.setCheckable(True)
-            self.ui.ui_pages.all_samples_radio.setChecked(True)
-
-            # spin #
-            self.ui.ui_pages.sample_idx_spin.setMinimum(1)
-            self.ui.ui_pages.sample_idx_spin.setValue(
-                _clamp_to_range(current_sample_idx, sample_size))
-            self.ui.ui_pages.sample_idx_spin.setDisabled(True)
-
-            # if there are replicates, then it makes sense to
-            # even look at each sample individually
-            if potential_repl:
-                self.ui.ui_pages.one_sample_radio.setEnabled(True)
-                self.ui.ui_pages.one_sample_radio.setCheckable(True)
-                self.ui.ui_pages.one_sample_radio.setChecked(True)        
-
-                # spin #
-                self.ui.ui_pages.sample_idx_spin.setEnabled(True)
-
-        def _nothing_to_spin_through():
-            self.ui.ui_pages.one_sample_radio.setChecked(False)
-            self.ui.ui_pages.one_sample_radio.setCheckable(False)
-            self.ui.ui_pages.one_sample_radio.setDisabled(True)
-            self.ui.ui_pages.all_samples_radio.setChecked(False)
-            self.ui.ui_pages.all_samples_radio.setCheckable(False)
-            self.ui.ui_pages.all_samples_radio.setDisabled(True)
-            self.ui.ui_pages.sample_idx_spin.setMinimum(0)
-            self.ui.ui_pages.sample_idx_spin.setValue(0)
-            self.ui.ui_pages.sample_idx_spin.setDisabled(True)
-            self.ui.ui_pages.repl_idx_spin.setMinimum(0)
-            self.ui.ui_pages.repl_idx_spin.setValue(0)
-            self.ui.ui_pages.repl_idx_spin.setDisabled(True)
-
-        # necessary to avoid infinite recursion
-        # otherwise GUI calls spin button actions
-        # as their values are adjusted below
-        self.ui.ui_pages.sample_idx_spin.blockSignals(True)
-        self.ui.ui_pages.repl_idx_spin.blockSignals(True)
-
-        # can we even circulate through something
-        # (basically: non-deterministic nodes)
-        if isinstance(node_dag.value, list):
-            if isinstance(node_dag.value[0], pjdt.AnnotatedTree):
-                if node_dag.repl_size >= 2:
-                    _prepare_for_tree(potential_repl=True)
-
-                else:
-                    _prepare_for_tree(potential_repl=False)
-
-            # scalar r.v. (or a list-of-lists -- one vector, e.g. of
-            # per-branch rates, per (sample, replicate) slot)
-            else:
-                # called unconditionally, same as '_prepare_for_tree'
-                # above for tree-valued nodes -- a guard here that
-                # only ran this when neither radio was yet enabled
-                # used to skip it whenever the *previously* selected
-                # node was tree-valued (which leaves 'one_sample_radio'
-                # enabled via '_prepare_for_tree'), leaving
-                # 'all_samples_radio' stuck unchecked from that prior
-                # node. That silently changed 'do_all_samples' to
-                # 'False' for this (unrelated) scalar node, routing
-                # 'selected_node_plot' into passing its stale,
-                # disabled 'sample_idx_spin' value of 0 (so
-                # 'sample_idx=-1') into 'plot_node_histogram' instead
-                # of 'None' ("show everything") -- which, for a
-                # single-(sample,replicate) node, slices to an empty
-                # list and plots nothing.
-                if node_dag.repl_size > 1:
-                    _prepare_for_scalar(potential_repl=True)
-
-                else:
-                    _prepare_for_scalar(potential_repl=False)
-
-                is_vector_per_slot = isinstance(node_dag.value[0], list)
-
-                if is_vector_per_slot and node_dag.repl_size > 1:
-                    # each (sample, replicate) slot is its own,
-                    # independently meaningful distribution (e.g. one
-                    # tree's per-branch rates) -- unlike an ordinary
-                    # scalar's replicates (always bundled together,
-                    # below), these are worth spinning through
-                    # individually, the same way tree replicates are
-                    self.ui.ui_pages.repl_idx_spin.setMinimum(1)
-                    self.ui.ui_pages.repl_idx_spin.setValue(
-                        _clamp_to_range(current_repl_idx, repl_size))
-                    self.ui.ui_pages.repl_idx_spin.setEnabled(True)
-
-                else:
-                    # we always bundle ordinary scalar replicates
-                    # together, so we never spin through them --
-                    # still displays '1' (not '0'), matching every
-                    # other spin box's 1-indexed convention (e.g. a
-                    # tree node's own spin boxes, via
-                    # '_prepare_for_tree'), even though there is
-                    # nothing to actually cycle through
-                    self.ui.ui_pages.repl_idx_spin.setMinimum(1)
-                    self.ui.ui_pages.repl_idx_spin.setValue(1)
-                    self.ui.ui_pages.repl_idx_spin.setDisabled(True)
-
-                # irrespective of all samples or one sample
-                # it should always be possible to check one
-                # sample if there are replicates
-                if node_dag.repl_size > 1:
-                    # radio
-                    self.ui.ui_pages.one_sample_radio.setEnabled(True)
-                    self.ui.ui_pages.one_sample_radio.setCheckable(True)
-                    
-                    # spin
-                    self.ui.ui_pages.sample_idx_spin.setMinimum(1)
-                    self.ui.ui_pages.sample_idx_spin.setValue(
-                        _clamp_to_range(current_sample_idx, sample_size))
-                    self.ui.ui_pages.sample_idx_spin.setEnabled(True)
-                
-                # if there are no replicates, it does not make
-                # sense to look at individual samples
-                else:
-                    # radio
-                    self.ui.ui_pages.one_sample_radio.setDisabled(True)
-                    self.ui.ui_pages.one_sample_radio.setCheckable(False)
-
-                    # spin -- displays '1', not '0', for the same
-                    # reason as 'repl_idx_spin' above
-                    self.ui.ui_pages.sample_idx_spin.setMinimum(1)
-                    self.ui.ui_pages.sample_idx_spin.setValue(1)
-                    self.ui.ui_pages.sample_idx_spin.setDisabled(True)
-
-                # all samples checked, so we won't be spinning
-                # through individuals samples
-                if self.ui.ui_pages.all_samples_radio.isChecked():
-                    self.ui.ui_pages.sample_idx_spin.setMinimum(1)
-                    self.ui.ui_pages.sample_idx_spin.setValue(1)
-                    self.ui.ui_pages.sample_idx_spin.setDisabled(True)
-
-        # can't spin through anything! nothing to do!
-        else:
-            _nothing_to_spin_through()
-
-        # need to unblock signals from here on
-        self.ui.ui_pages.sample_idx_spin.blockSignals(False)
-        self.ui.ui_pages.repl_idx_spin.blockSignals(False)
+        u = self.ui.ui_pages
+        with QSignalBlocker(u.sample_idx_spin), QSignalBlocker(u.repl_idx_spin):
+            values = self.gui_modeling.results.values(node_dag.node_name)
+            is_tree = any(isinstance(v, pjdt.AnnotatedTree) for _, v in elements(values[0]))
+            same_shape = all(shape(value) == shape(values[0]) for value in values[1:])
+            u.one_sample_radio.setEnabled(True)
+            u.one_sample_radio.setCheckable(True)
+            u.all_samples_radio.setCheckable(True)
+            u.all_samples_radio.setEnabled(not is_tree and same_shape)
+            if is_tree or not same_shape or not u.all_samples_radio.isChecked():
+                u.one_sample_radio.setChecked(True)
+            u.sample_idx_spin.setRange(1, sample_size)
+            u.sample_idx_spin.setEnabled(u.one_sample_radio.isChecked())
+            u.repl_idx_spin.setRange(1, repl_size)
+            u.repl_idx_spin.setEnabled(repl_size > 1)
 
     def refresh_node_lists(self):
         # pgm page node list #
@@ -1372,21 +1154,23 @@ class GUIMainWindow(QMainWindow):
         self.ui.ui_pages.node_list.clear()  # clear first
         self.ui.ui_pages.node_list.addItems(pgm_node_list)
 
-        # compare page node list
-        compare_nodes_list = \
-            [nd.node_name for nd in
-             self.gui_modeling.dag_obj.get_sorted_node_dag_list() if
-             nd.is_sampled]
+        # List fixed-shape components explicitly; ragged values have no automatic
+        # correspondence for comparison/coverage, but remain selectable on the model page.
+        comparison, coverage = [], []
+        for name, node in self.gui_modeling.dag_obj.name_node_dict.items():
+            values = self.gui_modeling.results.values(name)
+            if any(shape(value) != shape(values[0]) for value in values[1:]):
+                continue
+            for path, value in elements(values[0]):
+                label = name + path_text(path)
+                if node.is_sampled and isinstance(value, (int, float, pjdt.AnnotatedTree)):
+                    comparison.append(label)
+                if isinstance(value, (int, float)):
+                    coverage.append(label)
         self.ui.ui_pages.compare_node_list.clear()
-        self.ui.ui_pages.compare_node_list.addItems(compare_nodes_list)
-
-        # coverage page node list
-        coverage_nodes_list = \
-            [nd.node_name for nd in
-             self.gui_modeling.dag_obj.get_sorted_node_dag_list() if
-             not nd.is_deterministic]
+        self.ui.ui_pages.compare_node_list.addItems(comparison)
         self.ui.ui_pages.coverage_node_list.clear()
-        self.ui.ui_pages.coverage_node_list.addItems(coverage_nodes_list)
+        self.ui.ui_pages.coverage_node_list.addItems(coverage)
 
     def refresh_selected_node_display_plot_radio(self):
         # if nodes have been created and selected #
@@ -1405,11 +1189,12 @@ class GUIMainWindow(QMainWindow):
         cmd_hist_str = self.gui_modeling.cmd_log().lstrip()
         self.ui.ui_pages.cmd_log_textbox.setText(cmd_hist_str)
 
-    def redraw_selected_node(self):
-        if self.ui.ui_pages.node_list.currentItem() is not None:
-            self.do_selected_node_dag_page(spin_buttons_clicked=True)
-
     def clean_disable_everything(self, user_reset=False):
+        self._distance_node = None
+        with QSignalBlocker(self.ui.ui_pages.evolutionary_distance_check):
+            self.ui.ui_pages.evolutionary_distance_check.setChecked(False)
+            self.ui.ui_pages.evolutionary_distance_check.hide()
+        self.ui.ui_pages.reconstructed_tree_check.setEnabled(True)
         if user_reset:
             cmd_hist_str: str = ""
 
@@ -1435,6 +1220,7 @@ class GUIMainWindow(QMainWindow):
 
         # pgm-related objects are reset
         self.gui_modeling.clear()
+        self.refresh_resample_button()
 
         # remove all node names from list
         self.ui.ui_pages.node_list.clear()
@@ -1492,9 +1278,10 @@ class GUIMainWindow(QMainWindow):
 
         # if we look at all samples, it does not make sense
         # to be able to look at each sample individually
-        self.ui.ui_pages.sample_idx_spin.setMinimum(0)
-        self.ui.ui_pages.sample_idx_spin.setValue(0)
-        self.ui.ui_pages.sample_idx_spin.setDisabled(True)
+        with QSignalBlocker(self.ui.ui_pages.sample_idx_spin):
+            self.ui.ui_pages.sample_idx_spin.setMinimum(0)
+            self.ui.ui_pages.sample_idx_spin.setValue(0)
+            self.ui.ui_pages.sample_idx_spin.setDisabled(True)
 
         self.refresh_selected_node_display_plot_radio()
 

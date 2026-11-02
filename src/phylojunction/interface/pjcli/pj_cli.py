@@ -1,5 +1,7 @@
 import argparse
 import os
+from pathlib import Path
+from phylojunction.readwrite.execution_export import write_results, write_maps, FORMATS
 import typing as ty
 
 # pj imports
@@ -18,14 +20,14 @@ def execute_pj_script(
         user_prefix: ty.Optional[str] = None,
         out_dir: str = "./",
         write_data: bool = False,
-        write_stub_counts: bool = False,
         write_smap: bool = False,
         write_figures: ty.Optional[str] = None,
         write_inference: bool = False,
         write_nex_str: ty.Optional[str] = None,
         a_random_seed: ty.Optional[int] = None,
         tr_dag_nd_names: ty.Optional[str] = None,
-        smap_attr_name: ty.Optional[str] = None) -> None:
+        smap_attr_name: ty.Optional[str] = None, runs: int = 1,
+        output_format: str = 'separate-csv', write_stub_counts: bool = False) -> None:
     """
     Execute .pj script.
 
@@ -58,13 +60,11 @@ def execute_pj_script(
     #################
 
     print("Reading script " + model)
-    dag_obj: pgm.DirectedAcyclicGraph \
-        = cmd.script2dag(model,
-                        in_pj_file=True,
-                        random_seed=random_seed)
+    results = cmd.compile_model(Path(model).read_text(), str(model)).execute(runs, random_seed)
+    dag_obj = results.model
     print("    ... done!")
 
-    n_samples = dag_obj.sample_size
+    n_samples = results.n_executions
 
     fig_obj, fig_axes = cliplt.start_fig_and_axes()
 
@@ -94,13 +94,7 @@ def execute_pj_script(
                 os.mkdir(data_dir)
 
             if write_data:
-                pjw.dump_pgm_data(
-                    data_dir,
-                    dag_obj,
-                    prefix,
-                    write_nex,
-                    bit_format,
-                    write_stub_counts=write_stub_counts)
+                write_results(data_dir, results, prefix, output_format, write_nex, bit_format, write_stub_counts)
 
             if write_smap:
                 if not tr_dag_nd_names:
@@ -122,9 +116,9 @@ def execute_pj_script(
 
                 tr_dag_nd_name_list = tr_dag_nd_names.split(",")
 
-                pjw.dump_trees_rb_smap_dfs(
+                write_maps(
                     data_dir,
-                    dag_obj,
+                    results,
                     tr_dag_nd_name_list,
                     smap_attr_name,
                     prefix=prefix)
@@ -138,10 +132,9 @@ def execute_pj_script(
             if not os.path.isdir(fig_dir):
                 os.mkdir(fig_dir)
 
-            cliplt.call_node_plot_cli(
+            cliplt.call_results_plot_cli(
                 fig_dir,
-                dag_obj,
-                n_samples,
+                results,
                 node_range_dict,
                 fig_obj,
                 fig_axes,
@@ -171,18 +164,6 @@ def call_cli() -> None:
         action="store_true",
         default=False,
         help="Toggle data output")
-    parser.add_argument(
-        "-nstub",
-        "--stub-count-output",
-        dest="write_stub_counts",
-        action="store_true",
-        default=False,
-        help=("Toggle an additional "
-              "'[tree_dag_node_name]_n_stub.tsv' file per tree-valued "
-              "DAG node, with one row per (sample, replicate) tree, "
-              "one column per reconstructed-tree node, and stub "
-              "counts as cells. Only takes effect together with "
-              "'-d'/'--data-output'."))
     parser.add_argument(
         "-smap",
         "--smap-output",
@@ -249,6 +230,12 @@ def call_cli() -> None:
         default=None,
         help="Name of the attribute being stochastically mapped (e.g., 'state').")
 
+    parser.add_argument('-nstub', '--stub-count-output', action='store_true',
+                        help='With -d, write per-tree stub counts with replicate and element identifiers')
+    parser.add_argument('--runs', type=int, default=1, help='Number of model replicates')
+    parser.add_argument('--output-format', choices=tuple(FORMATS), default='separate-csv',
+                        help='Separate files (CSV), Combined (CSV), or JSON (MCON)')
+
     args = parser.parse_args()
 
     execute_pj_script(
@@ -256,7 +243,7 @@ def call_cli() -> None:
         user_prefix=args.prefix,
         out_dir=args.out_dir,
         write_data=args.write_data,
-        write_stub_counts=args.write_stub_counts,
+        write_stub_counts=args.stub_count_output,
         write_smap=args.write_smap,
         write_figures=args.write_figures,
         # write_inference=args.write_inference,
@@ -264,6 +251,7 @@ def call_cli() -> None:
         a_random_seed=args.random_seed,
         tr_dag_nd_names=args.tr_dag_nd_names,
         smap_attr_name=args.smap_attr_name,
+        runs=args.runs, output_format=args.output_format,
     )
 
 # if one wants to run pj_cli.py for some reason

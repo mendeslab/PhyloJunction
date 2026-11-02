@@ -46,112 +46,20 @@ def start_fig_and_axes(
     return fig, ax
 
 
-def selected_node_plot_cli(
-        fig_dir: str,
-        fig_obj: Figure,
-        fig_axes: Axes,
-        node_dag: NodeDAG,
-        prefix: str = "",
-        sample_idx: int = 0,
-        repl_idx: int = 0,
-        repl_size: int = 1) -> None:
-    """
-    Plot DAG node on provided Axes object (fig_axes), intended
-    to be scoped to pj_cli.execute_pj_script() 
-    then update canvas with new plot
-    """
-
-    outfile_path = fig_dir
-
-    if prefix:
-        outfile_path += prefix + "_"
-
-    outfile_path += node_dag.node_name + str(sample_idx + 1) \
-        + "_" + str(repl_idx + 1)
-    
-    print("Writing", outfile_path)
-    
-    # if stochastic or constant, value will be list
-    if isinstance(node_dag.value, list):
-        # if a tree
-        if isinstance(node_dag.value[0], pjdt.AnnotatedTree):
-            node_dag.plot_node(
-                fig_axes,
-                sample_idx=sample_idx,
-                repl_idx=repl_idx,
-                repl_size=repl_size)
-
-        # when not a tree
-        else:
-            node_dag.plot_node(
-                fig_axes,
-                sample_idx=sample_idx,
-                repl_size=repl_size)
-
-        pjwrite.write_fig_to_file(outfile_path, fig_obj)
-
-    # if deterministic, not subscriptable
-    # except Exception as e:
-    #     print("(cli_plotting.py) An error occurred: ", type(e).__name__, " - ", e)
-
-    # deterministic node, value is an Object
-    # else:
-    #     print(type(node_dag.value))
-
-
-def call_node_plot_cli(
-        fig_dir: str,
-        dag_obj: DirectedAcyclicGraph,
-        n_samples: int,
-        node_range_dict: ty.Dict[str, ty.Tuple[int]],
-        fig_obj: Figure,
-        fig_axes: Axes,
-        prefix: str = "") -> None:
-    """
-    """
- 
-    for node_name, range_tup in node_range_dict.items():
-        if node_name in dag_obj.name_node_dict:
-            node_dag = dag_obj.get_node_dag_by_name(node_name)
-            repl_size = node_dag.repl_size
-            start_idx = 0
-            end_idx = 1
-
-            if len(range_tup) == 0:
-                end_idx = n_samples
-
-            elif len(range_tup) == 1:
-                start_idx = range_tup[0] - 1 # offset
-                end_idx = start_idx + 1
-
-            elif len(range_tup) == 2:
-                start_idx, end_idx = range_tup
-                start_idx -= 1
-                # end_idx += 1
-
-            # debugging
-            # print("start_idx = " + str(start_idx))
-            # print("end_idx = " + str(end_idx))
-            # print("repl_size = " + str(repl_size))
-
-            for sample_idx in range(start_idx, end_idx):
-                for repl_idx in range(repl_size):
-                    try:
-                        selected_node_plot_cli(
-                            fig_dir,
-                            fig_obj,
-                            fig_axes,
-                            node_dag,
-                            prefix=prefix,
-                            sample_idx=sample_idx,
-                            repl_idx=repl_idx,
-                            repl_size=repl_size
-                        )
-
-                    except IndexError:
-                        raise ec.PJCLISampleOutOfRangeError(
-                            str(start_idx) + "-" + str(end_idx))
-
-        else:
-            # raise ec.PJCLINodeNotInPGM(node_name)
-            raise RuntimeError
+# Export each requested replicate and nested element using explicit, one-based paths.
+def call_results_plot_cli(fig_dir, results, node_range_dict, fig_obj, fig_axes, prefix=''):
+    from pathlib import Path
+    from phylojunction.pgm.values import elements, path_text, plot_values
+    for name, bounds in node_range_dict.items():
+        if name not in results.model.name_node_dict:
+            raise ValueError(f'Unknown model variable: {name}')
+        start = bounds[0] if bounds else 1
+        end = bounds[-1] if bounds else results.n_executions
+        if not 1 <= start <= end <= results.n_executions:
+            raise ValueError('Replicate range is out of bounds.')
+        for execution in range(start, end + 1):
+            for path, value in elements(results.value(name, execution - 1)):
+                distance = isinstance(value, pjdt.AnnotatedTree) and value.clock_model_attr_name is not None
+                plot_values(fig_axes, [value], reconstructed=distance, evolutionary_distance=distance)
+                filename = ((prefix + '_') if prefix else '') + f'{name}_replicate{execution}{path_text(path)}.png'
+                pjwrite.write_fig_to_file(str(Path(fig_dir) / filename), fig_obj)
