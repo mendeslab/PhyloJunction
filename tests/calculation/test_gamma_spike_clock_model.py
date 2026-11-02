@@ -302,6 +302,14 @@ class TestGammaSpike(unittest.TestCase):
             axes, evolutionary_distance=True, draw_reconstructed=False)
         figure.canvas.draw()
 
+        # 'DA_1' sits on the unrated stem, so its own x-coordinate
+        # would just be 'dummy1's -- not a real distance -- and
+        # drawing a dot there made the plot look like it started at
+        # the sampled ancestor instead of at the origin/root; no dot
+        # should be drawn for it at all here, the same way the
+        # chronogram never draws one for a complete-tree SA either
+        self.assertEqual(len(axes.lines), 0)
+
         # a genuinely missing rate elsewhere must still raise -- this
         # fix is scoped to the stem, not a blanket relaxation
         for nd in ann_tr.tree.preorder_node_iter():
@@ -311,6 +319,88 @@ class TestGammaSpike(unittest.TestCase):
         with self.assertRaises(ValueError):
             ann_tr.plot_node(
                 axes, evolutionary_distance=True, draw_reconstructed=False)
+
+    def test_complete_tree_distance_plot_draws_ordinary_sa_dot(self):
+        """An ordinary (rated) SA dot is unaffected by the stem suppression.
+
+        Unlike 'test_complete_tree_distance_plot_with_chained_sa_
+        stem's 'DA_1' (unrated, on the stem leading to the
+        reconstructed tree's own seed), 'SA_3' here is an ordinary
+        sampled ancestor elsewhere in the tree, with a real rate of
+        its own -- it must still be drawn as a dot, at its own real
+        distance, not swept up by the same suppression.
+        """
+
+        def mk(label, el, alive, sampled, is_sa=False,
+               is_sa_dummy_parent=False, is_sa_lineage=False):
+            nd = Node(taxon=Taxon(label=label), label=label, edge_length=el)
+            nd.state = 0
+            nd.alive = alive
+            nd.sampled = sampled
+            nd.is_sa = is_sa
+            nd.is_sa_dummy_parent = is_sa_dummy_parent
+            nd.is_sa_lineage = is_sa_lineage
+            return nd
+
+        origin = mk("origin", 0.0, False, False)
+        root = mk("root", 1.0, False, False)
+        origin.add_child(root)
+        tip_a = mk("tipa", 3.0, True, True)
+        dummy2 = mk("dummy2", 1.0, False, False, is_sa_dummy_parent=True)
+        root.add_child(tip_a)
+        root.add_child(dummy2)
+        SA_3 = mk("SA_3", 0.0, False, True, is_sa=True)
+        lineage_3 = mk("lineage_3", 1.0, False, False, is_sa_lineage=True)
+        dummy2.add_child(SA_3)
+        dummy2.add_child(lineage_3)
+        tip_c = mk("tipc", 1.0, True, True)
+        tip_d = mk("tipd", 1.0, True, True)
+        lineage_3.add_child(tip_c)
+        lineage_3.add_child(tip_d)
+
+        all_nodes = (
+            origin, root, tip_a, dummy2, SA_3, lineage_3, tip_c, tip_d)
+        tr_complete = Tree(seed_node=origin)
+        for nd in all_nodes:
+            tr_complete.taxon_namespace.add_taxon(nd.taxon)
+
+        ann_tr = pjtr.AnnotatedTree(
+            tr_complete, DiscreteTrait(1), start_at_origin=True,
+            max_age=4.0, epsilon=1e-12)
+        tr_rec = ann_tr.extract_reconstructed_tree(
+            plotting_overhead=False, require_obs_both_sides=False)
+
+        # sanity check: 'root' (not 'dummy2') is the reconstructed
+        # tree's own seed here, unlike the chained-SA-stem fixture --
+        # 'dummy2' is an ordinary, rated interior node
+        self.assertEqual(tr_rec.seed_node.label, "root")
+
+        np.random.seed(1)
+        pjgsc.populate_gamma_spike_mol_rates_on_rec_tr_branches(
+            ann_tr, clock_rate=0.1, spike_mean=0.05, spike_shape=2.0,
+            br_specific_rel_rates=[1.0] * ann_tr.n_rec_branches())
+        pjgsc.populate_gamma_spike_mol_rates_on_complete_tree_branches(
+            ann_tr, clock_rate=0.1, spike_mean=0.05, spike_shape=2.0,
+            br_specific_rel_rates_complete=(
+                [1.0] * ann_tr.n_complete_only_branches()))
+
+        for nd in ann_tr.tree.preorder_node_iter():
+            nd.mutation_rate = nd.mol_rate
+            nd.annotations.add_bound_attribute("mutation_rate")
+        ann_tr.clock_model_attr_name = "mutation_rate"
+
+        self.assertIsNotNone(dummy2.mutation_rate)
+
+        from matplotlib.figure import Figure
+        from matplotlib.backends.backend_agg import FigureCanvasAgg
+        figure = Figure()
+        FigureCanvasAgg(figure)
+        axes = figure.subplots()
+        ann_tr.plot_node(
+            axes, evolutionary_distance=True, draw_reconstructed=False)
+        figure.canvas.draw()
+
+        self.assertEqual(len(axes.lines), 1)
 
     # QuaSSE reconstruction used to rebuild on each read, unlike discrete trees. Exercise
     # the shared consumer entry point so repeated display/export preparation retains rates.

@@ -3271,7 +3271,25 @@ def plot_ann_tree(ann_tr: AnnotatedTree,
                                       axes,
                                       color=sa_color)
 
-        if rate_layout and sa_along_branches and nd.is_sa_dummy_parent:
+        # when positioning by evolutionary distance, a dummy parent with
+        # no rate of its own (the stem leading to the reconstructed
+        # tree's own seed -- see 'get_x_coord_from_attr_product') has
+        # no real x-coordinate to draw this dot at either: 'x_coords
+        # [nd_name]' is only ever its own parent's position, carried
+        # forward with zero contribution, not this node's actual
+        # (unknown) distance. Drawing a dot there made the whole
+        # unrated stem look like it started at that dot -- usually a
+        # sampled ancestor -- instead of at the origin/root, since
+        # nothing else along that stem is drawn with any marker of
+        # its own. Suppressing it here instead matches the
+        # chronogram's own complete-tree convention, which never
+        # draws these SA dots as a distinct marker to begin with.
+        stem_has_no_distance = (
+            distance_attr is not None
+            and getattr(nd, distance_attr, None) is None)
+
+        if rate_layout and sa_along_branches and nd.is_sa_dummy_parent \
+                and not stem_has_no_distance:
             for child in nd.child_node_iter():
                 if child.is_sa and child.is_leaf() and child.edge_length <= ann_tr.epsilon:
                     if isinstance(ann_tr.trait, ContinuousTrait):
