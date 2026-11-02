@@ -859,6 +859,17 @@ class TestExtractReconstructedTree(unittest.TestCase):
         self.assertEqual(tr_rec_str1, ";\n")
         self.assertEqual(tr_rec_str2, ";\n")
 
+        # regression check: 'self.tree_reconstructed' itself (not
+        # just the method's return value) must also reflect "nothing
+        # was reconstructed" -- it used to be left holding a full,
+        # unpruned deep copy of the complete tree instead of an empty
+        # one, so every other method reading 'self.tree_reconstructed'
+        # directly (n_rec_branches, populate_n_stubs_on_branches_of_
+        # rec_tr, ...) would silently see the whole extinct complete
+        # tree rather than an empty one
+        self.assertEqual(ann_tr1.n_rec_branches(), 0)
+        self.assertEqual(ann_tr2.n_rec_branches(), 0)
+
     def test_extract_reconstructed_tree_one_root_side_dies_three_survive(self):
         """
         Test extraction of rec. tree from complete tree (no origin).

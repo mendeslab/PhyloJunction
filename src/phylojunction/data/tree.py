@@ -1600,7 +1600,17 @@ class AnnotatedTree(dp.Tree):
             if (self.n_extant_sampled_terminal_nodes +
                     self.n_extinct_sampled_terminal_nodes +
                     self.n_sa_nodes) == 0:
-                return dp.Tree()
+                # 'self.tree_reconstructed' was just set to a full
+                # deep copy of the complete tree above, before this
+                # check -- it must be reset to an empty tree here
+                # too, or every other method that reads
+                # 'self.tree_reconstructed' directly (n_rec_branches,
+                # populate_n_stubs_on_branches_of_rec_tr,
+                # complete_only_branch_nodes, etc.) would silently
+                # see the whole unpruned complete tree instead of
+                # "nothing was reconstructed"
+                self.tree_reconstructed = dp.Tree()
+                return self.tree_reconstructed
 
             # filter_fn = lambda nd: \
             #     nd.is_sa or (nd.is_leaf() and nd.alive and nd.sampled)
@@ -1827,15 +1837,26 @@ class AnnotatedTree(dp.Tree):
             else:
                 # if we condition on sampled nodes on both sides of root,
                 # then by definition the reconstructed tree is empty!
+                #
+                # 'self.tree_reconstructed' was already set above to a
+                # pruned-but-nonempty tree that simply fails this
+                # both-sides condition -- it must be reset here too,
+                # or callers reading 'self.tree_reconstructed' directly
+                # would see that stale, non-conforming tree instead of
+                # "nothing was reconstructed" (see the identical fix
+                # on the all-extinct/nothing-sampled early return,
+                # above)
                 if not root_node:
-                    return dp.Tree()
+                    self.tree_reconstructed = dp.Tree()
+                    return self.tree_reconstructed
 
                 else:
                     # if there is a root, but sampled nodes were not found
                     # on both sides, reconstructed tree is empty!
                     if not self.is_extant_or_sa_on_both_sides_complete_tr_root(
                             root_node):
-                        return dp.Tree()
+                        self.tree_reconstructed = dp.Tree()
+                        return self.tree_reconstructed
 
                     # there are sampled nodes on both sides of the root!
                     #
@@ -1936,6 +1957,17 @@ class AnnotatedTree(dp.Tree):
         structural, not a convention, and why it holds even when the
         root is reached via a chain of direct ancestors above it).
 
+        A collapsed 'is_sa_dummy_parent' node counts toward the stub
+        total exactly like any other collapsed node -- it is never
+        exempted. This matches the Gamma-spike punctuated
+        relaxed-clock model's reference implementation (the
+        GammaSpikeModel BEAST2 package's forward-time simulator,
+        'BirthDeathStubSimulator.removeStubsRecursive'), which
+        resets the accumulated count to zero for both of a surviving
+        node's children, and collapses a dummy node away, crediting
+        its own stub count onto whichever child survives, if only one
+        of its own two children does.
+
         There is no return and only a side-effect (each node in the
         reconstructed tree has a member 'n_stub' initialized and
         populated.
@@ -1961,8 +1993,7 @@ class AnnotatedTree(dp.Tree):
             current_nd = complete_nd.parent_node
 
             while current_nd != complete_parent:
-                if not current_nd.is_sa_dummy_parent:
-                    rec_nd.n_stub += 1
+                rec_nd.n_stub += 1
 
                 current_nd = current_nd.parent_node
 
