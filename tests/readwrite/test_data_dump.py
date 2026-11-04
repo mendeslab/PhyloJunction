@@ -95,6 +95,11 @@ class TestDataDump(unittest.TestCase):
             self.assertEqual([r['x'] for r in records[1:]], ragged.values('x'))
         self.assertEqual(summaries([[1, 100]]), [])
         self.assertEqual([r['mean'] for r in summaries([[1, 100], [3, 200]])], [2, 150])
+        # With two observations, linear interpolation and sample SD have simple exact answers.
+        row = summaries([0, 40])[0]
+        self.assertEqual({key: row[key] for key in ('median', 'lower_50', 'upper_50', 'lower_95', 'upper_95')},
+                         {'median': 20, 'lower_50': 10, 'upper_50': 30, 'lower_95': 1, 'upper_95': 39})
+        self.assertAlmostEqual(row['sd'], 20 * 2 ** .5)
         self.assertEqual(summaries([[1], [2, 3]]), [])
         # every replicate's vector is empty (e.g. a tree with zero
         # complete-only branches) -- must not crash statistics.mean/
@@ -120,6 +125,11 @@ class TestDataDump(unittest.TestCase):
                 self.assertEqual(summary.index.tolist(), expected)
                 self.assertEqual(summary.loc['fixed', 'mean'], 7.75)
                 self.assertEqual(summary.loc['fixed', 'sd'], 0)
+                self.assertEqual(summary.columns.tolist(),
+                                 ['mean', 'sd', 'median', 'lower_50', 'upper_50', 'lower_95', 'upper_95'])
+                for column in ('median', 'lower_50', 'upper_50', 'lower_95', 'upper_95'):
+                    self.assertEqual(summary.loc['fixed', column], 7.75)
+                    self.assertEqual(summary.loc['trees[1][2].n_extant', column], 2)
                 self.assertEqual(summary.loc['trees[1][2].n_extant', 'mean'], 2)
                 self.assertEqual({p.name for p in root.glob('*stats_summary.csv')}, {'batch_stats_summary.csv'})
                 self.assertTrue((root / 'batch_t_stats.csv').exists())

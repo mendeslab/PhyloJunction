@@ -41,8 +41,14 @@ def summaries(values, reconstructed=False):
                     continue
         for metric, numbers_ in metrics.items():
             if all(isinstance(v, numbers.Real) and not isinstance(v, bool) for v in numbers_):
+                # Inclusive quantiles interpolate at (n-1)*p in the sorted replicate values.
+                # Fortieths include all four endpoints of the central 50% and 95% intervals.
+                quantiles = statistics.quantiles(numbers_, n=40, method='inclusive')
                 rows.append({'@element': path_text(path), 'statistic': metric,
-                             'mean': statistics.mean(numbers_), 'sd': statistics.stdev(numbers_)})
+                             'mean': statistics.mean(numbers_), 'sd': statistics.stdev(numbers_),
+                             'median': statistics.median(numbers_),
+                             'lower_50': quantiles[9], 'upper_50': quantiles[29],
+                             'lower_95': quantiles[0], 'upper_95': quantiles[38]})
     return rows
 
 
