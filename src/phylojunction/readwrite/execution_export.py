@@ -7,6 +7,11 @@ import pandas as pd
 from phylojunction.data.tree import AnnotatedTree
 from phylojunction.pgm.values import elements, path_text, shape, summaries
 
+# Match the identifiers in per-tree statistics while keeping display labels in the GUI.
+TREE_PROPERTIES = {'Origin age': 'origin_age', 'Root age': 'root_age',
+                   'Total taxon count': 'n_total', 'Extant taxon count': 'n_extant',
+                   'Extinct taxon count': 'n_extinct', 'Direct ancestor count': 'n_sa'}
+
 FORMATS = {'separate-csv': 'Separate files (CSV)', 'combined-csv': 'Combined (CSV)', 'json': 'JSON (MCON)'}
 
 
@@ -122,10 +127,16 @@ def write_results(directory, results, prefix='', output_format='separate-csv',
             add_output(outputs, name + '.csv', pd.DataFrame(rows))
     for filename, content in tree_files(results, write_nex_states, bit_format, write_stub_counts).items():
         add_output(outputs, filename, content)
+    summary_rows = []
     for name in columns:
-        stats = summaries(results.values(name))
-        if stats:
-            add_output(outputs, name + '_stats_summary.csv', pd.DataFrame(stats))
+        for row in summaries(results.values(name)):
+            variable = name + row.pop('@element')
+            statistic = row.pop('statistic')
+            if statistic != 'value':
+                variable += '.' + TREE_PROPERTIES[statistic]
+            summary_rows.append({'variable': variable, **row})
+    if summary_rows:
+        add_output(outputs, 'stats_summary.csv', pd.DataFrame(summary_rows))
     destination = Path(directory)
     destination.mkdir(parents=True, exist_ok=True)
     for filename, content in outputs.items():
