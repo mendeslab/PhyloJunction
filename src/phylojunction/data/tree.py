@@ -2236,14 +2236,14 @@ class AnnotatedTree(dp.Tree):
             living = sum(nd.alive for nd in tips)
             return {"Root age": self.rec_tr_root_age, "Total taxon count": len(tips),
                     "Extant taxon count": living, "Extinct taxon count": len(tips) - living,
-                    "Direct ancestor count": len(ancestors)}
+                    "Sampled ancestor count": len(ancestors)}
 
         ks = ["Origin age",
               "Root age",
               "Total taxon count",
               "Extant taxon count",
               "Extinct taxon count",
-              "Direct ancestor count"]
+              "Sampled ancestor count"]
         vs = [self.origin_age,
               self.root_age,
               (self.n_extant_terminal_nodes + self.n_extinct_terminal_nodes),
