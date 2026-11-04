@@ -10,7 +10,7 @@ from phylojunction.pgm.values import elements, path_text, shape, summaries
 # Match the identifiers in per-tree statistics while keeping display labels in the GUI.
 TREE_PROPERTIES = {'Origin age': 'origin_age', 'Root age': 'root_age',
                    'Total taxon count': 'n_total', 'Extant taxon count': 'n_extant',
-                   'Extinct taxon count': 'n_extinct', 'Direct ancestor count': 'n_sa'}
+                   'Extinct taxon count': 'n_extinct', 'Sampled ancestor count': 'n_sa'}
 
 FORMATS = {'separate-csv': 'Separate files (CSV)', 'combined-csv': 'Combined (CSV)', 'json': 'JSON (MCON)'}
 

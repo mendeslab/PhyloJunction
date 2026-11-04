@@ -879,9 +879,9 @@ def prep_data_df(
                         tree_repl_summary_df_dict[rv_name].at[j + 1, "n_extinct"] = \
                             round(stat.stdev(repls_all_stats_dict["Extinct taxon count"]), 5)
                         tree_repl_summary_df_dict[rv_name].at[j, "n_sa"] = \
-                            stat.mean(repls_all_stats_dict["Direct ancestor count"])
+                            stat.mean(repls_all_stats_dict["Sampled ancestor count"])
                         tree_repl_summary_df_dict[rv_name].at[j + 1, "n_sa"] = \
-                            round(stat.stdev(repls_all_stats_dict["Direct ancestor count"]), 5)
+                            round(stat.stdev(repls_all_stats_dict["Sampled ancestor count"]), 5)
 
                         j += 2
 

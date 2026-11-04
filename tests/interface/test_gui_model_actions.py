@@ -70,6 +70,7 @@ class TestModelActions(unittest.TestCase):
         self.assertEqual(tree.get_stats_dict(reconstructed=True)['Total taxon count'], 2)
         self.assertEqual(int(tree.get_stats_dict()['Total taxon count']), 3)
         self.assertNotIn('Origin age', u.summary_content.toPlainText())
+        self.assertIn('Sampled ancestor count', u.summary_content.toPlainText())
         u.evolutionary_distance_check.setChecked(False)
         self.assertTrue(u.reconstructed_tree_check.isEnabled())
         u.reconstructed_tree_check.setChecked(False)
