@@ -1,4 +1,4 @@
-from phylojunction.data.trait import DiscreteTrait
+from phylojunction.data.trait import DiscreteTrait, ContinuousTrait
 import unittest
 import copy
 import matplotlib
@@ -14,6 +14,30 @@ __email__ = "fmendes@lsu.edu"
 
 
 class TestExtractReconstructedTree(unittest.TestCase):
+
+    # Clock consumers need correct flags before plotting, including for read trees without
+    # SA history dictionaries. This topology checks pruning and chained SA continuations
+    # in both reconstruction paths; it is unnecessary if lineage flags become derived values.
+    def test_lineage_flags_follow_reconstructed_topology(self):
+        from phylojunction.readwrite.pj_read import read_nwk_tree_str
+        newick = ("((F1:0,(F2:0,(A[&alive=true]:1,X[&alive=false,sampled=false]:.2)J:1)"
+                  "D2:1)D1:1,B[&alive=true]:4)root;")
+        for trait in (DiscreteTrait(1), ContinuousTrait()):
+            with self.subTest(trait=type(trait).__name__):
+                source = read_nwk_tree_str(newick, in_file=False, is_complete=True)
+                for nd in source.tree:
+                    nd.trait = 0.0
+                tree = pjtr.AnnotatedTree(source.tree, trait, start_at_origin=False, max_age=4.0)
+                before = {nd.label: nd.is_sa_lineage for nd in tree.tree}
+                rec = tree.extract_reconstructed_tree(plotting_overhead=False)
+                expected = {'root': False, 'D1': False, 'F1': False,
+                            'D2': True, 'F2': False, 'A': True, 'B': False}
+                self.assertEqual({nd.label: nd.is_sa_lineage for nd in rec}, expected)
+                self.assertFalse(before['A'])
+                for _ in range(2):
+                    plotted = tree.ensure_reconstructed_tree(plotting_overhead=True)
+                    self.assertEqual({nd.label: nd.is_sa_lineage for nd in plotted}, expected)
+                self.assertEqual({nd.label: nd.is_sa_lineage for nd in tree.tree}, before)
 
     def test_obs_both_sides_root_with_origin_true(self):
         """

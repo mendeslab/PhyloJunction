@@ -1428,8 +1428,8 @@ class AnnotatedTree(dp.Tree):
         names are keys inside 'sa_lineage_dict' are pruned (because one
         of their children lineages dies off). Their SampledAncestor's
         associated instances must then be passed down to their surviving
-        lineages (which then must also be annotated with
-        'is_sa_lineage == True').
+        lineages. Structural lineage flags are established during
+        reconstruction, independently of this plotting bookkeeping.
 
         Args:
             rec_tree_root_nd (DendroPy.Node): Node that roots the
@@ -1483,13 +1483,9 @@ class AnnotatedTree(dp.Tree):
                         if rec_tr_nd_name == "":
                             continue
 
-                        rec_tr_nd = \
-                            self.tree_reconstructed.find_node_with_label(rec_tr_nd_name)
-                        rec_tr_nd.is_sa_lineage = True
-
                         # now update list of SAs
                         #
-                        # if rec_tr_nd was not an SA lineage, we make it so
+                        # create the association if the surviving node has none yet
                         if rec_tr_nd_name not in self.rec_tr_sa_lineage_dict:
                             self.rec_tr_sa_lineage_dict[rec_tr_nd_name] = \
                                 copy.deepcopy(self.sa_lineage_dict[nd_label])
@@ -1532,6 +1528,11 @@ class AnnotatedTree(dp.Tree):
             rec.seed_node = origin
         else:
             rec.seed_node.edge_length = 0.0
+        # Pruning can replace the continuing child of an SA marker. Refresh both true
+        # and false flags from the final topology before any plotting preparation.
+        for nd in rec:
+            nd.is_sa_lineage = (nd.parent_node is not None
+                                and nd.parent_node.is_sa_dummy_parent and not nd.is_sa)
         self.tree_reconstructed = rec
         self.rec_tr_root_node = rec.seed_node
         self.rec_tr_root_node_label = rec.seed_node.label
@@ -1895,6 +1896,10 @@ class AnnotatedTree(dp.Tree):
             #     (ii) rec_tr_node_ages_dict                    #
             ##################################################
 
+            # Reconstruction owns lineage flags; optional plotting must not change them.
+            for nd in self.tree_reconstructed:
+                nd.is_sa_lineage = (nd.parent_node is not None
+                                    and nd.parent_node.is_sa_dummy_parent and not nd.is_sa)
             self._populate_node_age_height_dicts(do_reconstructed_tree=True)
 
         if plotting_overhead and \
