@@ -258,15 +258,14 @@ def populate_gamma_spike_mol_rates_on_complete_tree_branches(
          'branch_raw_rate' (a rate is constant along the whole
          branch, by this model's own definition, so there is nothing
          to divide there), but the reconstructed branch's single,
-         already-drawn 'spike_effect' total is divided across them --
+         already-drawn 'spike_effect' total is divided across the
+         segments leaving genuine speciations --
          using a Dirichlet distribution, since a sum of 'n' i.i.d.
          Gamma(alpha, theta) draws is, conditional on that sum, split
          into proportions distributed exactly as Dirichlet(alpha,
          ..., alpha) (with 'n' repeats of 'alpha'), independently of
-         the sum itself. This gives each backbone segment a share
-         that is statistically indistinguishable from one drawn
-         directly, rather than an arbitrary split that merely adds up
-         to the right total.
+         the sum itself. This equivalence requires that the number
+         of eligible segments matches the number of spikes in the total.
     (iii) A branch with no reconstructed counterpart at all gets a
           fresh, independent draw for both components: the gradual,
           relaxed-clock component from 'br_specific_rel_rates_complete'
@@ -282,7 +281,7 @@ def populate_gamma_spike_mol_rates_on_complete_tree_branches(
     This function must be called after
     'populate_gamma_spike_mol_rates_on_rec_tr_branches' has already
     populated 'ann_tr.tree_reconstructed' -- it reads that tree's own
-    'branch_raw_rate', 'spike_effect', and 'n_stub' values rather than
+    'branch_raw_rate' and 'spike_effect' values rather than
     recomputing them. Every node of 'ann_tr.tree' ends up with
     'branch_raw_rate', 'spike_effect', and 'mol_rate' populated (set
     to 'None' on the root and any zero-length branch, same as the
@@ -376,31 +375,22 @@ def populate_gamma_spike_mol_rates_on_complete_tree_branches(
 
         stub_segment_nodes.reverse()
 
-        # 'complete_nd' itself is the segment carrying the branch's
-        # own "+1 baseline" -- included last, unconditionally; see
-        # below for why it may end up with no Dirichlet share of its
-        # own despite being part of the backbone
+        # Include the segment ending at 'complete_nd' after the hidden
+        # segments, retaining their order from oldest to youngest.
         backbone_segment_nodes = stub_segment_nodes + [complete_nd]
 
-        n_spikes = (
-            rec_nd.n_stub if rec_nd.is_sa_lineage else rec_nd.n_stub + 1)
+        # Fossil sampling is an observation event, not a speciation event,
+        # and must not introduce a spike. Select segments whose parents
+        # are genuine speciations; the baseline belongs to the first
+        # segment, and is absent when that segment starts at an SA marker.
+        candidate_sharing_segments = [
+            seg_nd for seg_nd in backbone_segment_nodes
+            if not seg_nd.parent_node.is_sa_dummy_parent
+            and seg_nd.parent_node.num_child_nodes() >= 2]
 
-        # when 'rec_nd.is_sa_lineage', the "+1 baseline" is dropped,
-        # so only the 'n_stub' hidden segments (never 'complete_nd'
-        # itself, which sits last) are conceptually due a share of
-        # the spike total. A zero-length one among them (e.g. a
-        # sampled ancestor whose own dummy parent was collapsed into
-        # it, leaving it with no surviving sibling lineage) cannot
-        # itself carry a rate -- there is no time for one to apply
-        # over -- so it is dropped here, and the *real*-length
-        # segments alone share the whole total instead. This is not
-        # an approximation: the Dirichlet distribution's own
-        # aggregation property means the real segments' own
-        # proportions, conditional on summing to the whole total (as
-        # they must, since a zero-length segment can only ever
-        # contribute exactly 0), are still Dirichlet-distributed with
-        # one entry removed per zero-length segment dropped.
-        candidate_sharing_segments = backbone_segment_nodes[:n_spikes]
+        # A zero-length segment cannot represent a nonzero spike as a
+        # finite rate. Keep the existing convention of allocating the total
+        # over real-length eligible segments; zero-length ones remain unrated.
         real_sharing_segments = [
             seg_nd for seg_nd in candidate_sharing_segments
             if pjtr.is_real_branch(seg_nd, ann_tr.epsilon)]
@@ -430,8 +420,7 @@ def populate_gamma_spike_mol_rates_on_complete_tree_branches(
                 + share / seg_nd.edge_length)
 
         # any segment not among 'real_sharing_segments' -- whether
-        # beyond the first 'n_spikes' (only ever 'complete_nd'
-        # itself, and only when 'rec_nd.is_sa_lineage'), or a zero-
+        # leaving a sampling event rather than a speciation, or a zero-
         # length one dropped above -- still needs its own rate if it
         # is itself a real branch (it carries no spike of its own);
         # a zero-length one is left with no rate at all, same as
