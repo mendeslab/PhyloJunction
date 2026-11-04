@@ -103,11 +103,35 @@ class TestDataDump(unittest.TestCase):
         # is produced for it
         self.assertEqual(summaries([[], [], []]), [])
 
+    # One combined table must preserve scalar/tree identities, including nested vectors.
+    # Raw-data tests cannot detect pooled elements or duplicated per-variable summary files.
+    def test_combined_statistics(self):
+        source = ('t := read_tree(string="(A:1,B:1);")[1]\n'
+                  'fixed <- 7.75\nx <- [[1,2]]\ntrees <- [[t,t]]\n')
+        results = compile_model(source).execute(2, 42)
+        properties = ['root_age', 'n_total', 'n_extant', 'n_extinct', 'n_sa']
+        expected = ['t.' + name for name in properties] + ['fixed', 'x[1][1]', 'x[1][2]']
+        expected += [f'trees[1][{i}].{name}' for i in (1, 2) for name in properties]
+        for output_format in ('separate-csv', 'combined-csv', 'json'):
+            with self.subTest(output_format=output_format), tempfile.TemporaryDirectory() as directory:
+                write_results(directory, results, prefix='batch', output_format=output_format)
+                root = Path(directory)
+                summary = pd.read_csv(root / 'batch_stats_summary.csv').set_index('variable')
+                self.assertEqual(summary.index.tolist(), expected)
+                self.assertEqual(summary.loc['fixed', 'mean'], 7.75)
+                self.assertEqual(summary.loc['fixed', 'sd'], 0)
+                self.assertEqual(summary.loc['trees[1][2].n_extant', 'mean'], 2)
+                self.assertEqual({p.name for p in root.glob('*stats_summary.csv')}, {'batch_stats_summary.csv'})
+                self.assertTrue((root / 'batch_t_stats.csv').exists())
+        with tempfile.TemporaryDirectory() as directory:
+            write_results(directory, compile_model('x <- []').execute(2, 42))
+            self.assertFalse((Path(directory) / 'stats_summary.csv').exists())
+
     # Ordinary format checks cannot detect loss at output dictionary insertion. Collisions
     # must fail before touching files, regardless of which pair of producers shares a name.
     def test_output_collisions(self):
         tree = 't := read_tree(string="(A:1,B:1);")\n'
-        sources = [('x ~ normal(0,1)\nx_stats_summary <- 123', 'x_stats_summary.csv'),
+        sources = [('x ~ normal(0,1)\nstats_summary <- 123', 'stats_summary.csv'),
                    (tree + 't_stats <- 123', 't_stats.csv'),
                    (tree + 't_annotated := t', 't_annotated_complete.tsv')]
         for source, filename in sources:
