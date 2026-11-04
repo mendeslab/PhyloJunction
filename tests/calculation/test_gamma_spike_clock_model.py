@@ -127,6 +127,24 @@ class TestGammaSpike(unittest.TestCase):
             rec_A.spike_effect,
             places=12)
 
+        # Conservation alone misses spikes placed on the wrong segment. After sampling,
+        # the continuation has no spike; a later hidden speciation contributes to its daughter.
+        sampled = pjr.read_nwk_tree_str(
+            "((F:0,(A[&alive=true]:1,X[&alive=false,sampled=false]:.2)J:1)D:1,"
+            "B[&alive=true]:3)root;", in_file=False, is_complete=True)
+        rated = pjgsc_dn.DnGammaSpikeClock(
+            sampled, "rate", 0.1, 0.05, 2, [1.0] * sampled.n_rec_branches(),
+            apply_to_complete=True,
+            br_specific_rel_rate_complete=[1.0] * sampled.n_complete_only_branches()).draw()
+        continuation = rated.tree.find_node_with_label("J")
+        daughter = rated.tree.find_node_with_label("A")
+        reconstructed = rated.tree_reconstructed.find_node_with_label("A")
+        self.assertGreater(reconstructed.spike_effect, 0.0)
+        self.assertEqual(continuation.spike_effect, 0.0)
+        self.assertEqual(daughter.spike_effect, reconstructed.spike_effect)
+        self.assertAlmostEqual(continuation.edge_length * continuation.rate + daughter.edge_length * daughter.rate,
+                               reconstructed.edge_length * reconstructed.rate)
+
     def test_apply_to_complete_requires_matching_rate_vector(self):
         """'apply_to_complete=True' needs a correctly-sized rate vector.
 

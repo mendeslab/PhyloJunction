@@ -258,12 +258,13 @@ def populate_gamma_spike_mol_rates_on_complete_tree_branches(
          'branch_raw_rate' (a rate is constant along the whole
          branch, by this model's own definition, so there is nothing
          to divide there), but the reconstructed branch's single,
-         already-drawn 'spike_effect' total is divided across them --
+         already-drawn 'spike_effect' total is divided across the
+         positive-length segments leaving genuine speciations,
          using a Dirichlet distribution, since a sum of 'n' i.i.d.
          Gamma(alpha, theta) draws is, conditional on that sum, split
          into proportions distributed exactly as Dirichlet(alpha,
          ..., alpha) (with 'n' repeats of 'alpha'), independently of
-         the sum itself. This gives each backbone segment a share
+         the sum itself. This gives each eligible segment a share
          that is statistically indistinguishable from one drawn
          directly, rather than an arbitrary split that merely adds up
          to the right total.
@@ -273,8 +274,8 @@ def populate_gamma_spike_mol_rates_on_complete_tree_branches(
           (externally supplied, exactly like 'br_specific_rel_rates' is
           for reconstructed branches), and the spike component from
           this same Gamma mechanism, with exactly one spike (or zero,
-          if the branch is an 'is_sa_lineage' one) -- a complete-tree
-          branch is, by construction, never itself subdivided by
+          if its parent is a sampling event or a unary origin). A
+          complete-tree branch is never itself subdivided by
           further hidden stubs, so there is no "+1 baseline, plus one
           per stub" sum to make here; it is just the ordinary single-
           branch rule with zero stubs.
@@ -341,12 +342,13 @@ def populate_gamma_spike_mol_rates_on_complete_tree_branches(
     for idx, nd in enumerate(complete_only_nodes):
         nd.branch_raw_rate = br_specific_rel_rates_complete[idx]
 
-        if nd.is_sa_lineage:
-            nd.spike_effect = 0.0
-
-        else:
+        # Fossil sampling is an observation event, not a speciation event, and must not
+        # introduce a spike. Only a genuine speciation at the parent contributes one.
+        if not nd.parent_node.is_sa_dummy_parent and nd.parent_node.num_child_nodes() >= 2:
             nd.spike_effect = spike_mean * np.random.gamma(
                 shape=spike_shape, scale=1.0 / spike_shape)
+        else:
+            nd.spike_effect = 0.0
 
         nd.mol_rate = (
             clock_rate * nd.branch_raw_rate
@@ -376,34 +378,18 @@ def populate_gamma_spike_mol_rates_on_complete_tree_branches(
 
         stub_segment_nodes.reverse()
 
-        # 'complete_nd' itself is the segment carrying the branch's
-        # own "+1 baseline" -- included last, unconditionally; see
-        # below for why it may end up with no Dirichlet share of its
-        # own despite being part of the backbone
         backbone_segment_nodes = stub_segment_nodes + [complete_nd]
 
-        n_spikes = (
-            rec_nd.n_stub if rec_nd.is_sa_lineage else rec_nd.n_stub + 1)
-
-        # when 'rec_nd.is_sa_lineage', the "+1 baseline" is dropped,
-        # so only the 'n_stub' hidden segments (never 'complete_nd'
-        # itself, which sits last) are conceptually due a share of
-        # the spike total. A zero-length one among them (e.g. a
-        # sampled ancestor whose own dummy parent was collapsed into
-        # it, leaving it with no surviving sibling lineage) cannot
-        # itself carry a rate -- there is no time for one to apply
-        # over -- so it is dropped here, and the *real*-length
-        # segments alone share the whole total instead. This is not
-        # an approximation: the Dirichlet distribution's own
-        # aggregation property means the real segments' own
-        # proportions, conditional on summing to the whole total (as
-        # they must, since a zero-length segment can only ever
-        # contribute exactly 0), are still Dirichlet-distributed with
-        # one entry removed per zero-length segment dropped.
-        candidate_sharing_segments = backbone_segment_nodes[:n_spikes]
+        # Fossil sampling must not introduce a spike on its continuing segment. Select
+        # segments by their complete-tree parents, not a reconstructed lineage flag:
+        # pruning can merge an SA continuation with daughters of later speciations.
+        # Positive-length segments leaving genuine speciations share the drawn total;
+        # the first segment carries the baseline only if its parent is a speciation.
         real_sharing_segments = [
-            seg_nd for seg_nd in candidate_sharing_segments
-            if pjtr.is_real_branch(seg_nd, ann_tr.epsilon)]
+            seg_nd for seg_nd in backbone_segment_nodes
+            if pjtr.is_real_branch(seg_nd, ann_tr.epsilon)
+            and not seg_nd.parent_node.is_sa_dummy_parent
+            and seg_nd.parent_node.num_child_nodes() >= 2]
 
         n_real = len(real_sharing_segments)
 
@@ -429,13 +415,8 @@ def populate_gamma_spike_mol_rates_on_complete_tree_branches(
                 clock_rate * seg_nd.branch_raw_rate
                 + share / seg_nd.edge_length)
 
-        # any segment not among 'real_sharing_segments' -- whether
-        # beyond the first 'n_spikes' (only ever 'complete_nd'
-        # itself, and only when 'rec_nd.is_sa_lineage'), or a zero-
-        # length one dropped above -- still needs its own rate if it
-        # is itself a real branch (it carries no spike of its own);
-        # a zero-length one is left with no rate at all, same as
-        # 'is_real_branch' excludes it everywhere else in this module
+        # Other positive-length segments carry only gradual evolution. Zero-length
+        # segments retain no rate, matching is_real_branch's convention above.
         for seg_nd in backbone_segment_nodes:
             if seg_nd in real_sharing_segments:
                 continue
