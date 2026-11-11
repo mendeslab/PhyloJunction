@@ -80,9 +80,9 @@ class DirectedAcyclicGraph:
             raise ScriptEvaluationError(str(error), source=source, source_name=source_name,
                                         line_number=line_number, variable=name) from error
 
-    def execute(self, runs=1, random_seed=None):
+    def execute(self, runs=1, random_seed=None, on_replicate_complete=None):
         from phylojunction.pgm.execution import ExecutionResults
-        return ExecutionResults(self, runs, random_seed)
+        return ExecutionResults(self, runs, random_seed, on_replicate_complete)
 
     def get_node_dag_by_name(self, name):
         return self.name_node_dict[name]

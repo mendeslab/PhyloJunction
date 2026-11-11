@@ -1,5 +1,7 @@
 import argparse
 import os
+import sys
+import time
 from pathlib import Path
 from phylojunction.readwrite.execution_export import write_results, write_maps, FORMATS
 import typing as ty
@@ -60,7 +62,19 @@ def execute_pj_script(
     #################
 
     print("Reading script " + model)
-    results = cmd.compile_model(Path(model).read_text(), str(model)).execute(runs, random_seed)
+    compiled_model = cmd.compile_model(Path(model).read_text(), str(model))
+    started = last_report = time.monotonic()
+
+    # Report completed replicates at most once per second, always including the final one.
+    def report_completion(completed):
+        nonlocal last_report
+        now = time.monotonic()
+        if completed == runs or now - last_report >= 1.0:
+            print(f"Completed {completed}/{runs} replicates ({now - started:.1f} s elapsed)",
+                  file=sys.stderr, flush=True)
+            last_report = now
+
+    results = compiled_model.execute(runs, random_seed, on_replicate_complete=report_completion)
     dag_obj = results.model
     print("    ... done!")
 

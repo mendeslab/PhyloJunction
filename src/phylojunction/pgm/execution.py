@@ -18,7 +18,7 @@ class ExecutionResults:
 
     # Execute every definition in order for each model run. Failed execution restores
     # both RNGs; successful execution advances them, including when no seed is specified.
-    def __init__(self, model, runs=1, random_seed=None):
+    def __init__(self, model, runs=1, random_seed=None, on_replicate_complete=None):
         if type(runs) is not int or runs < 1:
             raise ValueError("The number of replicates must be a positive integer.")
         self.model = copy.deepcopy(model)
@@ -30,7 +30,7 @@ class ExecutionResults:
             if random_seed is not None:
                 random.seed(random_seed)
                 np.random.seed(random_seed)
-            self._execute_from(0)
+            self._execute_from(0, on_replicate_complete)
         except Exception:
             random.setstate(state[0])
             np.random.set_state(state[1])
@@ -41,7 +41,7 @@ class ExecutionResults:
         return len(self._values)
 
     # Bind lookup to definition IDs, so a reassigned name cannot change prior expressions.
-    def _execute_from(self, start):
+    def _execute_from(self, start, on_replicate_complete=None):
         for execution, (row, sampled) in enumerate(zip(self._values, self._sampled_from), 1):
             for node in self.model.definitions[start:]:
                 try:
@@ -61,6 +61,8 @@ class ExecutionResults:
                         str(error), source=node.source, source_name=node.source_name,
                         line_number=node.line_number, variable=node.node_name,
                         execution=execution) from error
+            if on_replicate_complete is not None:
+                on_replicate_complete(execution)
 
     # Reject Python's implicit negative indexing for replicate selection as well.
     def value(self, name, execution_index=0):
