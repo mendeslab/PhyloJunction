@@ -1070,9 +1070,13 @@ class AnnotatedTree(dp.Tree):
         """
 
         if not self.tree_read_as_newick:
-            for nd in self.tree.nodes():
-                if not nd.is_leaf():
-                    self.tree.taxon_namespace.remove_taxon(nd.taxon)
+            # Repeated removals scan the namespace quadratically. Rebuild it in order,
+            # retaining the same namespace and taxon objects through DendroPy's public API.
+            internal_taxa = {nd.taxon for nd in self.tree if not nd.is_leaf()}
+            namespace = self.tree.taxon_namespace
+            retained_taxa = [taxon for taxon in namespace if taxon not in internal_taxa]
+            namespace.clear()
+            namespace.add_taxa(retained_taxa)
 
     def _add_at_ages(self) -> None:
         """Add age member values for attribute transitions in at_dict"""

@@ -143,8 +143,10 @@ class DnQuaSSE(DistrForSampling):
 
     # Nodes are the only persistent simulation representation; internal traits freeze at birth.
     def _new_node(self, tree, label, trait, parent=None):
-        node = dp.Node(label=label, edge_length=0.0,
-                       taxon=tree.taxon_namespace.require_taxon(label=label))
+        # A fossil continuation keeps its parent's taxon; all other generated labels are unique.
+        taxon = (parent.taxon if parent is not None and parent.label == label
+                 else tree.taxon_namespace.new_taxon(label=label))
+        node = dp.Node(label=label, edge_length=0.0, taxon=taxon)
         node.trait = float(trait)
         node.alive = node.sampled = True
         node.is_sa = node.is_sa_dummy_parent = node.is_sa_lineage = False
@@ -157,11 +159,12 @@ class DnQuaSSE(DistrForSampling):
     # Child order distinguishes continuation from fossil even after pruning zero-length edges.
     def _record_fossil(self, tree, node, fossil_index):
         label, sampled = node.label, node.sampled
+        # Transfer the existing taxon before replacing the parent's label and taxon.
+        continuation = self._new_node(tree, label, node.trait, node)
         node.label = f"dummy{fossil_index}"
-        node.taxon = tree.taxon_namespace.require_taxon(label=node.label)
+        node.taxon = tree.taxon_namespace.new_taxon(label=node.label)
         node.alive = node.sampled = node.is_sa = node.is_sa_lineage = False
         node.is_sa_dummy_parent = True
-        continuation = self._new_node(tree, label, node.trait, node)
         continuation.sampled, continuation.is_sa_lineage = sampled, True
         fossil = self._new_node(tree, f"sa{fossil_index}", node.trait, node)
         fossil.alive, fossil.is_sa = False, True
