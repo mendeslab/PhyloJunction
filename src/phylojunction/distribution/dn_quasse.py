@@ -403,13 +403,14 @@ class DnQuaSSE(DistrForSampling):
                     is_candidate = candidate_time < interval.end_time
             heapq.heappush(queue, (candidate_time, next(serials), is_candidate, interval))
 
+        fossil_args = {"fossil_rate": fossil} if fossils_enabled else {}
+
         # The same block creation is used for initialization, endpoint renewal, and daughters.
         # Consuming the index before drawing prevents endpoint-dependent budget allocation.
         def start(node, time):
             end_time = time + self.block_duration
             if self.stop == "age":
                 end_time = min(end_time, target)
-            fossil_args = {"fossil_rate": fossil} if fossils_enabled else {}
             interval = self._start_bridge_interval(node, time, end_time, birth, death,
                                                    drift, variance, next(block_indices), **fossil_args)
             living[node] = interval

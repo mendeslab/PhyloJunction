@@ -1,5 +1,6 @@
 """Continuous-trait rate functions shared by QuaSSE simulators."""
 
+import math
 import numpy as np
 from scipy.special import expit, ndtr
 
@@ -46,15 +47,14 @@ class RateFunction:
     # but is not certified interval arithmetic; the simulator's proof assumes exact bounds.
     def bound_on_interval(self, left, right):
         left, right = float(left), float(right)
-        if not np.isfinite(left) or not np.isfinite(right) or left > right:
+        if not math.isfinite(left) or not math.isfinite(right) or left > right:
             raise ValueError("Rate bounds require finite endpoints with left <= right.")
         bound = 0.0 if self.cap == 0 else float(self._interval_bound(left, right))
         if self.cap is not None:
             bound = min(bound, self.cap)
         if bound > 0:
-            with np.errstate(over="ignore"):
-                bound = float(np.nextafter(bound, np.inf))
-        if not np.isfinite(bound) or bound < 0:
+            bound = math.nextafter(bound, math.inf)
+        if not math.isfinite(bound) or bound < 0:
             raise ValueError("No finite nonnegative rate bound is available on this interval.")
         return bound
 
