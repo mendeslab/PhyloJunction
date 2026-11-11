@@ -57,7 +57,7 @@ class GUIModeling():
     def parse_cmd_update_pgm(self, cmd_line_list, gui_main_window_obj, clear_cmd_log_list=False):
         lines = [line.strip() for line in cmd_line_list if line.strip() and not line.strip().startswith('#')]
         try:
-            if not self.dag_obj.definitions:
+            if not self.dag_obj.statements:
                 seed = gui_main_window_obj._read_seed()
                 candidate = cmdp.compile_model('\n'.join(cmd_line_list), '<interactive>').execute(
                     gui_main_window_obj.ui.ui_pages.execution_count.value(), seed)

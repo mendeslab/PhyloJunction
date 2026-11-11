@@ -20,10 +20,10 @@ def compile_model(source, source_name="<script>"):
 
 
 # Read a script (or source text), compile its shared definitions, and execute it.
-def script2dag(script_file_path_or_model_spec, in_pj_file=True, random_seed=None, runs=1):
+def script2dag(script_file_path_or_model_spec, in_pj_file=True, random_seed=None, runs=1, max_attempts=1000):
     source = Path(script_file_path_or_model_spec).read_text() if in_pj_file else script_file_path_or_model_spec
     source_name = str(script_file_path_or_model_spec) if in_pj_file else "<script>"
-    return compile_model(source, source_name).execute(runs, random_seed)
+    return compile_model(source, source_name).execute(runs, random_seed, max_attempts=max_attempts)
 
 
 if __name__ == "__main__":

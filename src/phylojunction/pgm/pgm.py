@@ -1,5 +1,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+import ast
 from numbers import Integral
 import typing as ty
 import numpy as np
@@ -12,17 +14,29 @@ __author__ = "Fabio K. Mendes"
 __email__ = "fmendes@lsu.edu"
 
 
+@dataclass
+class _Condition:
+    """An acceptance statement with dependencies, but no named value or result column."""
+    expression: ast.AST
+    bindings: dict
+    source: str
+    source_name: str
+    line_number: int
+
+
 class DirectedAcyclicGraph:
     """Shared, ordered definitions of a model, without replicate-specific values.
 
     name_node_dict points to the latest definition of each source name. Every
     definition has a stable position in definitions, so reassignment preserves
-    the bindings of earlier statements. ExecutionResults owns sampled values.
+    the bindings of earlier statements. statements also includes unnamed conditions
+    in execution order, without shifting value indexes. ExecutionResults owns sampled values.
     """
 
     # A graph is compiled before it is executed; compiling consumes no random numbers.
     def __init__(self):
         self.definitions = []
+        self.statements = []
         self.name_node_dict = {}
         self.n_nodes = 0
 
@@ -37,7 +51,6 @@ class DirectedAcyclicGraph:
                 return
             name, operator, expression = statement
             # Clamping is observation metadata, not a parameter of the distribution object.
-            import ast
             clamped = False
             if operator == '~' and isinstance(expression, ast.Call):
                 clamp = next((item for item in expression.keywords if item.arg == 'clamp'), None)
@@ -58,6 +71,10 @@ class DirectedAcyclicGraph:
             missing = [name for name in names if name not in self.name_node_dict]
             if missing:
                 raise ValueError(f"Undefined variable(s): {', '.join(missing)}")
+            bindings = {name: self.name_node_dict[name].definition_id for name in names}
+            if operator == 'condition':
+                self.statements.append(_Condition(expression, bindings, source, source_name, line_number))
+                return
             parents = [self.name_node_dict[name] for name in names]
             node_class = DeterministicNodeDAG if operator == ':=' else StochasticNodeDAG
             node = node_class(name, parent_nodes=parents)
@@ -68,10 +85,11 @@ class DirectedAcyclicGraph:
             node.source = source
             node.source_name = source_name
             node.line_number = line_number
-            node.bindings = {name: self.name_node_dict[name].definition_id for name in names}
+            node.bindings = bindings
             node.is_sampled = operator == '~'
             node.is_clamped = clamped
             self.definitions.append(node)
+            self.statements.append(node)
             self.name_node_dict[name] = node
             self.n_nodes = len(self.definitions)
         except ScriptEvaluationError:
@@ -80,9 +98,9 @@ class DirectedAcyclicGraph:
             raise ScriptEvaluationError(str(error), source=source, source_name=source_name,
                                         line_number=line_number, variable=name) from error
 
-    def execute(self, runs=1, random_seed=None, on_replicate_complete=None):
+    def execute(self, runs=1, random_seed=None, on_replicate_complete=None, max_attempts=1000):
         from phylojunction.pgm.execution import ExecutionResults
-        return ExecutionResults(self, runs, random_seed, on_replicate_complete)
+        return ExecutionResults(self, runs, random_seed, on_replicate_complete, max_attempts)
 
     def get_node_dag_by_name(self, name):
         return self.name_node_dict[name]

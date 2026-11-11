@@ -3,7 +3,7 @@ from phylojunction.utility.exception_classes import ScriptEvaluationError
 import copy
 import random
 import numpy as np
-from phylojunction.pgm.pgm import DistrForSampling
+from phylojunction.pgm.pgm import DistrForSampling, _Condition
 from phylojunction.interface.cmdbox.expressions import evaluate, value_type
 from phylojunction.interface.grammar.constructors import construct
 
@@ -18,9 +18,11 @@ class ExecutionResults:
 
     # Execute every definition in order for each model run. Failed execution restores
     # both RNGs; successful execution advances them, including when no seed is specified.
-    def __init__(self, model, runs=1, random_seed=None, on_replicate_complete=None):
+    def __init__(self, model, runs=1, random_seed=None, on_replicate_complete=None, max_attempts=1000):
         if type(runs) is not int or runs < 1:
             raise ValueError("The number of replicates must be a positive integer.")
+        if max_attempts is not None and (type(max_attempts) is not int or max_attempts < 1):
+            raise ValueError("max_attempts must be a positive integer or None.")
         self.model = copy.deepcopy(model)
         self.random_seed = random_seed
         self._values = [[] for _ in range(runs)]
@@ -30,7 +32,7 @@ class ExecutionResults:
             if random_seed is not None:
                 random.seed(random_seed)
                 np.random.seed(random_seed)
-            self._execute_from(0, on_replicate_complete)
+            self._execute_from(0, on_replicate_complete, max_attempts)
         except Exception:
             random.setstate(state[0])
             np.random.set_state(state[1])
@@ -40,27 +42,45 @@ class ExecutionResults:
     def n_executions(self):
         return len(self._values)
 
-    # Bind lookup to definition IDs, so a reassigned name cannot change prior expressions.
-    def _execute_from(self, start, on_replicate_complete=None):
+    # Each rejected attempt discards all its values but keeps advancing both RNGs.
+    # Append executes only new statements, which cannot contain acceptance conditions.
+    def _execute_from(self, start, on_replicate_complete=None, max_attempts=1000):
+        statements = self.model.statements[start:]
         for execution, (row, sampled) in enumerate(zip(self._values, self._sampled_from), 1):
-            for node in self.model.definitions[start:]:
-                try:
-                    value = evaluate(node.expression, lambda name: row[node.bindings[name]], construct)
-                    distribution = None
-                    if node.operator == '~':
-                        validate_distributions(value)
-                        distribution = value
-                        value = draw_distributions(distribution)
-                        value_type(value)
-                    row.append(value)
-                    sampled.append(distribution)
-                except ScriptEvaluationError:
-                    raise
-                except Exception as error:
-                    raise ScriptEvaluationError(
-                        str(error), source=node.source, source_name=node.source_name,
-                        line_number=node.line_number, variable=node.node_name,
-                        execution=execution) from error
+            attempt = 0
+            while True:
+                attempt += 1
+                for node in statements:
+                    try:
+                        value = evaluate(node.expression, lambda name: row[node.bindings[name]], construct)
+                        if isinstance(node, _Condition):
+                            if type(value) is not bool:
+                                raise TypeError('condition(...) requires a Boolean scalar.')
+                            if value:
+                                continue
+                            if max_attempts is not None and attempt >= max_attempts:
+                                raise ValueError(f'No accepted replicate after {attempt} attempts; '
+                                                 'increase max_attempts or revise the condition.')
+                            row.clear()
+                            sampled.clear()
+                            break
+                        distribution = None
+                        if node.operator == '~':
+                            validate_distributions(value)
+                            distribution = value
+                            value = draw_distributions(distribution)
+                            value_type(value)
+                        row.append(value)
+                        sampled.append(distribution)
+                    except ScriptEvaluationError:
+                        raise
+                    except Exception as error:
+                        raise ScriptEvaluationError(
+                            str(error), source=node.source, source_name=node.source_name,
+                            line_number=node.line_number, variable=getattr(node, 'node_name', None),
+                            execution=execution) from error
+                else:
+                    break
             if on_replicate_complete is not None:
                 on_replicate_complete(execution)
 
@@ -77,11 +97,17 @@ class ExecutionResults:
     # Only new definitions run: earlier descendants retain their previously sampled values.
     def append(self, source, source_name="<interactive>"):
         candidate = copy.deepcopy(self)
-        start = len(candidate.model.definitions)
+        start = len(candidate.model.statements)
         state = random.getstate(), np.random.get_state()
         try:
             for number, line in enumerate(source.splitlines(), 1):
                 candidate.model.add_definition(line, source_name, number)
+            for statement in candidate.model.statements[start:]:
+                if isinstance(statement, _Condition):
+                    raise ScriptEvaluationError(
+                        'Cannot append conditions to executed results; rerun the complete model.',
+                        source=statement.source, source_name=statement.source_name,
+                        line_number=statement.line_number)
             candidate._execute_from(start)
         except Exception:
             random.setstate(state[0])

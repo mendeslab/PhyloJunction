@@ -47,6 +47,9 @@ class _RevExpression:
 # Emit separate scripts for replicates. Definitions retain symbolic dependencies; only
 # observations and proven fixed dimensions come from a replicate's realized values.
 def execution_to_rev(results, root, mcmc_chain_length=1000, prefix=''):
+    from phylojunction.pgm.pgm import _Condition
+    if any(isinstance(statement, _Condition) for statement in results.model.statements):
+        raise ValueError('RevBayes export does not yet support condition(...) statements.')
     if type(mcmc_chain_length) is not int or mcmc_chain_length < 1:
         raise ValueError('MCMC chain length must be a positive integer.')
     definitions = results.model.definitions

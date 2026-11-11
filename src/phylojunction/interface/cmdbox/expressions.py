@@ -4,13 +4,63 @@ Only the explicitly supported nodes are interpreted; Python code is never evalua
 Variable names in arguments are dependencies, whereas constructor names are dispatch keys.
 """
 import ast
+import io
 import operator
 import re
+import tokenize
 
 
 _BINARY_OPERATORS = {ast.Add: operator.add, ast.Sub: operator.sub,
                      ast.Mult: operator.mul, ast.Div: operator.truediv}
 _UNARY_OPERATORS = {ast.UAdd: operator.pos, ast.USub: operator.neg}
+_COMPARISONS = {ast.Lt: operator.lt, ast.LtE: operator.le, ast.Gt: operator.gt,
+                ast.GtE: operator.ge, ast.Eq: operator.eq, ast.NotEq: operator.ne}
+
+
+# Translate only tokens, leaving strings intact. Wrap each ! operand through comparisons
+# but stop at logical operators/delimiters, matching R precedence even in x == !y.
+def _python_expression(source):
+    raw = list(tokenize.generate_tokens(io.StringIO(source).readline))
+    tokens = []
+    index = 0
+    while index < len(raw):
+        token = raw[index]
+        index += 1
+        if token.type in (tokenize.ENDMARKER, tokenize.NEWLINE, tokenize.NL, tokenize.COMMENT):
+            continue
+        if token.type == tokenize.ERRORTOKEN and token.string.isspace():
+            continue
+        if token.type == tokenize.NAME and token.string in ('and', 'or', 'not'):
+            raise ValueError('Use &&, || and ! for Boolean operators.')
+        if token.type == tokenize.OP and token.string in ('&', '|'):
+            if index >= len(raw) or raw[index].string != token.string or raw[index].start != token.end:
+                raise ValueError('Use scalar && and ||; vectorized & and | are not supported.')
+            index += 1
+            tokens.append('and' if token.string == '&' else 'or')
+        else:
+            tokens.append(token.string)
+    closing = {}
+    for index, token in enumerate(tokens):
+        if token != '!':
+            continue
+        depth = 0
+        end = index + 1
+        while end < len(tokens):
+            following = tokens[end]
+            if depth == 0 and following in ('and', 'or', ',', ')', ']', 'for', 'if'):
+                break
+            if following in ('(', '['):
+                depth += 1
+            elif following in (')', ']'):
+                depth -= 1
+            end += 1
+        closing[end] = closing.get(end, 0) + 1
+    pieces = []
+    for index, token in enumerate(tokens):
+        pieces.extend(')' for _ in range(closing.get(index, 0)))
+        pieces.append('( not' if token == '!' else token)
+    pieces.extend(')' for _ in range(closing.get(len(tokens), 0)))
+    return ' '.join(pieces)
 
 
 # Apply only scalar numeric operations, sharing the same rules with symbolic export.
@@ -29,15 +79,22 @@ def parse_statement(source):
         return None
     match = re.fullmatch(r'([A-Za-z][A-Za-z_0-9]*)\s*(<-|:=|~)\s*(.+)', source)
     if match is None:
-        raise ValueError('Expected name <- value, name := expression, or name ~ distribution.')
+        expression = ast.parse(_python_expression(source), mode='eval').body
+        if (not isinstance(expression, ast.Call) or not isinstance(expression.func, ast.Name)
+                or expression.func.id != 'condition' or len(expression.args) != 1 or expression.keywords):
+            raise ValueError('Expected an assignment or condition(expression).')
+        validate(expression.args[0])
+        return None, 'condition', expression.args[0]
     name, operator, text = match.groups()
+    if name == 'condition':
+        raise ValueError('condition is reserved for standalone condition(expression) statements.')
     expression = parse_expression(text)
     return name, operator, expression
 
 
 # Reject executable Python constructs before a model is compiled or any values are sampled.
 def parse_expression(source):
-    expression = ast.parse(source, mode='eval').body
+    expression = ast.parse(_python_expression(source), mode='eval').body
     validate(expression)
     return expression
 
@@ -80,8 +137,19 @@ def validate(expression):
         validate(generator.iter)
         validate(expression.elt)
         return
-    if isinstance(expression, ast.UnaryOp) and type(expression.op) in _UNARY_OPERATORS:
+    if isinstance(expression, ast.UnaryOp) and (type(expression.op) in _UNARY_OPERATORS
+                                              or isinstance(expression.op, ast.Not)):
         validate(expression.operand)
+        return
+    if isinstance(expression, ast.Compare):
+        if len(expression.ops) != 1 or type(expression.ops[0]) not in _COMPARISONS:
+            raise ValueError('Use separate comparisons joined by && or ||, not chained comparisons.')
+        validate(expression.left)
+        validate(expression.comparators[0])
+        return
+    if isinstance(expression, ast.BoolOp) and isinstance(expression.op, (ast.And, ast.Or)):
+        for value in expression.values:
+            validate(value)
         return
     if isinstance(expression, ast.BinOp) and type(expression.op) in _BINARY_OPERATORS:
         validate(expression.left)
@@ -92,6 +160,8 @@ def validate(expression):
         validate(expression.slice)
         return
     if isinstance(expression, ast.Call) and isinstance(expression.func, ast.Name):
+        if expression.func.id == 'condition':
+            raise ValueError('condition(...) is allowed only as a standalone statement.')
         seen = set()
         for keyword in expression.keywords:
             if keyword.arg is None or keyword.arg in seen:
@@ -101,7 +171,8 @@ def validate(expression):
         for argument in expression.args:
             validate(argument)
         return
-    raise ValueError('Expected a literal, variable, vector, arithmetic or indexing expression, or named constructor.')
+    raise ValueError('Expected a literal, variable, vector, scalar arithmetic/comparison/Boolean expression, '
+                     'indexing expression, or named constructor.')
 
 
 # Dependency discovery excludes call targets and includes every collection/index expression.
@@ -155,7 +226,30 @@ def evaluate(expression, lookup, construct):
         value_type(result)
         return result
     if isinstance(expression, ast.UnaryOp):
+        if isinstance(expression.op, ast.Not):
+            value = evaluate(expression.operand, lookup, construct)
+            if type(value) is not bool:
+                raise TypeError('! requires a Boolean scalar operand.')
+            return not value
         return arithmetic(expression.op, evaluate(expression.operand, lookup, construct))
+    if isinstance(expression, ast.BoolOp):
+        for operand in expression.values:
+            value = evaluate(operand, lookup, construct)
+            if type(value) is not bool:
+                raise TypeError('&& and || require Boolean scalar operands.')
+            if isinstance(expression.op, ast.And) and not value:
+                return False
+            if isinstance(expression.op, ast.Or) and value:
+                return True
+        return value
+    if isinstance(expression, ast.Compare):
+        left = evaluate(expression.left, lookup, construct)
+        right = evaluate(expression.comparators[0], lookup, construct)
+        numeric = type(left) in (int, float) and type(right) in (int, float)
+        equality = isinstance(expression.ops[0], (ast.Eq, ast.NotEq))
+        if not numeric and not (equality and type(left) is type(right) and type(left) in (bool, str)):
+            raise TypeError('Comparisons require numeric scalars; == and != also accept matching Boolean or string scalars.')
+        return _COMPARISONS[type(expression.ops[0])](left, right)
     if isinstance(expression, ast.BinOp):
         left = evaluate(expression.left, lookup, construct)
         right = evaluate(expression.right, lookup, construct)

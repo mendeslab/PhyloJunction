@@ -107,6 +107,14 @@ def n_rec_branches(tree):
     return tree.n_rec_branches()
 
 
+# Count sampled living terminals only; fossils and unsampled living tips are excluded.
+def n_extant_tips(tree):
+    from phylojunction.data.tree import AnnotatedTree
+    if not isinstance(tree, AnnotatedTree):
+        raise TypeError("n_extant_tips requires a tree.")
+    return tree.n_extant_sampled_terminal_nodes
+
+
 # Counts the complete tree's own branches absent from the reconstructed tree
 # (extinct or unsampled-but-living lineages) -- sizes 'apply_to_complete's
 # 'br_specific_rel_rate_complete' vector the same way 'n_rec_branches' sizes
@@ -128,6 +136,7 @@ CONSTRUCTORS = {
         'apply_to_complete': Scalar, 'br_specific_rel_rate_complete': Vector,
     }]),
     'n_rec_branches': (n_rec_branches, [{'tree': Scalar}]),
+    'n_extant_tips': (n_extant_tips, [{'tree': Scalar}]),
     'n_complete_only_branches': (n_complete_only_branches, [{'tree': Scalar}]),
     'normal': (dn.DnNormal, [{
         'mean': Scalar, 'sd': Scalar,

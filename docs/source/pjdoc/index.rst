@@ -172,8 +172,7 @@ Scalar arithmetic
 -----------------
 
 Expressions support binary ``+``, ``-``, ``*``, and ``/``, and unary signs such as
-``-x``, ``+2``, and ``-(x + y)``. Parsing uses Python's expression parser, with Python's
-precedence: unary signs bind most tightly, followed by multiplication and division,
+``-x``, ``+2``, and ``-(x + y)``. Unary signs bind most tightly, followed by multiplication and division,
 then addition and subtraction. Binary operators associate left to right; parentheses
 change grouping. Division is real-valued, so ``3 / 2`` is ``1.5``.
 
@@ -186,9 +185,29 @@ change grouping. Division is real-valued, so ``3 / 2`` is ``1.5``.
 
 Arithmetic requires integer or real scalar operands, excluding booleans. It does not
 operate directly on lists or distribution objects. Use a comprehension such as
-``doubled := [2 * x for x in values]`` for elementwise arithmetic. Powers and other
-operators are not supported. Expressions are interpreted by PhyloJunction, not executed
-as Python code.
+``doubled := [2 * x for x in values]`` for elementwise arithmetic. Powers are not supported.
+Expressions are interpreted by PhyloJunction, not executed as Python code.
+
+Comparisons and Boolean expressions
+----------------------------------
+
+Comparisons support ``<``, ``<=``, ``>``, ``>=``, ``==``, and ``!=`` on numeric scalars.
+Equality and inequality also accept two Boolean scalars or two strings. There is no
+implicit conversion between numbers, strings, and Booleans.
+
+The Boolean constants are ``true`` and ``false``. The R-style operators ``!``, ``&&``,
+and ``||`` require Boolean scalars. ``&&`` and ``||`` short-circuit: the right side is
+evaluated only if needed. Arithmetic binds more tightly than comparisons, followed
+by ``!``, ``&&``, then ``||``. Parentheses override this ordering.
+
+.. code-block:: text
+
+    in_range := 100 <= n && n <= 300
+    excluded := !in_range || n == 200
+
+Write separate comparisons joined by ``&&`` or ``||`` rather than chained comparisons
+such as ``100 <= n <= 300``. Python's ``and``, ``or``, and ``not``, and vectorized
+``&`` and ``|``, are not supported.
 
 .. _executions:
 
@@ -224,6 +243,53 @@ Reassigning a name affects later statements without recomputing earlier values.
 A complete rerun evaluates the whole script again.
 Commands entered interactively apply to every existing replicate. If executing a command
 fails for any replicate, the command leaves the model and its values unchanged.
+
+Conditioning whole replicates
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``condition(expression)`` retains only complete model realizations satisfying a Boolean
+expression. A false condition discards every value drawn in that attempt and restarts the
+model from the beginning, including its parameter draws. Random-number generators keep
+advancing. A true condition continues execution; all conditions must pass.
+
+.. code-block:: text
+
+    lambda ~ lognormal(meanlog=-0.4307829161, sdlog=0.3)
+    birth := quasse_constant(rate=lambda)
+    death := quasse_constant(rate=0.13)
+    trees ~ quasse(birth_rate=birth, death_rate=death, stop="age", stop_value=8.68, diffusion=0.1, method="local_thinning", block_duration=1)
+    n := n_extant_tips(trees)
+    condition(100 <= n && n <= 300)
+
+``n_extant_tips(tree)`` counts sampled living tips, excluding fossils and unsampled living
+lineages. Like other scalar functions, it vectorizes over lists of trees. Each condition,
+however, must return one Boolean, not a vector.
+
+``condition`` is a standalone statement, not a function returning a value. Expressions
+such as ``x := 1 + condition(true)`` are invalid. Conditions cannot be appended to
+already-executed results; edit and rerun the complete model instead.
+
+``--runs`` counts accepted replicates. ``--max-attempts`` limits whole-model attempts
+per accepted replicate, including the first attempt; the default is 1000. For example:
+
+.. code-block:: text
+
+    pjcli model.pj --runs 100 --max-attempts 5000
+    pjcli model.pj --runs 100 --max-attempts none
+
+``none`` allows unlimited attempts. Exhausting a finite limit raises an error identifying
+the replicate and last rejecting condition. Invalid expressions and simulation errors
+remain errors; they are not treated as rejection. Progress messages count accepted replicates.
+
+This differs from QuaSSE's tree-level conditions and ``max_n_attempts``, which retry tree
+histories while holding the model's parameter draws fixed. Whole-model conditions generally
+change the distribution of retained parameters. For inference, selection based solely on
+the observed data leaves the original posterior unchanged; conditions involving unknown
+parameters or unobserved histories must also be accounted for in the inference model.
+
+Data exports contain accepted named values, with no columns for conditions. RevBayes model
+export does not yet support models containing conditions and reports an error rather than
+omitting them.
 
 .. _vectorization:
 
