@@ -63,6 +63,41 @@ class TestQuaSSE(unittest.TestCase):
             with self.assertRaises(ValueError):
                 cls(*args)
 
+    # Tail values and global maxima protect thinning from underestimated bounds; parser checks
+    # cover optional arguments that direct rate tests miss. Retire if linear rates are replaced.
+    def test_linear_trait_bounds(self):
+        x = np.array([-3., -1., 0., 2., 4.])
+        for bounds, effective, positive_bound, negative_bound in [
+                ({}, x, None, None),
+                ({"lower_trait": -1}, [-1, -1, 0, 2, 4], None, 3),
+                ({"upper_trait": 2}, [-3, -1, 0, 2, 2], 4, None),
+                ({"lower_trait": -1, "upper_trait": 2}, [-1, -1, 0, 2, 2], 4, 3)]:
+            for slope, bound in [(1, positive_bound), (-1, negative_bound), (0, 2)]:
+                rate = LinearRate(2, slope, **bounds)
+                expected = np.maximum(0, 2 + slope * np.array(effective))
+                np.testing.assert_array_equal(rate(x), expected)
+                self.assertEqual(rate.upper_bound, bound)
+                self.assertGreaterEqual(rate.bound_on_interval(-3, 4), max(expected))
+                capped = LinearRate(2, slope, 1.5, **bounds)
+                np.testing.assert_array_equal(capped(x), np.minimum(1.5, expected))
+                self.assertEqual(capped.upper_bound, 1.5)
+        self.assertTrue(LinearRate(-2, 1, upper_trait=1).is_identically_zero)
+        np.testing.assert_array_equal(LinearRate(2, -1, lower_trait=1, upper_trait=1)(x), np.ones(5))
+        self.assertNotIn('trait', str(LinearRate(2, 1)))
+        self.assertIn('upper_trait=2.0', str(LinearRate(2, 1, upper_trait=2)))
+        for bounds in ({"lower_trait": 2, "upper_trait": 1}, {"lower_trait": np.nan},
+                       {"upper_trait": np.inf}):
+            with self.assertRaises(ValueError):
+                LinearRate(2, 1, **bounds)
+        dag = compile_model(
+            'r := quasse_linear(intercept=2,slope=1,lower_trait=-1,upper_trait=[1,2])').execute()
+        rates = dag.values('r')[0]
+        self.assertEqual([float(r(4)) for r in rates], [3, 4])
+        for extra in ('', ',lower_trait=-1', ',upper_trait=2'):
+            dag.append('s := quasse_linear(intercept=2,slope=1' + extra + ')')
+        with self.assertRaises(ScriptEvaluationError):
+            dag.append('bad := quasse_linear(intercept=2,slope=1,lower_trait=2,upper_trait=1)')
+
     # Exact maxima supplement grid checks: tree tests can miss a narrow interior peak.
     # Retire this group if rate bounds are supplied by another verified implementation.
     def test_interval_bounds(self):

@@ -4,3 +4,7 @@ unbounded := quasse_quadratic(baseline=0.1, strength=0.05, center=0)
 death := quasse_constant(rate=0.02)
 bounded_trees ~ quasse(birth_rate=bounded, death_rate=death, diffusion=0.1, stop="age", stop_value=2, dt_max=0.01, max_nodes=10000)
 unbounded_trees ~ quasse(birth_rate=unbounded, death_rate=death, diffusion=0.1, stop="age", stop_value=2, dt_max=0.01, max_nodes=10000)
+
+# Fixed trait bounds give constant tails; these are not independently fitted rate levels.
+linear := quasse_linear(intercept=0.2, slope=0.1, lower_trait=-1, upper_trait=2)
+linear_trees ~ quasse(birth_rate=linear, death_rate=death, diffusion=0.1, stop="age", stop_value=2, dt_max=0.01, max_nodes=10000)

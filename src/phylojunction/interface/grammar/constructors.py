@@ -209,6 +209,7 @@ CONSTRUCTORS = {
     }]),
     'quasse_linear': (RATE_CONSTRUCTORS["quasse_linear"][0], [{
         'intercept': Scalar, 'slope': Scalar, 'cap': Scalar,
+        'lower_trait': Scalar, 'upper_trait': Scalar,
     }]),
     'quasse_skew_gaussian': (RATE_CONSTRUCTORS["quasse_skew_gaussian"][0], [{
         'baseline': Scalar, 'amplitude': Scalar, 'location': Scalar, 'width': Scalar, 'skew': Scalar,

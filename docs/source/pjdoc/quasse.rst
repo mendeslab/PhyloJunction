@@ -70,9 +70,19 @@ and ``amplitude`` are not generally its peak position and height; ``skew=0`` giv
 Gaussian peak. All constructor parameters are constant through time within a simulation.
 
 Every constructor accepts optional ``cap``: the evaluated rate is min(cap, f(x)). The cap must
-be finite and nonnegative, may be below the baseline, and may be zero. Without it, linear,
-quadratic and absolute-value rates remain unbounded
-when their slope or strength is nonzero. There is no hidden upper truncation.
+be finite and nonnegative, may be below the baseline, and may be zero. Without it, quadratic and
+absolute-value rates remain unbounded when their strength is nonzero. A nonzero-slope linear rate
+is unbounded unless a trait bound limits its increasing tail. There is no hidden upper truncation.
+
+``quasse_linear`` also accepts ``lower_trait`` and ``upper_trait``; either may be omitted.
+The trait is clamped at the supplied bounds before evaluating ``max(0, intercept + slope*x)``.
+Supplied bounds must be finite, with ``lower_trait <= upper_trait`` when both are supplied.
+Equal bounds give a constant rate. An omitted bound leaves the trait unclamped on that side.
+These are trait values, not rate minima or maxima; a negative slope gives the higher rate at the
+lower trait bound.
+For example, ``quasse_linear(intercept=0.2, slope=0.1, lower_trait=-1, upper_trait=2)``
+has rates 0.1 and 0.4 in its lower and upper tails. This matches diversitree's
+``make.linear.x(-1, 2)`` evaluated with intercept 0.2 and slope 0.1.
 
 An explicit cap changes the biological model; computational resource limits do not cap rates.
 For example, pure branching Brownian motion with quadratic speciation can have an infinite
@@ -379,7 +389,8 @@ Python and NumPy's global random streams; distribution objects do not own RNG se
 The Python rate classes are ``ConstantRate``, ``LogisticRate``, ``GaussianRate``, ``StepRate``,
 ``LinearRate``, ``SkewGaussianRate``, ``QuadraticRate`` and ``AbsoluteRate``, all in
 ``phylojunction.calculation.continuous_sse``. They accept the same named arguments as the
-script constructors and evaluate NumPy arrays or scalars. Their shared ``RateFunction``
+script constructors and evaluate NumPy arrays or scalars. For ``LinearRate``, the trait bounds
+are keyword-only; the third positional argument is ``cap``. Their shared ``RateFunction``
 interface exposes ``is_identically_zero`` and ``upper_bound`` (a conservative finite bound,
 or ``None`` when unavailable). A zero rate at one trait is not an identically zero function.
 ``bound_on_interval(left, right)`` returns a finite conservative bound on a closed finite

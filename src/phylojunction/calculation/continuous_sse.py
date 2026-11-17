@@ -163,20 +163,41 @@ class StepRate(RateFunction):
 
 
 class LinearRate(RateFunction):
-    """A linear rate with negative values replaced by zero, not an implicit upper cap."""
+    """A nonnegative linear rate with optional constant tails at fixed trait bounds."""
     _label = "linear"
 
-    def __init__(self, intercept, slope, cap=None):
-        self._initialize(dict(intercept=intercept, slope=slope), cap=cap)
+    # Omitted bounds remain absent from descriptions; cap retains its positional argument.
+    def __init__(self, intercept, slope, cap=None, *, lower_trait=None, upper_trait=None):
+        parameters = dict(intercept=intercept, slope=slope)
+        if lower_trait is not None:
+            parameters["lower_trait"] = lower_trait
+        if upper_trait is not None:
+            parameters["upper_trait"] = upper_trait
+        self._initialize(parameters, cap=cap)
+        if lower_trait is None:
+            self.lower_trait = None
+        if upper_trait is None:
+            self.upper_trait = None
+        if self.lower_trait is not None and self.upper_trait is not None and self.lower_trait > self.upper_trait:
+            raise ValueError("lower_trait must not exceed upper_trait.")
 
+    # A monotone rate is bounded globally only when its increasing tail is clamped.
     def _bound(self):
-        return float("inf") if self.slope else max(0., self.intercept)
+        if self.slope == 0:
+            return max(0., self.intercept)
+        endpoint = self.upper_trait if self.slope > 0 else self.lower_trait
+        return float("inf") if endpoint is None else float(self._evaluate(endpoint))
 
-    # The maximum of zero and an affine function is convex: endpoints suffice.
+    # Clamping and zero truncation preserve monotonicity, so endpoints still suffice.
     def _interval_bound(self, left, right):
         return max(float(self(left)), float(self(right)))
 
+    # Clamp the trait first; plateau heights follow from the line, not separate rate parameters.
     def _evaluate(self, x):
+        if self.lower_trait is not None:
+            x = np.maximum(x, self.lower_trait)
+        if self.upper_trait is not None:
+            x = np.minimum(x, self.upper_trait)
         return np.maximum(0., self.intercept + self.slope * x)
 
 
