@@ -52,7 +52,7 @@ class DnQuaSSE(DistrForSampling):
                  sampling_prob=1.0, cond_surv=True, cond_spn=False, cond_obs_both_sides=False,
                  min_rec_taxa=None, max_rec_taxa=None, max_n_attempts=200, dt_max=None, max_nodes=None,
                  block_duration=None, bridge_error=None, fossil_rate=None, start_distribution=None,
-                 observation_sd=0.0):
+                 observation_sd=0.0, reject_above=None):
         if start_distribution is not None:
             from phylojunction.distribution.dn_parametric import (
                 DnNormal, DnLogNormal, DnUnif, DnExponential, DnGamma, DnBeta, DnCauchy,
@@ -68,6 +68,10 @@ class DnQuaSSE(DistrForSampling):
         self.stop = stop
         self.k = _integer(k, "k")
         self.max_steps = _integer(max_steps, "max_steps")
+        if reject_above is not None and (isinstance(reject_above, (bool, np.bool_))
+                                         or not isinstance(reject_above, (int, float, np.integer, np.floating))):
+            raise ValueError("reject_above must be a positive integer.")
+        self.reject_above = None if reject_above is None else _integer(reject_above, "reject_above")
         self.max_alive = _integer(max_alive, "max_alive")
         self.max_nodes = None if max_nodes is None else _integer(max_nodes, "max_nodes")
         self.dt_max = None if dt_max is None else float(dt_max)
@@ -260,6 +264,9 @@ class DnQuaSSE(DistrForSampling):
                     if next_count > target:
                         break
                     sampled_count = next_count
+                if is_birth and self.reject_above is not None and len(living) >= self.reject_above:
+                    raise ec.RejectReplicate(f"Birth would give {len(living) + 1} living lineages "
+                                             f"(reject_above={self.reject_above}).")
                 if is_birth and len(living) >= self.max_alive:
                     raise ec.GenerateFailError(self.DN_NAME, "Exceeded max_alive.")
                 # Each birth/fossil adds two nodes, in addition to origin and initial lineage.
@@ -455,6 +462,9 @@ class DnQuaSSE(DistrForSampling):
                     self._check_runtime(deadline)
                     self._advance_bridge(pending, elapsed, variance)
                 return tree, elapsed
+            if is_birth and self.reject_above is not None and len(living) >= self.reject_above:
+                raise ec.RejectReplicate(f"Birth would give {len(living) + 1} living lineages "
+                                         f"(reject_above={self.reject_above}).")
             if is_birth and len(living) >= self.max_alive:
                 raise ec.GenerateFailError(self.DN_NAME, "Exceeded max_alive.")
             is_fossil = mark >= lx + mx

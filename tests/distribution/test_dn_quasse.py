@@ -183,6 +183,41 @@ class TestQuaSSE(unittest.TestCase):
         self.assertEqual(single.seed_age, 0)
         self.assertEqual(single.n_extant_terminal_nodes, 1)
 
+    # Check actual births against the cutoff in each event loop. Tree-level retries cannot test
+    # whole-model rejection; retire these boundary cases if both methods share a tested birth handler.
+    def test_peak_living_cutoff(self):
+        one, zero = ConstantRate(1), ConstantRate(0)
+        for options in (dict(k=1), dict(method='local_thinning', block_duration=1)):
+            with self.subTest(options=options), patch('numpy.random.random', return_value=0), \
+                    patch('numpy.random.exponential', return_value=.1), patch('numpy.random.uniform', return_value=0):
+                tree = DnQuaSSE(one, zero, 'size', 2, reject_above=2, **options).draw()
+                self.assertEqual(tree.n_extant_terminal_nodes, 2)
+                with self.assertRaisesRegex(ec.RejectReplicate, '3 living lineages'):
+                    DnQuaSSE(one, zero, 'age', 4, reject_above=2, max_alive=2, **options).draw()
+        for invalid in (0, -1, 1.5, True, '5'):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                DnQuaSSE(one, zero, 'age', 1, reject_above=invalid)
+
+    # A rejected nested draw must redraw earlier parameters, or fail transactionally on append.
+    # Condition-statement tests miss rejection inside a sampler; retain while draws can signal it.
+    def test_peak_cutoff_restarts_replicate(self):
+        source = ('rate ~ normal(0,1)\nb := quasse_constant(rate)\nd := quasse_constant(0)\n'
+                  'trees ~ iid(2,quasse(b,d,"age",1,k=1,reject_above=1))')
+        model = compile_model(source)
+        with patch('numpy.random.random', return_value=0), patch.object(DnNormal, 'draw', side_effect=[1., 0.]) as draw:
+            result = model.execute(max_attempts=2)
+        self.assertEqual(draw.call_count, 2)
+        self.assertEqual(result.value('rate'), 0.)
+        self.assertEqual([tree.n_extant_terminal_nodes for tree in result.value('trees')], [1, 1])
+        with patch('numpy.random.random', return_value=0), patch.object(DnNormal, 'draw', return_value=1.):
+            with self.assertRaisesRegex(ScriptEvaluationError, 'after 2 attempts.*reject_above=1') as caught:
+                model.execute(max_attempts=2)
+            self.assertEqual((caught.exception.variable, caught.exception.execution), ('trees', 1))
+            empty = DirectedAcyclicGraph().execute()
+            with self.assertRaisesRegex(ScriptEvaluationError, 'Rerun the complete model'):
+                empty.append(source)
+            self.assertEqual(empty.model.n_nodes, 0)
+
     # DAG integration protects vector broadcasting and retry-independent parameter ownership.
     # Discrete rate objects follow a different path; retire if shared object-vector tests replace it.
     def test_dag_and_zero_rates(self):

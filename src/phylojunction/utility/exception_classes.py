@@ -5,6 +5,10 @@ __author__ = "Fabio K. Mendes"
 __email__ = "fmendes@lsu.edu"
 
 
+class RejectReplicate(Exception):
+    """A model condition rejected the current attempt, including its parameter draws."""
+
+
 class ScriptEvaluationError(Exception):
     """A script failure with its source location and original exception as cause."""
 

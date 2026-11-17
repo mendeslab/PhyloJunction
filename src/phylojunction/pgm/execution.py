@@ -1,5 +1,5 @@
 """Values from model replicates of one shared dependency graph."""
-from phylojunction.utility.exception_classes import ScriptEvaluationError
+from phylojunction.utility.exception_classes import RejectReplicate, ScriptEvaluationError
 import copy
 import random
 import numpy as np
@@ -44,7 +44,7 @@ class ExecutionResults:
 
     # Each rejected attempt discards all its values but keeps advancing both RNGs.
     # Append executes only new statements, which cannot contain acceptance conditions.
-    def _execute_from(self, start, on_replicate_complete=None, max_attempts=1000):
+    def _execute_from(self, start, on_replicate_complete=None, max_attempts=1000, *, appending=False):
         statements = self.model.statements[start:]
         for execution, (row, sampled) in enumerate(zip(self._values, self._sampled_from), 1):
             attempt = 0
@@ -58,12 +58,7 @@ class ExecutionResults:
                                 raise TypeError('condition(...) requires a Boolean scalar.')
                             if value:
                                 continue
-                            if max_attempts is not None and attempt >= max_attempts:
-                                raise ValueError(f'No accepted replicate after {attempt} attempts; '
-                                                 'increase max_attempts or revise the condition.')
-                            row.clear()
-                            sampled.clear()
-                            break
+                            raise RejectReplicate('Condition evaluated to false.')
                         distribution = None
                         if node.operator == '~':
                             validate_distributions(value)
@@ -72,6 +67,18 @@ class ExecutionResults:
                             value_type(value)
                         row.append(value)
                         sampled.append(distribution)
+                    except RejectReplicate as rejection:
+                        if appending:
+                            message = f'{rejection} Rerun the complete model to redraw earlier values.'
+                        elif max_attempts is not None and attempt >= max_attempts:
+                            message = f'No accepted replicate after {attempt} attempts. {rejection}'
+                        else:
+                            row.clear()
+                            sampled.clear()
+                            break
+                        raise ScriptEvaluationError(
+                            message, source=node.source, source_name=node.source_name, line_number=node.line_number,
+                            variable=getattr(node, 'node_name', None), execution=execution) from rejection
                     except ScriptEvaluationError:
                         raise
                     except Exception as error:
@@ -108,7 +115,7 @@ class ExecutionResults:
                         'Cannot append conditions to executed results; rerun the complete model.',
                         source=statement.source, source_name=statement.source_name,
                         line_number=statement.line_number)
-            candidate._execute_from(start)
+            candidate._execute_from(start, appending=True)
         except Exception:
             random.setstate(state[0])
             np.random.set_state(state[1])

@@ -180,7 +180,7 @@ CONSTRUCTORS = {
     'quasse': (DnQuaSSE, [{
         'birth_rate': Scalar, 'death_rate': Scalar, 'stop': Scalar, 'stop_value': Scalar, 'start_trait': Scalar,
         'drift': Scalar, 'diffusion': Scalar, 'method': Scalar, 'k': Scalar, 'runtime_limit': Scalar,
-        'max_steps': Scalar, 'max_alive': Scalar, 'sampling_prob': Scalar, 'cond_surv': Scalar,
+        'reject_above': Scalar, 'max_steps': Scalar, 'max_alive': Scalar, 'sampling_prob': Scalar, 'cond_surv': Scalar,
         'cond_spn': Scalar, 'cond_obs_both_sides': Scalar, 'min_rec_taxa': Scalar, 'max_rec_taxa': Scalar,
         'max_n_attempts': Scalar, 'dt_max': Scalar, 'max_nodes': Scalar, 'block_duration': Scalar,
         'bridge_error': Scalar, 'fossil_rate': Scalar, 'start_distribution': Scalar,

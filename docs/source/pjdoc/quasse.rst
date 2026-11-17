@@ -290,6 +290,9 @@ impossible conditions can exhaust the rejection budget. Limits are:
    * - ``max_steps``
      - 1,000,000
      - Diversitree steps or local queue actions per attempt, shared across numerical restarts
+   * - ``reject_above``
+     - unset
+     - Peak living lineage count allowed in a whole model replicate
    * - ``max_alive``
      - 100,000
      - Living lineages per attempt
@@ -301,6 +304,14 @@ All limits are positive; count limits are integers. Reaching the rejection budge
 error. Except for the finite local bound-exceedance recovery described above, numerical
 failures and exceeded resource limits raise errors without retry. In particular, transiently
 exceeding ``max_rec_taxa`` does not reject an attempt.
+
+``reject_above=5000`` allows 5,000 living lineages, including unsampled ones. A birth
+that would produce lineage 5,001 discards the whole replicate and redraws its parameters.
+Pair this with ``condition(100 <= n && n <= 300)``, where ``n := n_extant_tips(tree)``,
+to restrict the final sample as well. Both rejections count toward the model's
+``max_attempts``. The cutoff takes precedence over ``max_alive`` if both apply to the same
+birth. A birth omitted by size stopping does not count. A direct Python draw that crosses
+the cutoff raises ``RejectReplicate``; an interactive append reports that the model must be rerun.
 
 ``max_nodes`` is checked before creating the initial two nodes or the two new nodes at a birth or fossil event.
 The omitted size-stopping birth does not consume nodes. This is a memory safeguard, not an
