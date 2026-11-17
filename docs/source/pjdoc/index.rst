@@ -186,6 +186,12 @@ change grouping. Division is real-valued, so ``3 / 2`` is ``1.5``.
 Arithmetic requires integer or real scalar operands, excluding booleans. It does not
 operate directly on lists or distribution objects. Use a comprehension such as
 ``doubled := [2 * x for x in values]`` for elementwise arithmetic. Powers are not supported.
+
+``log(x)`` takes the natural logarithm of a positive number, and ``exp(x)`` computes e to the
+power x. Both accept a scalar or act elementwise on a flat list. For example,
+``normal(mean=0, sd=log(2)/2)`` uses half the natural logarithm of two as its standard deviation.
+RevBayes export writes these functions as ``ln(x)`` and ``exp(x)``, respectively.
+
 Expressions are interpreted by PhyloJunction, not executed as Python code.
 
 Comparisons and Boolean expressions

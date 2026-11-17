@@ -18,6 +18,16 @@ __email__ = "fmendes@lsu.edu"
 
 class TestParametricSamplingDnAssignment(unittest.TestCase):
     
+    # Exercise math calls through the script binder, including mapped inputs and source errors.
+    # Sampler tests miss these cases; retire if shared expression tests cover the same calls.
+    def test_log_exp_expressions(self):
+        result = cmdp.compile_model('x ~ normal(0, sd=log(2)/2)\ny := exp(x=[0,x])').execute(2, 42)
+        for x, y in zip(result.values('x'), result.values('y')):
+            self.assertEqual(y, [1., math.exp(x)])
+        for expression in ('log(0)', 'log(-1)', 'exp(true)', 'log("2")', 'exp(1000)'):
+            with self.subTest(expression=expression), self.assertRaises(ec.ScriptEvaluationError):
+                cmdp.compile_model('y := ' + expression).execute()
+
     def test_sampling_unif_assignment(self):
         """
         Test if uniform sampling distribution assignments are correctly

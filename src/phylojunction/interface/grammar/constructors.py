@@ -17,6 +17,18 @@ def scalar(value):
     return dn.finite(value, 'parameter')
 
 
+def natural_log(x):
+    if type(x) not in (int, float):
+        raise TypeError("log requires a numeric scalar.")
+    return math.log(x)
+
+
+def exponential_value(x):
+    if type(x) not in (int, float):
+        raise TypeError("exp requires a numeric scalar.")
+    return math.exp(x)
+
+
 def flag(value):
     return dn.boolean(value)
 
@@ -130,6 +142,8 @@ def n_complete_only_branches(tree):
 Scalar, Vector = "Scalar", "Vector"
 
 CONSTRUCTORS = {
+    'log': (natural_log, [{'x': Scalar}]),
+    'exp': (exponential_value, [{'x': Scalar}]),
     'gamma_spike_clock': (DnGammaSpikeClock, [{
         'tree': Scalar, 'attr_name': Scalar, 'clock_rate': Scalar, 'spike_mean': Scalar,
         'spike_shape': Scalar, 'br_specific_rel_rate': Vector, 'strict_clock_when_no_stubs': Scalar,

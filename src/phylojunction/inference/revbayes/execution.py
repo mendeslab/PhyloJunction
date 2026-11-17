@@ -93,7 +93,7 @@ def execution_to_rev(results, root, mcmc_chain_length=1000, prefix=''):
                                   [item.value for item in items], all(item.fixed for item in items), tuple(items))
 
         # Convert parameterizations without freezing stochastic switches or dimensions.
-        def distribution(name, arguments):
+        def render_call(name, arguments):
             def text(key):
                 return arguments[key].code
 
@@ -106,7 +106,10 @@ def execution_to_rev(results, root, mcmc_chain_length=1000, prefix=''):
             value = construct(name, **values)
             fixed = all(item.fixed for item in arguments.values())
             inner = None
-            if name == 'normal':
+            if name in ('log', 'exp'):
+                rev_name = 'ln' if name == 'log' else 'exp'
+                code = f'{rev_name}({text("x")})'
+            elif name == 'normal':
                 code = f'dnNormal(mean={text("mean")}, sd={text("sd")})'
             elif name == 'cauchy':
                 code = f'dnCauchy(location={text("location")}, scale={text("scale")})'
@@ -215,7 +218,7 @@ def execution_to_rev(results, root, mcmc_chain_length=1000, prefix=''):
                                 for entries in zip(*(arg.items for arg in args)))
                 return _RevExpression('', [item.value for item in records],
                                       all(arg.fixed for arg in args), records)
-            if name not in ('normal', 'lognormal', 'unif', 'gamma', 'exponential', 'beta', 'cauchy', 'iid'):
+            if name not in ('log', 'exp', 'normal', 'lognormal', 'unif', 'gamma', 'exponential', 'beta', 'cauchy', 'iid'):
                 raise ValueError(f'RevBayes export does not support {name}.')
             bound, traversed = bind_call(name, [item.value for item in args],
                                          {key: item.value for key, item in kwargs.items()})
@@ -225,8 +228,8 @@ def execution_to_rev(results, root, mcmc_chain_length=1000, prefix=''):
                          for key, value in bound.arguments.items() if key not in symbolic.arguments}
             arguments.update(symbolic.arguments)
             if not traversed:
-                return distribution(name, arguments)
-            return collection([distribution(name, {key: item.items[i] if key in traversed else item
+                return render_call(name, arguments)
+            return collection([render_call(name, {key: item.items[i] if key in traversed else item
                                                     for key, item in arguments.items()})
                                for i in range(len(bound.arguments[traversed[0]]))])
 
