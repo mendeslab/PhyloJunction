@@ -1,5 +1,9 @@
 from phylojunction.utility.exception_classes import ScriptEvaluationError
 import unittest
+from unittest.mock import patch
+import random
+import numpy as np
+from phylojunction.distribution.dn_parametric import DnNormal, DnCategorical
 import re
 import math
 from statistics import mean, stdev
@@ -251,6 +255,99 @@ exception if mandatory parameters are missing"""
             self.assertEqual((error.source, error.variable, error.execution), (source, source.split()[0], 1))
             self.assertIn('missing a required argument', str(error))
             self.assertIsInstance(error.__cause__, TypeError)
+
+    # Whole-model rejection must redraw parents and recompute descendants; distribution-level
+    # retry tests cannot cover this. Retire if equivalent execution coverage replaces this group.
+    def test_conditions_restart_model(self):
+        model = cmdp.compile_model('x ~ normal(0, 1)\ny := 2*x\n'
+                                   'condition(y > 0)\ncondition(y < 6)\nz := y + 1')
+        completed = []
+        with patch.object(DnNormal, 'draw', side_effect=[-1., 4., 2., -2., 1.]) as draw:
+            result = model.execute(runs=2, max_attempts=3, on_replicate_complete=completed.append)
+        self.assertEqual(result.values('x'), [2., 1.])
+        self.assertEqual(result.values('y'), [4., 2.])
+        self.assertEqual(result.values('z'), [5., 3.])
+        self.assertEqual(draw.call_count, 5)
+        self.assertEqual(completed, [1, 2])
+
+    # Execution errors must not become rejection, and attempt limits must count draws exactly.
+    # Sampler tests miss this boundary; retire if a shared acceptance layer tests it equivalently.
+    def test_condition_limits_and_errors(self):
+        source = 'x ~ normal(0, 1)\ncondition(x > 0)'
+        with patch.object(DnNormal, 'draw', return_value=-1.) as draw:
+            with self.assertRaises(ScriptEvaluationError) as caught:
+                cmdp.compile_model(source).execute(max_attempts=3)
+        self.assertEqual(draw.call_count, 3)
+        error = caught.exception
+        self.assertEqual((error.source, error.line_number, error.execution), ('condition(x > 0)', 2, 1))
+        self.assertIn('after 3 attempts', str(error))
+        for expression in ('1', '[true, false]'):
+            with self.subTest(expression=expression), patch.object(DnNormal, 'draw', return_value=1.) as draw:
+                with self.assertRaises(ScriptEvaluationError) as caught:
+                    cmdp.compile_model('x ~ normal(0, 1)\ncondition(' + expression + ')').execute()
+                self.assertEqual(draw.call_count, 1)
+                self.assertIsInstance(caught.exception.__cause__, TypeError)
+                self.assertIn('Boolean scalar', str(caught.exception))
+        failure = RuntimeError('sampling failed')
+        with patch.object(DnNormal, 'draw', side_effect=failure) as draw:
+            with self.assertRaises(ScriptEvaluationError) as caught:
+                cmdp.compile_model(source).execute()
+        self.assertEqual(draw.call_count, 1)
+        self.assertIs(caught.exception.__cause__, failure)
+
+    # Failed condition append must leave earlier results and definitions untouched, even after
+    # preceding assignments. Ordinary append tests miss this; retire if append supports conditions.
+    def test_condition_append_is_transactional(self):
+        result = cmdp.compile_model('x := 1').execute()
+        with self.assertRaisesRegex(ScriptEvaluationError, 'Cannot append conditions'):
+            result.append('y := 2\ncondition(x > 0)')
+        self.assertEqual(result.value('x'), 1)
+        self.assertEqual(set(result.model.name_node_dict), {'x'})
+        self.assertEqual(result.model.n_nodes, 1)
+        self.assertEqual(len(result.model.statements), 1)
+
+    # Real draws detect reseeding on rejection and failure to restore RNG state on errors, which
+    # mocked draws cannot. Retire if execution stops using these global random-number generators.
+    def test_condition_random_stream(self):
+        saved_python, saved_numpy = random.getstate(), np.random.get_state()
+        try:
+            for expression, distribution in (
+                    ('normal(0, 1)', DnNormal(0, 1)),
+                    ('categorical(cats=[1,-1], probs=[1,1])', DnCategorical([1, -1], [1, 1]))):
+                with self.subTest(expression=expression):
+                    random.seed(1)
+                    np.random.seed(1)
+                    for attempt in range(10):
+                        expected = distribution.draw()
+                        if expected < 0:
+                            break
+                    else:
+                        self.fail('Reference loop did not accept within ten attempts')
+                    self.assertGreater(attempt, 0)
+                    next_numpy, next_python = np.random.random(), random.random()
+                    result = cmdp.compile_model('x ~ ' + expression + '\ncondition(x < 0)').execute(
+                        random_seed=1, max_attempts=10)
+                    self.assertEqual(result.value('x'), expected)
+                    self.assertEqual(np.random.random(), next_numpy)
+                    self.assertEqual(random.random(), next_python)
+
+            before_python, before_numpy = random.getstate(), np.random.get_state()
+            model = cmdp.compile_model('x ~ normal(0, 1)\ncondition(false)')
+            # Count real draws to ensure the error follows sampling, rather than failing before it.
+            with patch.object(DnNormal, 'draw', autospec=True, side_effect=DnNormal.draw) as draw:
+                with self.assertRaises(ScriptEvaluationError) as caught:
+                    model.execute(random_seed=2, max_attempts=3)
+            self.assertEqual(draw.call_count, 3)
+            self.assertEqual((caught.exception.source, caught.exception.execution), ('condition(false)', 1))
+            self.assertIn('after 3 attempts', str(caught.exception))
+            self.assertEqual(random.getstate(), before_python)
+            after_numpy = np.random.get_state()
+            self.assertEqual(after_numpy[0], before_numpy[0])
+            np.testing.assert_array_equal(after_numpy[1], before_numpy[1])
+            self.assertEqual(after_numpy[2:], before_numpy[2:])
+        finally:
+            random.setstate(saved_python)
+            np.random.set_state(saved_numpy)
 
 
 if __name__ == "__main__":
