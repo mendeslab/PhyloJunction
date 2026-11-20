@@ -78,7 +78,7 @@ def call_gui():
         nonlocal results, dag_obj
         lines = [line.strip() for line in cmd_line_list if line.strip() and not line.strip().startswith('#')]
         try:
-            if not results.model.definitions:
+            if not results.model.statements:
                 candidate = cmdp.compile_model('\n'.join(cmd_line_list), '<interactive>').execute(int(wdw['-RUNS-'].get()),
                     int(wdw['-SEED-'].get()) if wdw['-SEED-'].get().strip() else None)
             else:
@@ -706,7 +706,7 @@ def call_gui():
 
         elif event == "Simulate":
             try:
-                source = '\n'.join(node.source for node in dag_obj.definitions)
+                source = '\n'.join(statement.source for statement in dag_obj.statements)
                 candidate = cmdp.compile_model(source, "<rerun>").execute(
                     int(values['-RUNS-']), int(values['-SEED-']) if values['-SEED-'].strip() else None)
                 results, dag_obj = candidate, candidate.model

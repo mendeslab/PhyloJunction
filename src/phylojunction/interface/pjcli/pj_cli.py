@@ -1,5 +1,7 @@
 import argparse
 import os
+import sys
+import time
 from pathlib import Path
 from phylojunction.readwrite.execution_export import write_results, write_maps, FORMATS
 import typing as ty
@@ -15,6 +17,19 @@ __author__ = "Fabio K. Mendes"
 __email__ = "fmendes@lsu.edu"
 
 
+# Parse a per-replicate attempt budget; None explicitly disables the limit.
+def _max_attempts(text):
+    if text.lower() == 'none':
+        return None
+    try:
+        value = int(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError('Expected a positive integer or none.') from None
+    if value < 1:
+        raise argparse.ArgumentTypeError('Expected a positive integer or none.')
+    return value
+
+
 def execute_pj_script(
         model: str,
         user_prefix: ty.Optional[str] = None,
@@ -27,7 +42,8 @@ def execute_pj_script(
         a_random_seed: ty.Optional[int] = None,
         tr_dag_nd_names: ty.Optional[str] = None,
         smap_attr_name: ty.Optional[str] = None, runs: int = 1,
-        output_format: str = 'separate-csv', write_stub_counts: bool = False) -> None:
+        output_format: str = 'separate-csv', write_stub_counts: bool = False,
+        max_attempts: ty.Optional[int] = 1000) -> None:
     """
     Execute .pj script.
 
@@ -60,7 +76,20 @@ def execute_pj_script(
     #################
 
     print("Reading script " + model)
-    results = cmd.compile_model(Path(model).read_text(), str(model)).execute(runs, random_seed)
+    compiled_model = cmd.compile_model(Path(model).read_text(), str(model))
+    started = last_report = time.monotonic()
+
+    # Report completed replicates at most once per second, always including the final one.
+    def report_completion(completed):
+        nonlocal last_report
+        now = time.monotonic()
+        if completed == runs or now - last_report >= 1.0:
+            print(f"Completed {completed}/{runs} replicates ({now - started:.1f} s elapsed)",
+                  file=sys.stderr, flush=True)
+            last_report = now
+
+    results = compiled_model.execute(runs, random_seed, on_replicate_complete=report_completion,
+                                     max_attempts=max_attempts)
     dag_obj = results.model
     print("    ... done!")
 
@@ -232,7 +261,9 @@ def call_cli() -> None:
 
     parser.add_argument('-nstub', '--stub-count-output', action='store_true',
                         help='With -d, write per-tree stub counts with replicate and element identifiers')
-    parser.add_argument('--runs', type=int, default=1, help='Number of model replicates')
+    parser.add_argument('--runs', type=int, default=1, help='Number of accepted model replicates')
+    parser.add_argument('--max-attempts', type=_max_attempts, default=1000,
+                        help='Attempts per accepted replicate (default: 1000; none: unlimited)')
     parser.add_argument('--output-format', choices=tuple(FORMATS), default='separate-csv',
                         help='Separate files (CSV), Combined (CSV), or JSON (MCON)')
 
@@ -251,7 +282,7 @@ def call_cli() -> None:
         a_random_seed=args.random_seed,
         tr_dag_nd_names=args.tr_dag_nd_names,
         smap_attr_name=args.smap_attr_name,
-        runs=args.runs, output_format=args.output_format,
+        runs=args.runs, output_format=args.output_format, max_attempts=args.max_attempts,
     )
 
 # if one wants to run pj_cli.py for some reason

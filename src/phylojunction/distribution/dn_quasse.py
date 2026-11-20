@@ -52,7 +52,7 @@ class DnQuaSSE(DistrForSampling):
                  sampling_prob=1.0, cond_surv=True, cond_spn=False, cond_obs_both_sides=False,
                  min_rec_taxa=None, max_rec_taxa=None, max_n_attempts=200, dt_max=None, max_nodes=None,
                  block_duration=None, bridge_error=None, fossil_rate=None, start_distribution=None,
-                 observation_sd=0.0):
+                 observation_sd=0.0, reject_above=None):
         if start_distribution is not None:
             from phylojunction.distribution.dn_parametric import (
                 DnNormal, DnLogNormal, DnUnif, DnExponential, DnGamma, DnBeta, DnCauchy,
@@ -68,6 +68,10 @@ class DnQuaSSE(DistrForSampling):
         self.stop = stop
         self.k = _integer(k, "k")
         self.max_steps = _integer(max_steps, "max_steps")
+        if reject_above is not None and (isinstance(reject_above, (bool, np.bool_))
+                                         or not isinstance(reject_above, (int, float, np.integer, np.floating))):
+            raise ValueError("reject_above must be a positive integer.")
+        self.reject_above = None if reject_above is None else _integer(reject_above, "reject_above")
         self.max_alive = _integer(max_alive, "max_alive")
         self.max_nodes = None if max_nodes is None else _integer(max_nodes, "max_nodes")
         self.dt_max = None if dt_max is None else float(dt_max)
@@ -143,8 +147,10 @@ class DnQuaSSE(DistrForSampling):
 
     # Nodes are the only persistent simulation representation; internal traits freeze at birth.
     def _new_node(self, tree, label, trait, parent=None):
-        node = dp.Node(label=label, edge_length=0.0,
-                       taxon=tree.taxon_namespace.require_taxon(label=label))
+        # A fossil continuation keeps its parent's taxon; all other generated labels are unique.
+        taxon = (parent.taxon if parent is not None and parent.label == label
+                 else tree.taxon_namespace.new_taxon(label=label))
+        node = dp.Node(label=label, edge_length=0.0, taxon=taxon)
         node.trait = float(trait)
         node.alive = node.sampled = True
         node.is_sa = node.is_sa_dummy_parent = node.is_sa_lineage = False
@@ -157,11 +163,12 @@ class DnQuaSSE(DistrForSampling):
     # Child order distinguishes continuation from fossil even after pruning zero-length edges.
     def _record_fossil(self, tree, node, fossil_index):
         label, sampled = node.label, node.sampled
+        # Transfer the existing taxon before replacing the parent's label and taxon.
+        continuation = self._new_node(tree, label, node.trait, node)
         node.label = f"dummy{fossil_index}"
-        node.taxon = tree.taxon_namespace.require_taxon(label=node.label)
+        node.taxon = tree.taxon_namespace.new_taxon(label=node.label)
         node.alive = node.sampled = node.is_sa = node.is_sa_lineage = False
         node.is_sa_dummy_parent = True
-        continuation = self._new_node(tree, label, node.trait, node)
         continuation.sampled, continuation.is_sa_lineage = sampled, True
         fossil = self._new_node(tree, f"sa{fossil_index}", node.trait, node)
         fossil.alive, fossil.is_sa = False, True
@@ -257,6 +264,9 @@ class DnQuaSSE(DistrForSampling):
                     if next_count > target:
                         break
                     sampled_count = next_count
+                if is_birth and self.reject_above is not None and len(living) >= self.reject_above:
+                    raise ec.RejectReplicate(f"Birth would give {len(living) + 1} living lineages "
+                                             f"(reject_above={self.reject_above}).")
                 if is_birth and len(living) >= self.max_alive:
                     raise ec.GenerateFailError(self.DN_NAME, "Exceeded max_alive.")
                 # Each birth/fossil adds two nodes, in addition to origin and initial lineage.
@@ -400,13 +410,14 @@ class DnQuaSSE(DistrForSampling):
                     is_candidate = candidate_time < interval.end_time
             heapq.heappush(queue, (candidate_time, next(serials), is_candidate, interval))
 
+        fossil_args = {"fossil_rate": fossil} if fossils_enabled else {}
+
         # The same block creation is used for initialization, endpoint renewal, and daughters.
         # Consuming the index before drawing prevents endpoint-dependent budget allocation.
         def start(node, time):
             end_time = time + self.block_duration
             if self.stop == "age":
                 end_time = min(end_time, target)
-            fossil_args = {"fossil_rate": fossil} if fossils_enabled else {}
             interval = self._start_bridge_interval(node, time, end_time, birth, death,
                                                    drift, variance, next(block_indices), **fossil_args)
             living[node] = interval
@@ -451,6 +462,9 @@ class DnQuaSSE(DistrForSampling):
                     self._check_runtime(deadline)
                     self._advance_bridge(pending, elapsed, variance)
                 return tree, elapsed
+            if is_birth and self.reject_above is not None and len(living) >= self.reject_above:
+                raise ec.RejectReplicate(f"Birth would give {len(living) + 1} living lineages "
+                                         f"(reject_above={self.reject_above}).")
             if is_birth and len(living) >= self.max_alive:
                 raise ec.GenerateFailError(self.DN_NAME, "Exceeded max_alive.")
             is_fossil = mark >= lx + mx

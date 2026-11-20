@@ -17,6 +17,18 @@ def scalar(value):
     return dn.finite(value, 'parameter')
 
 
+def natural_log(x):
+    if type(x) not in (int, float):
+        raise TypeError("log requires a numeric scalar.")
+    return math.log(x)
+
+
+def exponential_value(x):
+    if type(x) not in (int, float):
+        raise TypeError("exp requires a numeric scalar.")
+    return math.exp(x)
+
+
 def flag(value):
     return dn.boolean(value)
 
@@ -107,6 +119,14 @@ def n_rec_branches(tree):
     return tree.n_rec_branches()
 
 
+# Count sampled living terminals only; fossils and unsampled living tips are excluded.
+def n_extant_tips(tree):
+    from phylojunction.data.tree import AnnotatedTree
+    if not isinstance(tree, AnnotatedTree):
+        raise TypeError("n_extant_tips requires a tree.")
+    return tree.n_extant_sampled_terminal_nodes
+
+
 # Counts the complete tree's own branches absent from the reconstructed tree
 # (extinct or unsampled-but-living lineages) -- sizes 'apply_to_complete's
 # 'br_specific_rel_rate_complete' vector the same way 'n_rec_branches' sizes
@@ -122,12 +142,15 @@ def n_complete_only_branches(tree):
 Scalar, Vector = "Scalar", "Vector"
 
 CONSTRUCTORS = {
+    'log': (natural_log, [{'x': Scalar}]),
+    'exp': (exponential_value, [{'x': Scalar}]),
     'gamma_spike_clock': (DnGammaSpikeClock, [{
         'tree': Scalar, 'attr_name': Scalar, 'clock_rate': Scalar, 'spike_mean': Scalar,
         'spike_shape': Scalar, 'br_specific_rel_rate': Vector, 'strict_clock_when_no_stubs': Scalar,
         'apply_to_complete': Scalar, 'br_specific_rel_rate_complete': Vector,
     }]),
     'n_rec_branches': (n_rec_branches, [{'tree': Scalar}]),
+    'n_extant_tips': (n_extant_tips, [{'tree': Scalar}]),
     'n_complete_only_branches': (n_complete_only_branches, [{'tree': Scalar}]),
     'normal': (dn.DnNormal, [{
         'mean': Scalar, 'sd': Scalar,
@@ -157,7 +180,7 @@ CONSTRUCTORS = {
     'quasse': (DnQuaSSE, [{
         'birth_rate': Scalar, 'death_rate': Scalar, 'stop': Scalar, 'stop_value': Scalar, 'start_trait': Scalar,
         'drift': Scalar, 'diffusion': Scalar, 'method': Scalar, 'k': Scalar, 'runtime_limit': Scalar,
-        'max_steps': Scalar, 'max_alive': Scalar, 'sampling_prob': Scalar, 'cond_surv': Scalar,
+        'reject_above': Scalar, 'max_steps': Scalar, 'max_alive': Scalar, 'sampling_prob': Scalar, 'cond_surv': Scalar,
         'cond_spn': Scalar, 'cond_obs_both_sides': Scalar, 'min_rec_taxa': Scalar, 'max_rec_taxa': Scalar,
         'max_n_attempts': Scalar, 'dt_max': Scalar, 'max_nodes': Scalar, 'block_duration': Scalar,
         'bridge_error': Scalar, 'fossil_rate': Scalar, 'start_distribution': Scalar,
@@ -200,6 +223,7 @@ CONSTRUCTORS = {
     }]),
     'quasse_linear': (RATE_CONSTRUCTORS["quasse_linear"][0], [{
         'intercept': Scalar, 'slope': Scalar, 'cap': Scalar,
+        'lower_trait': Scalar, 'upper_trait': Scalar,
     }]),
     'quasse_skew_gaussian': (RATE_CONSTRUCTORS["quasse_skew_gaussian"][0], [{
         'baseline': Scalar, 'amplitude': Scalar, 'location': Scalar, 'width': Scalar, 'skew': Scalar,

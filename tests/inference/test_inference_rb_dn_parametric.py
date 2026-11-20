@@ -69,6 +69,7 @@ class TestInferenceRevBayesParametricDn(unittest.TestCase):
                   'ys ~ [[normal(pjInternal1,1)]]\n'
                   'ratio := 3 / 2\nneg := -(pjInternal1 + 2)\n'
                   'arith := +neg * 2 - pjInternal1 / (1 + 2)\n'
+                  'factor := exp(pjInternal1/2)\nrecovered := log(x=[factor,1])\n'
                   'arith_draw ~ normal(arith,1)\n'
                   'mus ~ iid(2,normal(0,1))\n'
                   'zs ~ [normal(mu,sd) for (mu,sd) in zip_strict(mus,[1,2])]\n'
@@ -89,7 +90,10 @@ class TestInferenceRevBayesParametricDn(unittest.TestCase):
             # Real execution also checks grouping, true division and live dependencies;
             # matching generated strings alone cannot establish these semantics.
             checks = ('\nif (ratio != 1.5) { stop("division failed") }\n'
+                      'pjInternal1.setValue(-2.0)\n'
+                      'if (abs(recovered[1]+1.0) > 1e-10) { stop("log dependency failed") }\n'
                       'pjInternal1.setValue(4.0)\n'
+                      'if (abs(recovered[1]-2.0) > 1e-10) { stop("exp dependency failed") }\n'
                       'if (neg != -6.0) { stop("unary dependency failed") }\n'
                       'if (abs(arith - (-12.0 - 4.0/3.0)) > 1e-10) { stop("arithmetic failed") }\n')
             script.write_text(models[0] + checks + '\nprint(model(pjInternal1,xs[1][1],xs[2][2]))\n' + logging[0])
